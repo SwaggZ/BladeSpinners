@@ -1,0 +1,74 @@
+# =============== #
+#  Unity Generated #
+# =============== #
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# =============== #
+#  Asset Bundles   #
+# =============== #
+/*.unitypackage
+/[Aa]sset[Bb]undles/
+/[Ss]treamingAssets/
+
+# =============== #
+#  IDE / Editor    #
+# =============== #
+/.vs/
+/.vscode/
+/.idea/
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# =============== #
+#  OS Generated    #
+# =============== #
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# =============== #
+#  Crash Reports   #
+# =============== #
+sysinfo.txt
+crashlytics-build.properties
+
+# =============== #
+#  Build Outputs   #
+# =============== #
+*.apk
+*.aab
+*.unitypackage
+*.app
+*.exe
+*.dll
+!Assets/Plugins/**/*.dll
+
+# =============== #
+#  Plastic SCM     #
+# =============== #
+/*.plastic/
