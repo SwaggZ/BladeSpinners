@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Scorpion_Tip
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Scorpion_Tip
+  partType: 0
+  occupiesSlots: 00000000
+  rarity: 0
+  tags: 
+  partID: scorpion_tip_685544525
+  description: A Common Tip from the Scorpion set.
+  icon: {fileID: 0}
+  meshSeed: 69106042
+  primaryColor: {r: 0.35185736, g: 0.4105624, b: 0.21528764, a: 1}
+  secondaryColor: {r: 0.621717, g: 0.6559797, b: 0.54200923, a: 1}
+  tipBehavior: 3
+  behaviorBasedStaminaDrainModifier: 1.3918366
+  uphillResistanceMultiplier: 1.2468762
+  slopeMultiplier: 1.7141819
+  spinThreshold: 77.66033
+  altTipBehavior: 1
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

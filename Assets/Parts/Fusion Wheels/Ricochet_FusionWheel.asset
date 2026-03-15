@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Ricochet_FusionWheel
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Ricochet_FusionWheel
+  partType: 2
+  occupiesSlots: 02000000
+  rarity: 1
+  tags: 
+  partID: ricochet_fusionwheel_1701094348
+  description: A Uncommon FusionWheel from the Ricochet set.
+  icon: {fileID: 0}
+  meshSeed: 1449836168
+  primaryColor: {r: 0.39949223, g: 0.64219046, b: 0.81919646, a: 1}
+  secondaryColor: {r: 0.70070463, g: 0.82166636, b: 0.90988684, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 51.336823
+  massBasedStaminaDrainRate: 1.550209
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

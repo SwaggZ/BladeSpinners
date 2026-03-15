@@ -26,7 +26,7 @@ namespace BladeSpinners.Editor
         {
             GameManager gm = GameManager.Instance;
             if (gm == null)
-                gm = Object.FindObjectOfType<GameManager>();
+                gm = Object.FindFirstObjectByType<GameManager>();
 
             if (gm == null)
             {

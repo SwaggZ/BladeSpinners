@@ -1,5 +1,6 @@
 using UnityEngine;
 using BladeSpinners.Core;
+using BladeSpinners.Gameplay;
 
 namespace BladeSpinners.World
 {
@@ -519,6 +520,25 @@ namespace BladeSpinners.World
             platform.transform.localScale = new Vector3(platRadius * 2f, platHeight * 0.5f, platRadius * 2f);
             platform.transform.position = new Vector3(x, y + platHeight * 0.5f, z);
 
+            // Ensure platforms use a true cylindrical collider shape.
+            // Unity doesn't provide a built-in CylinderCollider, so use MeshCollider
+            // from the cylinder mesh for reliable shape matching.
+            Collider existingCollider = platform.GetComponent<Collider>();
+            if (existingCollider != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Object.Destroy(existingCollider);
+                }
+                else
+                {
+                    Object.DestroyImmediate(existingCollider);
+                }
+            }
+
+            MeshCollider platformCollider = platform.AddComponent<MeshCollider>();
+            platformCollider.convex = false;
+
             Renderer rend = platform.GetComponent<Renderer>();
             rend.sharedMaterial = CreateArenaMaterial(
                 new Color(0.45f, 0.5f, 0.55f), 0.4f, 0.35f); // blue-grey
@@ -601,9 +621,7 @@ namespace BladeSpinners.World
 
         private static Material CreateArenaMaterial(Color color, float metallic, float smoothness)
         {
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-            if (shader == null)
-                shader = Shader.Find("Standard");
+            Shader shader = ShaderProvider.URPLit;
 
             Material mat = new Material(shader);
             mat.SetColor("_BaseColor", color);

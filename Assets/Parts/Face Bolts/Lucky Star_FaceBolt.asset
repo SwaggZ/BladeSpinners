@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Lucky Star_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Lucky Star_FaceBolt
+  partType: 4
+  occupiesSlots: 04000000
+  rarity: 2
+  tags: 
+  partID: lucky star_facebolt_900441926
+  description: A Rare FaceBolt from the Lucky Star set.
+  icon: {fileID: 0}
+  meshSeed: 837257427
+  primaryColor: {r: 0.2558726, g: 0.8351075, b: 0.74256146, a: 1}
+  secondaryColor: {r: 0.5381632, g: 0.8976608, b: 0.8402228, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 21300000, guid: c4d9b927934a76544aecfabeec2a298c, type: 3}

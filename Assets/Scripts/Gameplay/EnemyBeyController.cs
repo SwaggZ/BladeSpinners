@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 using BladeSpinners.Core;
 using BladeSpinners.Gameplay.Parts;
 using BladeSpinners.Gameplay.Movement;
@@ -30,6 +31,35 @@ namespace BladeSpinners.Gameplay
         // ── Public API (used by MatchManager) ────────────────────────
         public BeyConfiguration BeyConfiguration => beyConfiguration;
         public bool IsBurst => isBurst;
+
+        public List<BeyPart> GetEquippedParts()
+        {
+            List<BeyPart> equippedParts = new List<BeyPart>();
+
+            if (assembler == null)
+                assembler = GetComponent<BeyAssembler>();
+
+            if (assembler == null)
+                return equippedParts;
+
+            PartType[] slots =
+            {
+                PartType.Tip,
+                PartType.Track,
+                PartType.FusionWheel,
+                PartType.EnergyRing,
+                PartType.FaceBolt
+            };
+
+            for (int i = 0; i < slots.Length; i++)
+            {
+                BeyPart part = assembler.GetEquippedPart(slots[i]);
+                if (part != null)
+                    equippedParts.Add(part);
+            }
+
+            return equippedParts;
+        }
 
         // ══════════════════════════════════════════════════════════════
         // Awake: re-wire all components.
@@ -88,7 +118,7 @@ namespace BladeSpinners.Gameplay
                     ?.SetValue(aiInput, beyConfiguration);
 
                 // Find the player and set as target
-                PlayerManager player = FindObjectOfType<PlayerManager>();
+                PlayerManager player = FindFirstObjectByType<PlayerManager>();
                 if (player != null)
                     aiInput.SetTarget(player.transform);
             }

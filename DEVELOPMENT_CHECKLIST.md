@@ -13,10 +13,12 @@
 - [x] BeyMovementController & steering/boost/brake logic
 - [x] BeyTiltController (visual lean + wobble at low spin)
 - [x] Physics collision detection & SpinExchangeHandler
+- [x] Anti-stuck tuning: zero-friction Bey physics materials (dynamic/static friction = 0, combine = Minimum)
 
 ## Player & Camera
 - [x] Player input handler (movement, boost, brake, jump, ability input)
 - [x] Third-person camera orbiting Bey
+- [x] Focus indicator arrow above currently focused enemy (hidden when no focus)
 - [x] Main player Bey prefab coordination (PlayerManager - ready for GameObject setup)
 
 ## Inventory & Part Management
@@ -26,6 +28,7 @@
 
 ## World Generation
 - [ ] Map chunk prefabs (flat, ramps, platforms, bowls, bridges, hazards)
+- [x] Procedural arena platforms use cylindrical `MeshCollider` shape (not box/capsule)
 - [ ] DungeonLayoutGenerator (grid-based layout, room connection)
 - [ ] MapChunkAssembler (build individual maps from chunks)
 - [ ] Room types spawned (Combat, Loot, Workshop, Boss, Secret, Start, Exit)
@@ -40,10 +43,24 @@
 - [ ] ProceduralPartGenerator (all slot types, depth scaling, rarity)
 - [ ] Connect to part dropping & loot rooms
 
+## Editor Tooling
+- [x] Single-set part generator (`Generate Part Set`)
+- [x] Massive batch set generator (`Generate Massive Part Sets`)
+- [x] JSON-driven massive batch set generator (`Generate Massive Part Sets (JSON)` with load/save JSON datasets)
+- [x] JSON batch duplicate protection (skip existing set names instead of overwriting)
+- [x] Mass generator list-wide seed randomize button
+- [x] Face Bolt emblem sprite field on part data (for UI/future hologram use)
+
+## Test Scene Setup
+- [x] Enemy test Beys use existing part pool (no automatic per-enemy set generation)
+
 ## Enemies & Combat
 - [ ] EnemyBeyAI state machine (Aggression, Reposition, StaminaConservation)
 - [ ] EnemySpawner using dungeon theme & depth
-- [ ] Part drop system on enemy burst
+- [x] Part drop system on enemy burst (3-roll logic: any-drop roll → equal part selection roll → rarity gate roll)
+- [x] Part drops use part-shaped visual meshes with increased pickup radius and auto-collect when all enemies are destroyed
+- [x] Player win no longer forces immediate auto-restart/teleport to center by default
+- [x] Player spin drain pauses after all enemies are destroyed (victory state)
 - [ ] Boss enemy system with named configs
 
 ## Abilities & Combat Enhancement
@@ -54,10 +71,37 @@
 
 ## UI & Menus
 - [ ] In-run HUD (spin bar, mana bar, ability icon, minimap)
-- [ ] Inventory/part swapping screen
-- [ ] Main menu with Bey customization
+- [x] Player-only world-space stat rings (speed/acceleration, mana, spin/stamina) — centered toon black outlines (inside/outside balanced) with black-capped fill ends, dark base arcs + vivid same-hue fill arcs, smaller labels fitting between rings with thicker 8-direction toon black text outline, wider front gap facing away from camera, speed normalized on 0→max-with-boost curve, horizontal lock, raised offset, double-sided transparent rendering
+- [x] Stat ring labels + black text outlines render in front of curve layers
+- [x] Main menu runtime GUI (Start Run, Inventory, Settings, Keybinds)
+- [x] Main menu runtime GUI visual refresh (flat cel-shaded panels, black toon outlines, responsive layout scaling)
+- [x] Pause menu runtime GUI (Resume, Run Inventory, Settings, Keybinds, Return Main Menu)
+- [x] Pause menu Esc toggle migrated to Input System API (fixes legacy Input.GetKeyDown exception)
+- [x] Inventory/part swapping runtime MVP (main-menu loadout seeding + run-time equip from run inventory)
+- [x] Starter unlock flow now supports configurable base parts via `StarterPartsConfig` (`Resources/StarterPartsConfig.asset`)
+- [x] Spinning Bey preview + live stats window in inventory GUI
+- [x] Preview/Run stat panel now includes live Spin and Mana current values
 - [ ] Achievement screen
 - [ ] Room transition UI
+
+## Run Flow (Current Phase)
+- [x] Start Run launches random procedural test arena at runtime (current placeholder before multi-level run progression)
+
+## Build & Runtime Safety
+- [x] `ShaderProvider` utility centralizes build-safe shader loading via `Resources/` reference materials (`URPLitReference.mat`, `URPUnlitReference.mat`)
+- [x] All runtime `Shader.Find()` calls replaced with `ShaderProvider.URPLit` / `ShaderProvider.URPUnlit` (BeyAssembler, ProceduralArenaGenerator, MatchManager, BeyStatRingsUI, BeyBurstEffect)
+- [x] `link.xml` prevents IL2CPP managed code stripping of reflection targets
+- [x] Scene includes a Main Camera tagged `MainCamera` (fallback camera also created at runtime if missing)
+- [x] `RuntimeGameUiController` bootstrap wrapped in sectioned try-catch (camera, starter data, preview each fail independently)
+- [x] `OnGUI` wrapped in try-catch with on-screen error overlay in builds
+- [x] `StartRun()` catch block shows visible error text instead of silently returning to menu
+- [x] Resolution-aware UI scaling (`GetUiScale()`) based on 1080p baseline, clamped 0.85–2.25×
+
+## Visual Part Identity
+- [x] Face Bolt emblem visible on Face Bolt mesh in-game
+- [x] Face Bolt widened; Energy Ring center hole constrained to stay slightly larger than Face Bolt width (close-fit clearance)
+- [x] Face Bolt vertical anchor aligned to Energy Ring connection location
+- [ ] Ability-activation hologram using Face Bolt emblem
 
 ## Persistence
 - [ ] SaveManager & JSON serialization
@@ -78,4 +122,4 @@
 
 ---
 
-**Last Updated:** February 23, 2026
+**Last Updated:** March 15, 2026

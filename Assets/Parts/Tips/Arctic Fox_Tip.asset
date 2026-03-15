@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Arctic Fox_Tip
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Arctic Fox_Tip
+  partType: 0
+  occupiesSlots: 00000000
+  rarity: 0
+  tags: 
+  partID: arctic fox_tip_794974132
+  description: A Common Tip from the Arctic Fox set.
+  icon: {fileID: 0}
+  meshSeed: 1646947258
+  primaryColor: {r: 0.86661804, g: 0.924155, b: 0.9879623, a: 1}
+  secondaryColor: {r: 0.94302577, g: 0.9676027, b: 0.9948581, a: 1}
+  tipBehavior: 0
+  behaviorBasedStaminaDrainModifier: 1.1983218
+  uphillResistanceMultiplier: 0.73990273
+  slopeMultiplier: 1.0185316
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

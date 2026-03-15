@@ -19,7 +19,7 @@ namespace BladeSpinners.Gameplay
         private Transform beyTransform; // The player bey (always followed)
 
         [Header("Free Camera")]
-        [SerializeField] private float orbitDistance = 1f;
+        [SerializeField] private float orbitDistance = 2f;
         [SerializeField] private float orbitHeight = 0.5f;
         [SerializeField] private float mouseSensitivity = 3f;
         [SerializeField] private float gamepadSensitivity = 120f;
@@ -33,6 +33,12 @@ namespace BladeSpinners.Gameplay
         [SerializeField] private float lockOnSmoothTime = 0.2f; // position smoothing
         [SerializeField] private float lockOnLookHeight = 0.3f; // look target height offset on player
 
+        [Header("Focused Enemy Arrow")]
+        [SerializeField] private bool showFocusedEnemyArrow = true;
+        [SerializeField] private float focusedArrowHeight = 1.1f;
+        [SerializeField] private float focusedArrowTextSize = 0.2f;
+        [SerializeField] private Color focusedArrowColor = new Color(1f, 0.9f, 0.2f, 1f);
+
         private float currentYaw = 0f;
         private float currentPitch = 25f;
         private Vector3 smoothVelocity = Vector3.zero;
@@ -44,15 +50,16 @@ namespace BladeSpinners.Gameplay
         private int enemyTargetIndex = 0;
         private bool lockedToEnemy = false;
         private Transform lockedEnemyTransform;
+        private Transform focusedArrowTransform;
+        private TextMesh focusedArrowTextMesh;
 
         private void Start()
         {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-
             // Auto-discover enemies at runtime so lock-on works
             // even if SetEnemyTransforms was never called manually.
             AutoDiscoverEnemies();
+
+            EnsureFocusedArrowExists();
         }
 
         /// <summary>
@@ -91,6 +98,8 @@ namespace BladeSpinners.Gameplay
                 ReadCameraInput();
                 UpdateFreeCamera();
             }
+
+            UpdateFocusedArrow();
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -337,9 +346,90 @@ namespace BladeSpinners.Gameplay
 
         public bool IsLockedToEnemy => lockedToEnemy;
         public int CurrentEnemyIndex => lockedToEnemy ? enemyTargetIndex : -1;
+        public Transform CurrentLockedEnemy => lockedToEnemy ? lockedEnemyTransform : null;
+
+        private void EnsureFocusedArrowExists()
+        {
+            if (!showFocusedEnemyArrow || focusedArrowTransform != null)
+            {
+                return;
+            }
+
+            GameObject arrowObject = new GameObject("FocusedEnemyArrow");
+            arrowObject.hideFlags = HideFlags.DontSave;
+
+            TextMesh textMesh = arrowObject.AddComponent<TextMesh>();
+            textMesh.text = "▼";
+            textMesh.anchor = TextAnchor.MiddleCenter;
+            textMesh.alignment = TextAlignment.Center;
+            textMesh.fontSize = 64;
+            textMesh.characterSize = Mathf.Max(0.01f, focusedArrowTextSize);
+            textMesh.color = focusedArrowColor;
+
+            MeshRenderer renderer = arrowObject.GetComponent<MeshRenderer>();
+            if (renderer != null)
+            {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+
+            focusedArrowTransform = arrowObject.transform;
+            focusedArrowTextMesh = textMesh;
+            focusedArrowTransform.gameObject.SetActive(false);
+        }
+
+        private void UpdateFocusedArrow()
+        {
+            if (!showFocusedEnemyArrow)
+            {
+                if (focusedArrowTransform != null)
+                {
+                    focusedArrowTransform.gameObject.SetActive(false);
+                }
+                return;
+            }
+
+            EnsureFocusedArrowExists();
+            if (focusedArrowTransform == null)
+            {
+                return;
+            }
+
+            bool hasFocusedEnemy = lockedToEnemy && !IsEnemyDead(lockedEnemyTransform);
+            if (!hasFocusedEnemy)
+            {
+                focusedArrowTransform.gameObject.SetActive(false);
+                return;
+            }
+
+            if (!focusedArrowTransform.gameObject.activeSelf)
+            {
+                focusedArrowTransform.gameObject.SetActive(true);
+            }
+
+            Vector3 worldPosition = lockedEnemyTransform.position + Vector3.up * focusedArrowHeight;
+            focusedArrowTransform.position = worldPosition;
+
+            if (focusedArrowTextMesh != null)
+            {
+                focusedArrowTextMesh.characterSize = Mathf.Max(0.01f, focusedArrowTextSize);
+                focusedArrowTextMesh.color = focusedArrowColor;
+            }
+
+            Vector3 toCamera = transform.position - focusedArrowTransform.position;
+            if (toCamera.sqrMagnitude > 0.0001f)
+            {
+                focusedArrowTransform.rotation = Quaternion.LookRotation(toCamera.normalized, Vector3.up);
+            }
+        }
 
         private void OnDestroy()
         {
+            if (focusedArrowTransform != null)
+            {
+                Destroy(focusedArrowTransform.gameObject);
+            }
+
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }

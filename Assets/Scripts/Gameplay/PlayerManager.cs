@@ -36,6 +36,9 @@ namespace BladeSpinners.Gameplay
         [SerializeField]
         private PartDatabase partDatabase;
 
+        [SerializeField]
+        private BeyStatRingsUI statRingsUI;
+
         private PartInventory runInventory;
 
         private void Awake()
@@ -116,9 +119,29 @@ namespace BladeSpinners.Gameplay
             {
                 cameraController.SetBeyTransform(transform);
             }
+
+            if (statRingsUI == null)
+                statRingsUI = GetComponent<BeyStatRingsUI>();
+
+            if (statRingsUI == null)
+                statRingsUI = gameObject.AddComponent<BeyStatRingsUI>();
+
+            statRingsUI.Initialize(beyConfiguration, movementController, transform);
         }
 
-        private void InitializePlayerBey()
+            /// <summary>
+            /// Re-initializes stat rings against the CURRENT beyConfiguration and
+            /// movementController. Must be called by RuntimeRunBuilder after all
+            /// reflection field-sets are complete, because Awake() fires synchronously
+            /// during AddComponent and captures a stale empty BeyConfiguration.
+            /// </summary>
+            public void RewireStatRings()
+            {
+                if (statRingsUI == null) return;
+                statRingsUI.Initialize(beyConfiguration, movementController, transform);
+            }
+
+            private void InitializePlayerBey()
         {
             if (beyConfiguration == null)
                 return;
@@ -183,5 +206,6 @@ namespace BladeSpinners.Gameplay
         public PlayerInputHandler InputHandler => inputHandler;
         public ThirdPersonCameraController CameraController => cameraController;
         public PartDatabase PartDatabase => partDatabase;
+        public BeyStatRingsUI StatRingsUI => statRingsUI;
     }
 }

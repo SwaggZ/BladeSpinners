@@ -19,6 +19,7 @@ namespace BladeSpinners.Gameplay.Parts
 
         private float currentSpin;
         private float currentMana;
+        private bool spinDrainPaused;
 
         /// <summary>
         /// Event fired when spin value changes. Subscribers check spin thresholds.
@@ -232,6 +233,9 @@ namespace BladeSpinners.Gameplay.Parts
         /// </summary>
         public void DrainSpin(float deltaTime, float boostMultiplier = 1f)
         {
+            if (spinDrainPaused)
+                return;
+
             BeyStatBlock stats = GetStatBlock();
             float gmDrain = GameManager.GetForBey(IsEnemy, g => g.spinDrainMultiplier, g => g.enemySpinDrainMultiplier);
             float drain = stats.TotalStaminaDrainRate * deltaTime * boostMultiplier * gmDrain;
@@ -240,6 +244,12 @@ namespace BladeSpinners.Gameplay.Parts
 
         public float CurrentSpin => currentSpin;
         public bool IsBurst => currentSpin <= 0;
+        public bool IsSpinDrainPaused => spinDrainPaused;
+
+        public void SetSpinDrainPaused(bool paused)
+        {
+            spinDrainPaused = paused;
+        }
 
         /// <summary>
         /// Sets the current mana value.

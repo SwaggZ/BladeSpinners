@@ -1,0 +1,19 @@
+{
+  "datasetName": "StarterBatch",
+  "sets": [
+    {
+      "setName": "Set_001",
+      "seed": 1000,
+      "rarity": "Common",
+      "colorHex": "#3366E6",
+      "emblemAssetPath": ""
+    },
+    {
+      "setName": "Set_002",
+      "seed": 1001,
+      "rarity": "Rare",
+      "colorHex": "#E64D66",
+      "emblemAssetPath": ""
+    }
+  ]
+}

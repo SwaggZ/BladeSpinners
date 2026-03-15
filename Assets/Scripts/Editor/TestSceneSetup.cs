@@ -93,7 +93,7 @@ namespace BladeSpinners.Editor
         private static void ClearScene()
         {
             // Delete default objects
-            Object[] allObjects = Object.FindObjectsOfType<GameObject>();
+            Object[] allObjects = Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
             foreach (GameObject obj in allObjects)
             {
                 if (obj.name == "Main Camera" || obj.name == "Directional Light")
@@ -358,16 +358,8 @@ namespace BladeSpinners.Editor
             // BeyConfiguration
             BeyConfiguration enemyConfig = new BeyConfiguration();
 
-            // --- Generate a unique part set for this enemy ---
-            int enemySeed = 70000 + index * 1111;
-            string enemyName = $"Enemy{index}";
-            Color enemyColor = Color.HSVToRGB((0.0f + index * 0.15f) % 1f, 0.8f, 0.9f);
-
-            RarityTier[] rarities = { RarityTier.Common, RarityTier.Common, RarityTier.Uncommon,
-                                      RarityTier.Uncommon, RarityTier.Rare };
-            RarityTier enemyRarity = rarities[index % rarities.Length];
-
-            PartSetGenerator.GenerateSet(enemyName, enemySeed, enemyRarity, enemyColor);
+            // --- Use existing parts for this enemy (no new set generation) ---
+            System.Random enemyPartRng = new System.Random(70000 + index * 1111);
 
             // --- Components (same as player) ---
             BeyMovementController movement = enemyObj.AddComponent<BeyMovementController>();
@@ -415,14 +407,14 @@ namespace BladeSpinners.Editor
             assembler.GetType().GetField("beyModelTransform", flags)
                 ?.SetValue(assembler, spinChild.transform);
 
-            // Load generated parts and push to config
-            LoadPartsIntoAssemblerByName(assembler, enemyName);
+            // Load existing random parts and push to config
+            LoadRandomExistingPartsIntoAssembler(assembler, enemyPartRng);
             assembler.SetConfiguration(enemyConfig);
 
             // --- Initialize the enemy controller + AI ---
             enemyCtrl.Initialize(enemyConfig, playerTarget);
 
-            Debug.Log($"[TestSceneSetup] Spawned enemy {index} ({enemyRarity}) at {spawnPos}");
+            Debug.Log($"[TestSceneSetup] Spawned enemy {index} using existing part pool at {spawnPos}");
 
             return enemyObj;
         }
@@ -477,6 +469,66 @@ namespace BladeSpinners.Editor
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Loads one random existing part per slot type into an assembler.
+        /// Uses project assets only and does not generate new part sets.
+        /// </summary>
+        private static void LoadRandomExistingPartsIntoAssembler(BeyAssembler assembler, System.Random rng)
+        {
+            var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+
+            BeyPart tip = FindRandomPartOfType(PartType.Tip, rng);
+            BeyPart track = FindRandomPartOfType(PartType.Track, rng);
+            BeyPart fusionWheel = FindRandomPartOfType(PartType.FusionWheel, rng);
+            BeyPart energyRing = FindRandomPartOfType(PartType.EnergyRing, rng);
+            BeyPart faceBolt = FindRandomPartOfType(PartType.FaceBolt, rng);
+
+            if (tip != null) assembler.GetType().GetField("tipPart", flags)?.SetValue(assembler, tip);
+            if (track != null) assembler.GetType().GetField("trackPart", flags)?.SetValue(assembler, track);
+            if (fusionWheel != null) assembler.GetType().GetField("fusionWheelPart", flags)?.SetValue(assembler, fusionWheel);
+            if (energyRing != null) assembler.GetType().GetField("energyRingPart", flags)?.SetValue(assembler, energyRing);
+            if (faceBolt != null) assembler.GetType().GetField("faceBoltPart", flags)?.SetValue(assembler, faceBolt);
+
+            int count = (tip != null ? 1 : 0) + (track != null ? 1 : 0) + (fusionWheel != null ? 1 : 0)
+                      + (energyRing != null ? 1 : 0) + (faceBolt != null ? 1 : 0);
+            Debug.Log($"[TestSceneSetup] Loaded {count}/5 random existing parts for enemy");
+        }
+
+        private static BeyPart FindRandomPartOfType(PartType type, System.Random rng)
+        {
+            string folder = type switch
+            {
+                PartType.Tip => "Assets/Parts/Tips",
+                PartType.Track => "Assets/Parts/Tracks",
+                PartType.FusionWheel => "Assets/Parts/Fusion Wheels",
+                PartType.EnergyRing => "Assets/Parts/Energy Rings",
+                PartType.FaceBolt => "Assets/Parts/Face Bolts",
+                _ => "Assets/Parts"
+            };
+
+            string[] guids = AssetDatabase.FindAssets("t:BeyPart", new[] { folder });
+            List<BeyPart> candidates = new List<BeyPart>();
+
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                BeyPart part = AssetDatabase.LoadAssetAtPath<BeyPart>(path);
+                if (part != null && part.PartType == type)
+                {
+                    candidates.Add(part);
+                }
+            }
+
+            if (candidates.Count == 0)
+            {
+                Debug.LogWarning($"[TestSceneSetup] No existing parts found for {type} in {folder}");
+                return null;
+            }
+
+            int pickIndex = rng.Next(candidates.Count);
+            return candidates[pickIndex];
         }
 
         /// <summary>

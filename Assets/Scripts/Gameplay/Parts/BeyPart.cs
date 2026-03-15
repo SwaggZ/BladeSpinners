@@ -162,6 +162,12 @@ namespace BladeSpinners.Gameplay.Parts
         [SerializeField]
         protected Abilities.BeyAbility equippedAbility;
 
+        /// <summary>
+        /// Optional Face Bolt emblem image (used for UI and ability hologram visuals).
+        /// </summary>
+        [SerializeField]
+        protected Sprite faceBoltEmblem;
+
         public string PartName => partName;
         public PartType PartType => partType;
         public List<PartType> OccupiesSlots => occupiesSlots ?? new List<PartType>();
@@ -198,6 +204,7 @@ namespace BladeSpinners.Gameplay.Parts
 
         // Face Bolt
         public Abilities.BeyAbility EquippedAbility => equippedAbility;
+        public Sprite FaceBoltEmblem => faceBoltEmblem;
 
         /// <summary>
         /// Returns true if this part occupies multiple slots (hybrid).

@@ -1,0 +1,341 @@
+{
+    "datasetName": "PartSetBatch",
+    "sets": [
+        {
+            "setName": "Inferno",
+            "seed": 1345623452,
+            "rarity": "Rare",
+            "colorHex": "CC2200",
+            "emblemAssetPath": "Assets/Parts/Icons/Fire_Aspect.png"
+        },
+        {
+            "setName": "Tidal Wave",
+            "seed": 6234352,
+            "rarity": "Uncommon",
+            "colorHex": "1155CC",
+            "emblemAssetPath": "Assets/Parts/Icons/Unchanting.png"
+        },
+        {
+            "setName": "Venom Fang",
+            "seed": 88432107,
+            "rarity": "Rare",
+            "colorHex": "22AA33",
+            "emblemAssetPath": "Assets/Parts/Icons/Jungle_Poison.png"
+        },
+        {
+            "setName": "Eclipse",
+            "seed": 55198234,
+            "rarity": "Legendary",
+            "colorHex": "7722BB",
+            "emblemAssetPath": "Assets/Parts/Icons/Void_Strike.png"
+        },
+        {
+            "setName": "Obsidian",
+            "seed": 31004782,
+            "rarity": "Uncommon",
+            "colorHex": "1A1A2E",
+            "emblemAssetPath": "Assets/Parts/Icons/Gravity.png"
+        },
+        {
+            "setName": "Crimson Slash",
+            "seed": 74521890,
+            "rarity": "Epic",
+            "colorHex": "AA1133",
+            "emblemAssetPath": "Assets/Parts/Icons/Critical_Hit.png"
+        },
+        {
+            "setName": "Frost Bite",
+            "seed": 19384756,
+            "rarity": "Common",
+            "colorHex": "5599DD",
+            "emblemAssetPath": "Assets/Parts/Icons/Freezing.png"
+        },
+        {
+            "setName": "Phantom",
+            "seed": 40291837,
+            "rarity": "Legendary",
+            "colorHex": "111111",
+            "emblemAssetPath": "Assets/Parts/Icons/Soul_Siphon.png"
+        },
+        {
+            "setName": "Solar Flare",
+            "seed": 66738291,
+            "rarity": "Uncommon",
+            "colorHex": "FF8800",
+            "emblemAssetPath": "Assets/Parts/Icons/Radiance.png"
+        },
+        {
+            "setName": "Blizzard",
+            "seed": 82015634,
+            "rarity": "Epic",
+            "colorHex": "AADDFF",
+            "emblemAssetPath": "Assets/Parts/Icons/Snowball.png"
+        },
+        {
+            "setName": "Thunder Bolt",
+            "seed": 53928174,
+            "rarity": "Rare",
+            "colorHex": "FFD700",
+            "emblemAssetPath": "Assets/Parts/Icons/Thundering.png"
+        },
+        {
+            "setName": "Void Reaper",
+            "seed": 10482935,
+            "rarity": "Legendary",
+            "colorHex": "2A0040",
+            "emblemAssetPath": "Assets/Parts/Icons/Anima_Conduit.png"
+        },
+        {
+            "setName": "Iron Claw",
+            "seed": 37650128,
+            "rarity": "Common",
+            "colorHex": "888899",
+            "emblemAssetPath": "Assets/Parts/Icons/Committed.png"
+        },
+        {
+            "setName": "Wildfire",
+            "seed": 91284503,
+            "rarity": "Rare",
+            "colorHex": "DD4400",
+            "emblemAssetPath": "Assets/Parts/Icons/Exploding.png"
+        },
+        {
+            "setName": "Night Stalker",
+            "seed": 28473019,
+            "rarity": "Epic",
+            "colorHex": "222244",
+            "emblemAssetPath": "Assets/Parts/Icons/Ambush.png"
+        },
+        {
+            "setName": "Emerald Storm",
+            "seed": 64019283,
+            "rarity": "Rare",
+            "colorHex": "00CC77",
+            "emblemAssetPath": "Assets/Parts/Icons/Poison_Cloud.png"
+        },
+        {
+            "setName": "Dragonheart",
+            "seed": 85203716,
+            "rarity": "Legendary",
+            "colorHex": "BB0022",
+            "emblemAssetPath": "Assets/Parts/Icons/Final_Shout.png"
+        },
+        {
+            "setName": "Arctic Fox",
+            "seed": 47382910,
+            "rarity": "Common",
+            "colorHex": "CCE8FF",
+            "emblemAssetPath": "Assets/Parts/Icons/Chilling.png"
+        },
+        {
+            "setName": "Hexblade",
+            "seed": 72648103,
+            "rarity": "Epic",
+            "colorHex": "9933CC",
+            "emblemAssetPath": "Assets/Parts/Icons/Enigma_Resonator.png"
+        },
+        {
+            "setName": "Scorpion",
+            "seed": 59028341,
+            "rarity": "Common",
+            "colorHex": "556B2F",
+            "emblemAssetPath": "Assets/Parts/Icons/Weakening.png"
+        },
+        {
+            "setName": "Magma Core",
+            "seed": 20481735,
+            "rarity": "Epic",
+            "colorHex": "FF3300",
+            "emblemAssetPath": "Assets/Parts/Icons/Fire_Trail.png"
+        },
+        {
+            "setName": "Shadow Wyrm",
+            "seed": 68193042,
+            "rarity": "Legendary",
+            "colorHex": "0D0D1A",
+            "emblemAssetPath": "Assets/Parts/Icons/Gravity_Pulse.png"
+        },
+        {
+            "setName": "Sapphire Edge",
+            "seed": 43017286,
+            "rarity": "Rare",
+            "colorHex": "0044BB",
+            "emblemAssetPath": "Assets/Parts/Icons/Sharpness.png"
+        },
+        {
+            "setName": "Gilded Wrath",
+            "seed": 96205148,
+            "rarity": "Uncommon",
+            "colorHex": "DAA520",
+            "emblemAssetPath": "Assets/Parts/Icons/Prospector.png"
+        },
+        {
+            "setName": "Serpent King",
+            "seed": 34918265,
+            "rarity": "Legendary",
+            "colorHex": "116633",
+            "emblemAssetPath": "Assets/Parts/Icons/Leeching.png"
+        },
+        {
+            "setName": "Ashen Wolf",
+            "seed": 78543120,
+            "rarity": "Common",
+            "colorHex": "555566",
+            "emblemAssetPath": "Assets/Parts/Icons/Stunning.png"
+        },
+        {
+            "setName": "Blood Moon",
+            "seed": 41238907,
+            "rarity": "Epic",
+            "colorHex": "880022",
+            "emblemAssetPath": "Assets/Parts/Icons/Pain_Cycle.png"
+        },
+        {
+            "setName": "Glacier",
+            "seed": 25804631,
+            "rarity": "Uncommon",
+            "colorHex": "88CCEE",
+            "emblemAssetPath": "Assets/Parts/Icons/Cool_Down.png"
+        },
+        {
+            "setName": "Supernova",
+            "seed": 50371829,
+            "rarity": "Legendary",
+            "colorHex": "FFAA00",
+            "emblemAssetPath": "Assets/Parts/Icons/Dynamo_Melee.png"
+        },
+        {
+            "setName": "Rampager",
+            "seed": 38204751,
+            "rarity": "Uncommon",
+            "colorHex": "993311",
+            "emblemAssetPath": "Assets/Parts/Icons/Rampaging.png"
+        },
+        {
+            "setName": "Tempest",
+            "seed": 61839204,
+            "rarity": "Epic",
+            "colorHex": "4477AA",
+            "emblemAssetPath": "Assets/Parts/Icons/Shockwave.png"
+        },
+        {
+            "setName": "Mirage",
+            "seed": 29481036,
+            "rarity": "Rare",
+            "colorHex": "CC88FF",
+            "emblemAssetPath": "Assets/Parts/Icons/Swirling.png"
+        },
+        {
+            "setName": "Warden",
+            "seed": 84019253,
+            "rarity": "Common",
+            "colorHex": "445566",
+            "emblemAssetPath": "Assets/Parts/Icons/Guarding_Strike.png"
+        },
+        {
+            "setName": "Plague Doctor",
+            "seed": 57203841,
+            "rarity": "Rare",
+            "colorHex": "336633",
+            "emblemAssetPath": "Assets/Parts/Icons/Refreshment_Melee.png"
+        },
+        {
+            "setName": "Berserker",
+            "seed": 42918305,
+            "rarity": "Epic",
+            "colorHex": "CC3322",
+            "emblemAssetPath": "Assets/Parts/Icons/Frenzied.png"
+        },
+        {
+            "setName": "Ricochet",
+            "seed": 73028194,
+            "rarity": "Uncommon",
+            "colorHex": "77AACC",
+            "emblemAssetPath": "Assets/Parts/Icons/Ricochet.png"
+        },
+        {
+            "setName": "Swiftfoot",
+            "seed": 90281435,
+            "rarity": "Common",
+            "colorHex": "33AA88",
+            "emblemAssetPath": "Assets/Parts/Icons/Swiftfooted.png"
+        },
+        {
+            "setName": "Chain Lightning",
+            "seed": 65028193,
+            "rarity": "Rare",
+            "colorHex": "BBAA22",
+            "emblemAssetPath": "Assets/Parts/Icons/Chain_Reaction.png"
+        },
+        {
+            "setName": "Phantom Arrow",
+            "seed": 30482917,
+            "rarity": "Uncommon",
+            "colorHex": "6644AA",
+            "emblemAssetPath": "Assets/Parts/Icons/Piercing.png"
+        },
+        {
+            "setName": "Barrier",
+            "seed": 52039184,
+            "rarity": "Common",
+            "colorHex": "4488BB",
+            "emblemAssetPath": "Assets/Parts/Icons/Potion_Barrier.png"
+        },
+        {
+            "setName": "Multishot",
+            "seed": 81203946,
+            "rarity": "Epic",
+            "colorHex": "AA4488",
+            "emblemAssetPath": "Assets/Parts/Icons/Multishot.png"
+        },
+        {
+            "setName": "Soul Reaver",
+            "seed": 46281903,
+            "rarity": "Legendary",
+            "colorHex": "224466",
+            "emblemAssetPath": "Assets/Parts/Icons/Soul_Speed.png"
+        },
+        {
+            "setName": "Thornback",
+            "seed": 71038294,
+            "rarity": "Uncommon",
+            "colorHex": "667744",
+            "emblemAssetPath": "Assets/Parts/Icons/Thorns.png"
+        },
+        {
+            "setName": "Deflector",
+            "seed": 24819305,
+            "rarity": "Common",
+            "colorHex": "99AABB",
+            "emblemAssetPath": "Assets/Parts/Icons/Deflect.png"
+        },
+        {
+            "setName": "Lucky Star",
+            "seed": 58302914,
+            "rarity": "Rare",
+            "colorHex": "33BBAA",
+            "emblemAssetPath": "Assets/Parts/Icons/Luck_Of_The_Sea.png"
+        },
+        {
+            "setName": "Electra",
+            "seed": 39184025,
+            "rarity": "Epic",
+            "colorHex": "44CCFF",
+            "emblemAssetPath": "Assets/Parts/Icons/Electrified.png"
+        },
+        {
+            "setName": "Buzz Blade",
+            "seed": 82930415,
+            "rarity": "Uncommon",
+            "colorHex": "CCAA33",
+            "emblemAssetPath": "Assets/Parts/Icons/Busy_Bee.png"
+        },
+        {
+            "setName": "Death Dealer",
+            "seed": 15829304,
+            "rarity": "Legendary",
+            "colorHex": "331122",
+            "emblemAssetPath": "Assets/Parts/Icons/Death_Barter.png"
+        }
+    ]
+}

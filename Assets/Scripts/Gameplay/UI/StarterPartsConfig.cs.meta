@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: e2bfc582b13dc4e44af77e25a08677cf
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - starterBaseTip: {fileID: 11400000, guid: d845b31c5ddf5dc40aee3881b534a472, type: 2}
+  - starterBaseTrack: {fileID: 11400000, guid: 26f4ddd58ff22a8408ee2029f3820b79, type: 2}
+  - starterBaseFusionWheel: {fileID: 11400000, guid: e660b125151228f4f9dda9271b830397, type: 2}
+  - starterBaseEnergyRing: {fileID: 11400000, guid: e862da770b401164fa71159bd15e5e3c, type: 2}
+  - starterBaseFaceBolt: {fileID: 11400000, guid: 7b6b98b14035d2c428cf315ebedb122f, type: 2}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

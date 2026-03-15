@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Void Reaper_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Void Reaper_FaceBolt
+  partType: 4
+  occupiesSlots: 04000000
+  rarity: 4
+  tags: 
+  partID: void reaper_facebolt_803789929
+  description: A Legendary FaceBolt from the Void Reaper set.
+  icon: {fileID: 0}
+  meshSeed: 2070712405
+  primaryColor: {r: 0.2469868, g: 0.0011280556, b: 0.42329752, a: 1}
+  secondaryColor: {r: 0.53385526, g: 0.38165903, b: 0.6429985, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 21300000, guid: 0f54d38d756d2914d8fd6d09dbb167b9, type: 3}

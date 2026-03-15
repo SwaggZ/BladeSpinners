@@ -14,10 +14,14 @@ namespace BladeSpinners.Editor
     /// </summary>
     public class PartSetGenerator : EditorWindow
     {
+        private static readonly System.Collections.Generic.HashSet<string> ensuredFolders =
+            new System.Collections.Generic.HashSet<string>();
+
         private string setName = "MyBey";
         private int seed = 42;
         private RarityTier setRarity = RarityTier.Common;
         private Color mainColor = new Color(0.2f, 0.4f, 0.9f); // default blue
+        private Sprite faceBoltEmblem;
 
         [MenuItem("Blade Spinners/Generate Part Set")]
         public static void ShowWindow()
@@ -35,6 +39,7 @@ namespace BladeSpinners.Editor
             seed = EditorGUILayout.IntField("Seed", seed);
             setRarity = (RarityTier)EditorGUILayout.EnumPopup("Set Rarity", setRarity);
             mainColor = EditorGUILayout.ColorField("Main Color", mainColor);
+            faceBoltEmblem = (Sprite)EditorGUILayout.ObjectField("Face Bolt Emblem", faceBoltEmblem, typeof(Sprite), false);
 
             // Show the stat boost for the selected rarity
             float boost = GetRarityBoost(setRarity);
@@ -46,7 +51,7 @@ namespace BladeSpinners.Editor
 
             if (GUILayout.Button("Generate Part Set", GUILayout.Height(30)))
             {
-                GenerateSet(setName, seed, setRarity, mainColor);
+                GenerateSet(setName, seed, setRarity, mainColor, faceBoltEmblem);
             }
         }
 
@@ -54,7 +59,13 @@ namespace BladeSpinners.Editor
         /// Creates 5 BeyPart ScriptableObject assets under Assets/Parts/{subfolder}/
         /// with random stats driven by the seed.
         /// </summary>
-        public static void GenerateSet(string name, int seed, RarityTier rarity = RarityTier.Common, Color? color = null)
+        public static void GenerateSet(
+            string name,
+            int seed,
+            RarityTier rarity = RarityTier.Common,
+            Color? color = null,
+            Sprite faceBoltEmblem = null,
+            bool saveAndRefresh = true)
         {
             System.Random rng = new System.Random(seed);
             float boost = GetRarityBoost(rarity);
@@ -72,14 +83,17 @@ namespace BladeSpinners.Editor
                 baseVal = 0.7f;
             }
 
-            CreatePartAsset(name, PartType.Tip, rng, baseHue, baseSat, baseVal, rarity, boost);
-            CreatePartAsset(name, PartType.Track, rng, baseHue, baseSat, baseVal, rarity, boost);
-            CreatePartAsset(name, PartType.FusionWheel, rng, baseHue, baseSat, baseVal, rarity, boost);
-            CreatePartAsset(name, PartType.EnergyRing, rng, baseHue, baseSat, baseVal, rarity, boost);
-            CreatePartAsset(name, PartType.FaceBolt, rng, baseHue, baseSat, baseVal, rarity, boost);
+            CreatePartAsset(name, PartType.Tip, rng, baseHue, baseSat, baseVal, rarity, boost, faceBoltEmblem);
+            CreatePartAsset(name, PartType.Track, rng, baseHue, baseSat, baseVal, rarity, boost, faceBoltEmblem);
+            CreatePartAsset(name, PartType.FusionWheel, rng, baseHue, baseSat, baseVal, rarity, boost, faceBoltEmblem);
+            CreatePartAsset(name, PartType.EnergyRing, rng, baseHue, baseSat, baseVal, rarity, boost, faceBoltEmblem);
+            CreatePartAsset(name, PartType.FaceBolt, rng, baseHue, baseSat, baseVal, rarity, boost, faceBoltEmblem);
 
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
+            if (saveAndRefresh)
+            {
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
 
             Debug.Log($"[PartSetGenerator] Created {rarity} part set \"{name}\" (seed {seed}, +{boost * 100f:0}%) — 5 assets in Assets/Parts/");
         }
@@ -102,7 +116,7 @@ namespace BladeSpinners.Editor
         }
 
         private static void CreatePartAsset(string setName, PartType type, System.Random rng, float baseHue,
-            float baseSat, float baseVal, RarityTier rarity, float boost)
+            float baseSat, float baseVal, RarityTier rarity, float boost, Sprite faceBoltEmblem)
         {
             BeyPart part = ScriptableObject.CreateInstance<BeyPart>();
             var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
@@ -147,6 +161,7 @@ namespace BladeSpinners.Editor
                     break;
                 case PartType.FaceBolt:
                     // FaceBolt stats are just the equipped ability, leave null for now
+                    part.GetType().GetField("faceBoltEmblem", flags)?.SetValue(part, faceBoltEmblem);
                     break;
             }
 
@@ -330,6 +345,14 @@ namespace BladeSpinners.Editor
 
         private static void EnsureFolder(string path)
         {
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            path = path.Trim();
+
+            if (ensuredFolders.Contains(path))
+                return;
+
             // Split the path and create each folder level
             string[] parts = path.Split('/');
             string current = parts[0]; // "Assets"
@@ -340,8 +363,12 @@ namespace BladeSpinners.Editor
                 {
                     AssetDatabase.CreateFolder(current, parts[i]);
                 }
+
+                ensuredFolders.Add(next);
                 current = next;
             }
+
+            ensuredFolders.Add(path);
         }
     }
 }

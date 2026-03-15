@@ -16,6 +16,9 @@ namespace BladeSpinners.Gameplay.Parts
     {
         private const int RING_SEGMENTS = 32;
         private const int TIP_SEGMENTS = 16;
+        private const float FACE_BOLT_MIN_RADIUS = 0.03f;
+        private const float FACE_BOLT_MAX_RADIUS = 0.045f;
+        private const float ENERGY_RING_HOLE_EXTRA_DIAMETER = 0.03f; // hole width must stay slightly larger than face bolt width
 
         // =====================================================================
         // PUBLIC API
@@ -46,13 +49,13 @@ namespace BladeSpinners.Gameplay.Parts
         /// <summary>
         /// Generate an EnergyRing mesh constrained by neighboring parts.
         /// maxOuterRadius: ring cannot be wider than this (from FusionWheel).
-        /// maxHoleRadius: center hole cannot be wider than this (from FaceBolt).
+        /// faceBoltRadius: used to enforce minimum hole width clearance.
         /// </summary>
-        public static Mesh GenerateConstrainedEnergyRing(BeyPart part, float maxOuterRadius, float maxHoleRadius)
+        public static Mesh GenerateConstrainedEnergyRing(BeyPart part, float maxOuterRadius, float faceBoltRadius)
         {
             if (part == null || part.PartType != PartType.EnergyRing) return null;
             System.Random rng = new System.Random(part.MeshSeed);
-            return GenerateEnergyRingMesh(part, rng, maxOuterRadius, maxHoleRadius);
+            return GenerateEnergyRingMesh(part, rng, maxOuterRadius, faceBoltRadius);
         }
 
         /// <summary>
@@ -64,7 +67,7 @@ namespace BladeSpinners.Gameplay.Parts
             if (faceBolt == null || faceBolt.PartType != PartType.FaceBolt) return 0.025f;
             System.Random rng = new System.Random(faceBolt.MeshSeed);
             rng.Next(0, 5); // skip polygon sides (same as GenerateFaceBoltMesh)
-            return 0.02f + (float)rng.NextDouble() * 0.01f; // 0.02–0.03
+            return FACE_BOLT_MIN_RADIUS + (float)rng.NextDouble() * (FACE_BOLT_MAX_RADIUS - FACE_BOLT_MIN_RADIUS);
         }
 
         /// <summary>
@@ -265,7 +268,7 @@ namespace BladeSpinners.Gameplay.Parts
         }
 
         private static Mesh GenerateEnergyRingMesh(BeyPart part, System.Random rng,
-            float maxOuterRadius = float.MaxValue, float maxHoleRadius = float.MaxValue)
+            float maxOuterRadius = float.MaxValue, float faceBoltRadius = 0.025f)
         {
             float t = Mathf.InverseLerp(GameConstants.MIN_MANA_POOL, GameConstants.MAX_MANA_POOL, part.ManaPoolSize);
             float baseOuterRadius = Mathf.Lerp(0.11f, 0.20f, t);
@@ -274,10 +277,16 @@ namespace BladeSpinners.Gameplay.Parts
             const float RING_MARGIN = 0.015f; // inset from fusion wheel edge
             baseOuterRadius = Mathf.Min(baseOuterRadius, maxOuterRadius - RING_MARGIN);
 
-            // Inner radius (hole) must not be wider than the FaceBolt
-            float innerRadius = Mathf.Min(baseOuterRadius * 0.3f, maxHoleRadius);
-            // Ensure there's at least some ring thickness and hole is positive
-            innerRadius = Mathf.Clamp(innerRadius, 0.005f, baseOuterRadius - 0.01f);
+            // Inner radius (hole) must always stay slightly wider (diameter) than FaceBolt.
+            // Diameter clearance +0.03 means radius clearance +0.015.
+            float minHoleRadiusFromFaceBolt = Mathf.Max(0.005f, faceBoltRadius + ENERGY_RING_HOLE_EXTRA_DIAMETER * 0.5f);
+
+            // Keep some ring thickness even at minimum outer radius.
+            float maxAllowedInnerRadius = baseOuterRadius - 0.01f;
+
+            // Start from procedural default, then enforce minimum hole clearance.
+            float innerRadius = Mathf.Max(baseOuterRadius * 0.3f, minHoleRadiusFromFaceBolt);
+            innerRadius = Mathf.Clamp(innerRadius, 0.005f, maxAllowedInnerRadius);
 
             float height = GetEnergyRingHeight(part);
 
@@ -327,7 +336,7 @@ namespace BladeSpinners.Gameplay.Parts
         {
             // Seed-based polygon sides and size variation
             int sides = 4 + rng.Next(0, 5); // 4–8 sided polygon
-            float radius = 0.02f + (float)rng.NextDouble() * 0.01f; // 0.02–0.03
+            float radius = FACE_BOLT_MIN_RADIUS + (float)rng.NextDouble() * (FACE_BOLT_MAX_RADIUS - FACE_BOLT_MIN_RADIUS);
             float height = GetFaceBoltHeight();
 
             // Generate with the polygon segment count for angular shape

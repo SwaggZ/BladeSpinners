@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BladeSpinners.Core;
 using BladeSpinners.Gameplay.Parts;
 using BladeSpinners.Gameplay.Movement;
+using BladeSpinners.World;
 
 namespace BladeSpinners.Gameplay
 {
@@ -13,36 +14,40 @@ namespace BladeSpinners.Gameplay
     /// </summary>
     public class MatchManager : MonoBehaviour
     {
-        // ── Match state ──────────────────────────────────────────────
         public enum MatchState { WaitingToStart, InProgress, PlayerWon, PlayerLost }
 
         [Header("Match Settings")]
         [SerializeField] private float countdownDuration = 3f;
         [SerializeField] private float postMatchDelay = 3f;
+        [SerializeField] private bool autoRestartOnPlayerWin = false;
+        [SerializeField] private bool autoRestartOnPlayerLoss = true;
+
+        [Header("Enemy Part Drops")]
+        [SerializeField, Range(0f, 1f)] private float anyPartDropChance = 0.6f;
+        [SerializeField] private Vector3 dropSpawnOffset = new Vector3(0f, 0.35f, 0f);
+        [SerializeField] private Vector3 dropVisualScale = new Vector3(1.75f, 1.75f, 1.75f);
+        [SerializeField] private bool useTransparentDropMaterial = true;
+        [SerializeField, Range(0.15f, 1f)] private float dropVisualAlpha = 0.58f;
+        [SerializeField] private float partPickupRadius = 1.25f;
 
         private MatchState currentState = MatchState.WaitingToStart;
         private float stateTimer;
 
-        // ── Bey registry ─────────────────────────────────────────────
         private PlayerManager playerManager;
         private readonly List<EnemyBeyController> enemies = new List<EnemyBeyController>();
         private readonly List<EnemyBeyController> aliveEnemies = new List<EnemyBeyController>();
 
-        // ── Events ───────────────────────────────────────────────────
         public event System.Action<MatchState> OnMatchStateChanged;
-        public event System.Action<string> OnBeyBurst;  // name of the burst bey
+        public event System.Action<string> OnBeyBurst;
 
-        // ── Public API ───────────────────────────────────────────────
         public MatchState CurrentState => currentState;
         public int EnemiesRemaining => aliveEnemies.Count;
 
-        /// <summary>Register the player. Called by TestSceneSetup or a spawner.</summary>
         public void RegisterPlayer(PlayerManager player)
         {
             playerManager = player;
         }
 
-        /// <summary>Register an enemy bey. Called when enemies are spawned.</summary>
         public void RegisterEnemy(EnemyBeyController enemy)
         {
             if (!enemies.Contains(enemy))
@@ -52,36 +57,32 @@ namespace BladeSpinners.Gameplay
             }
         }
 
-        /// <summary>Begin the match (starts countdown).</summary>
         public void StartMatch()
         {
+            if (playerManager != null && playerManager.BeyConfiguration != null)
+            {
+                playerManager.BeyConfiguration.SetSpinDrainPaused(false);
+            }
+
             SetState(MatchState.WaitingToStart);
             stateTimer = countdownDuration;
         }
 
-        // ── Lifecycle ────────────────────────────────────────────────
-
-        /// <summary>
-        /// Auto-discover player and enemies at runtime.
-        /// Edit-time registration (from TestSceneSetup) is lost because these
-        /// fields are non-serialized — they reset to null/empty on Play.
-        /// </summary>
         private void Start()
         {
-            // Discover player
             if (playerManager == null)
             {
-                playerManager = FindObjectOfType<PlayerManager>();
+                playerManager = FindFirstObjectByType<PlayerManager>();
                 if (playerManager != null)
                     Debug.Log($"[MatchManager] Auto-discovered player: {playerManager.gameObject.name}");
             }
 
-            // Discover enemies
             if (aliveEnemies.Count == 0)
             {
-                var foundEnemies = FindObjectsByType<EnemyBeyController>(FindObjectsSortMode.None);
-                foreach (var enemy in foundEnemies)
+                EnemyBeyController[] foundEnemies = FindObjectsByType<EnemyBeyController>(FindObjectsSortMode.None);
+                for (int i = 0; i < foundEnemies.Length; i++)
                 {
+                    EnemyBeyController enemy = foundEnemies[i];
                     if (!enemies.Contains(enemy))
                     {
                         enemies.Add(enemy);
@@ -91,7 +92,6 @@ namespace BladeSpinners.Gameplay
                 Debug.Log($"[MatchManager] Auto-discovered {aliveEnemies.Count} enemies");
             }
 
-            // Auto-start match
             if (currentState == MatchState.WaitingToStart && stateTimer <= 0f)
             {
                 stateTimer = countdownDuration;
@@ -113,30 +113,34 @@ namespace BladeSpinners.Gameplay
                     break;
 
                 case MatchState.PlayerWon:
+                    if (autoRestartOnPlayerWin)
+                    {
+                        stateTimer -= Time.deltaTime;
+                        if (stateTimer <= 0f)
+                            RestartMatch();
+                    }
+                    break;
+
                 case MatchState.PlayerLost:
-                    stateTimer -= Time.deltaTime;
-                    if (stateTimer <= 0f)
-                        RestartMatch();
+                    if (autoRestartOnPlayerLoss)
+                    {
+                        stateTimer -= Time.deltaTime;
+                        if (stateTimer <= 0f)
+                            RestartMatch();
+                    }
                     break;
             }
         }
 
-        // ── Burst detection ──────────────────────────────────────────
-
         private void CheckForBursts()
         {
-            // Check player burst
-            if (playerManager != null && playerManager.BeyConfiguration != null)
+            if (playerManager != null && playerManager.BeyConfiguration != null && playerManager.BeyConfiguration.IsBurst)
             {
-                if (playerManager.BeyConfiguration.IsBurst)
-                {
-                    OnBeyBurst?.Invoke("Player");
-                    HandlePlayerBurst();
-                    return;
-                }
+                OnBeyBurst?.Invoke("Player");
+                HandlePlayerBurst();
+                return;
             }
 
-            // Check enemy bursts
             for (int i = aliveEnemies.Count - 1; i >= 0; i--)
             {
                 EnemyBeyController enemy = aliveEnemies[i];
@@ -146,20 +150,19 @@ namespace BladeSpinners.Gameplay
                     continue;
                 }
 
-                if (enemy.BeyConfiguration.IsBurst)
-                {
-                    string enemyName = enemy.gameObject.name;
-                    Debug.Log($"💥 {enemyName} BURST! Triggering disassembly...");
-                    OnBeyBurst?.Invoke(enemyName);
-                    HandleEnemyBurst(enemy);
-                    aliveEnemies.RemoveAt(i);
+                if (!enemy.BeyConfiguration.IsBurst)
+                    continue;
 
-                    // Check win condition after each enemy burst
-                    if (aliveEnemies.Count == 0)
-                    {
-                        HandlePlayerWin();
-                        return;
-                    }
+                string enemyName = enemy.gameObject.name;
+                Debug.Log($"💥 {enemyName} BURST! Triggering disassembly...");
+                OnBeyBurst?.Invoke(enemyName);
+                HandleEnemyBurst(enemy);
+                aliveEnemies.RemoveAt(i);
+
+                if (aliveEnemies.Count == 0)
+                {
+                    HandlePlayerWin();
+                    return;
                 }
             }
         }
@@ -168,10 +171,9 @@ namespace BladeSpinners.Gameplay
         {
             Debug.Log("💥 PLAYER BURST! You lost!");
 
-            // Trigger burst effect on the player bey (parts fly off)
             if (playerManager != null)
             {
-                var burstEffect = playerManager.GetComponent<Effects.BeyBurstEffect>();
+                Effects.BeyBurstEffect burstEffect = playerManager.GetComponent<Effects.BeyBurstEffect>();
                 if (burstEffect == null)
                     burstEffect = playerManager.gameObject.AddComponent<Effects.BeyBurstEffect>();
                 burstEffect.TriggerBurst();
@@ -184,18 +186,136 @@ namespace BladeSpinners.Gameplay
         private void HandleEnemyBurst(EnemyBeyController enemy)
         {
             Debug.Log($"💥 {enemy.gameObject.name} BURST!");
-            // Disable the enemy bey (stop movement, make it fall over)
+            TryDropPartFromEnemy(enemy);
             enemy.OnBurst();
+        }
+
+        private void TryDropPartFromEnemy(EnemyBeyController enemy)
+        {
+            if (enemy == null)
+                return;
+
+            if (Random.value > anyPartDropChance)
+                return;
+
+            List<BeyPart> equippedParts = enemy.GetEquippedParts();
+            if (equippedParts.Count == 0)
+                return;
+
+            BeyPart selectedPart = equippedParts[Random.Range(0, equippedParts.Count)];
+            if (selectedPart == null)
+                return;
+
+            float rarityDropChance = GetRarityDropChance(selectedPart.Rarity);
+            if (Random.value > rarityDropChance)
+            {
+                Debug.Log($"[PartDrop] {enemy.name} selected {PartDisplayNameFormatter.ToShortDisplayName(selectedPart)} ({selectedPart.Rarity}) but failed rarity roll ({rarityDropChance:P0}).");
+                return;
+            }
+
+            SpawnPartDropPickup(selectedPart, enemy.transform.position + dropSpawnOffset);
+        }
+
+        private void SpawnPartDropPickup(BeyPart part, Vector3 worldPosition)
+        {
+            if (part == null)
+                return;
+
+            GameObject dropObject = new GameObject($"PartDrop_{PartDisplayNameFormatter.ToShortDisplayName(part).Replace(' ', '_')}");
+            dropObject.transform.position = worldPosition;
+            dropObject.transform.localScale = dropVisualScale;
+
+            MeshFilter meshFilter = dropObject.AddComponent<MeshFilter>();
+            MeshRenderer meshRenderer = dropObject.AddComponent<MeshRenderer>();
+            Mesh dropMesh = ProceduralPartMeshGenerator.GenerateMesh(part);
+            if (dropMesh != null)
+            {
+                meshFilter.sharedMesh = dropMesh;
+            }
+
+            Material material = new Material(ShaderProvider.URPLit);
+            Color color = part.PrimaryColor;
+            color.a = useTransparentDropMaterial ? Mathf.Clamp01(dropVisualAlpha) : 1f;
+            material.color = color;
+            if (useTransparentDropMaterial)
+            {
+                ApplyTransparentMaterialSettings(material);
+            }
+            meshRenderer.sharedMaterial = material;
+
+            SphereCollider trigger = dropObject.AddComponent<SphereCollider>();
+            trigger.isTrigger = true;
+            trigger.radius = Mathf.Max(0.1f, partPickupRadius);
+
+            dropObject.AddComponent<PickupBobAnimation>();
+            PartDropPickup pickup = dropObject.AddComponent<PartDropPickup>();
+            pickup.Initialize(part);
+
+            Debug.Log($"[PartDrop] Dropped {PartDisplayNameFormatter.ToShortDisplayName(part)} ({part.Rarity}).");
+        }
+
+        private static void ApplyTransparentMaterialSettings(Material material)
+        {
+            if (material == null)
+                return;
+
+            if (material.HasProperty("_Surface")) material.SetFloat("_Surface", 1f);
+            if (material.HasProperty("_Blend")) material.SetFloat("_Blend", 0f);
+            if (material.HasProperty("_ZWrite")) material.SetFloat("_ZWrite", 0f);
+            if (material.HasProperty("_SrcBlend")) material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            if (material.HasProperty("_DstBlend")) material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.EnableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+        }
+
+        private static float GetRarityDropChance(RarityTier rarity)
+        {
+            return rarity switch
+            {
+                RarityTier.Common => 1f,
+                RarityTier.Uncommon => 0.7f,
+                RarityTier.Rare => 0.45f,
+                RarityTier.Epic => 0.25f,
+                RarityTier.Legendary => 0.1f,
+                _ => 0.5f
+            };
         }
 
         private void HandlePlayerWin()
         {
             Debug.Log("🏆 ALL ENEMIES BURST! You win!");
+
+            if (playerManager != null && playerManager.BeyConfiguration != null)
+            {
+                playerManager.BeyConfiguration.SetSpinDrainPaused(true);
+            }
+
+            AutoCollectAllDroppedParts();
             SetState(MatchState.PlayerWon);
-            stateTimer = postMatchDelay;
+            stateTimer = autoRestartOnPlayerWin ? postMatchDelay : 0f;
         }
 
-        // ── Match flow helpers ───────────────────────────────────────
+        private void AutoCollectAllDroppedParts()
+        {
+            if (playerManager == null)
+                return;
+
+            PartDropPickup[] worldDrops = FindObjectsByType<PartDropPickup>(FindObjectsSortMode.None);
+            int collectedCount = 0;
+            for (int i = 0; i < worldDrops.Length; i++)
+            {
+                PartDropPickup drop = worldDrops[i];
+                if (drop != null && drop.TryCollect(playerManager))
+                    collectedCount++;
+            }
+
+            if (collectedCount > 0)
+            {
+                Debug.Log($"[PartDrop] Auto-collected {collectedCount} dropped part(s) when all enemies were destroyed.");
+            }
+        }
 
         private void SetState(MatchState newState)
         {
@@ -205,27 +325,18 @@ namespace BladeSpinners.Gameplay
             Debug.Log($"[MatchManager] State → {newState}");
         }
 
-        private void DisablePlayerMovement()
-        {
-            if (playerManager == null) return;
-            BeyMovementController movement = playerManager.MovementController;
-            if (movement != null) movement.enabled = false;
-        }
-
         private void RestartMatch()
         {
             Debug.Log("[MatchManager] Restarting match...");
-            // Re-enable player
             if (playerManager != null)
             {
                 BeyMovementController movement = playerManager.MovementController;
                 if (movement != null) movement.enabled = true;
 
-                // Reset player spin
                 playerManager.BeyConfiguration?.SetSpin(GameConstants.DEFAULT_STARTING_SPIN);
                 playerManager.BeyConfiguration?.SetMana(GameConstants.DEFAULT_MANA_POOL);
+                playerManager.BeyConfiguration?.SetSpinDrainPaused(false);
 
-                // Reset position
                 playerManager.transform.position = new Vector3(0, 3, 0);
                 Rigidbody rb = playerManager.GetComponent<Rigidbody>();
                 if (rb != null)
@@ -235,16 +346,14 @@ namespace BladeSpinners.Gameplay
                 }
             }
 
-            // Reset enemies
-            foreach (var enemy in enemies)
+            foreach (EnemyBeyController enemy in enemies)
             {
                 if (enemy != null)
                     enemy.ResetBey();
             }
+
             aliveEnemies.Clear();
             aliveEnemies.AddRange(enemies);
-
-            // Remove destroyed enemies
             aliveEnemies.RemoveAll(e => e == null);
             enemies.RemoveAll(e => e == null);
 
@@ -252,11 +361,8 @@ namespace BladeSpinners.Gameplay
             stateTimer = countdownDuration;
         }
 
-        // ── Gizmos ───────────────────────────────────────────────────
-
         private void OnDrawGizmos()
         {
-            // Draw match state label at world origin
             Vector3 pos = Vector3.up * 15f;
             switch (currentState)
             {
@@ -278,19 +384,20 @@ namespace BladeSpinners.Gameplay
                     break;
             }
 
-            // Draw lines from match manager to all tracked beys
             if (playerManager != null)
             {
                 Gizmos.color = Color.green;
                 Gizmos.DrawLine(pos, playerManager.transform.position);
             }
-            foreach (var enemy in enemies)
+
+            for (int i = 0; i < enemies.Count; i++)
             {
-                if (enemy != null)
-                {
-                    Gizmos.color = aliveEnemies.Contains(enemy) ? Color.red : Color.gray;
-                    Gizmos.DrawLine(pos, enemy.transform.position);
-                }
+                EnemyBeyController enemy = enemies[i];
+                if (enemy == null)
+                    continue;
+
+                Gizmos.color = aliveEnemies.Contains(enemy) ? Color.red : Color.gray;
+                Gizmos.DrawLine(pos, enemy.transform.position);
             }
         }
     }

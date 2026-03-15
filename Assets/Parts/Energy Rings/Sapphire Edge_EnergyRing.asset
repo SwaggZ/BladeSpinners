@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Sapphire Edge_EnergyRing
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Sapphire Edge_EnergyRing
+  partType: 3
+  occupiesSlots: 03000000
+  rarity: 2
+  tags: 
+  partID: sapphire edge_energyring_1991658076
+  description: A Rare EnergyRing from the Sapphire Edge set.
+  icon: {fileID: 0}
+  meshSeed: 1468708053
+  primaryColor: {r: 0, g: 0.37658936, b: 0.8003449, a: 1}
+  secondaryColor: {r: 0.44316947, g: 0.65286595, b: 0.88882595, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 225.19258
+  manaRegenRate: 7.5657935
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

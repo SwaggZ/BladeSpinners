@@ -116,8 +116,8 @@ namespace BladeSpinners.Gameplay.Movement
             {
                 PhysicsMaterial bouncyMat = new PhysicsMaterial("BeyBounce");
                 bouncyMat.bounciness = 0.4f; // Moderate bounce on landing
-                bouncyMat.dynamicFriction = 0.1f; // Low friction (spinning top)
-                bouncyMat.staticFriction = 0.1f;
+                bouncyMat.dynamicFriction = 0f; // Zero friction to reduce collision sticking
+                bouncyMat.staticFriction = 0f;
                 bouncyMat.frictionCombine = PhysicsMaterialCombine.Minimum;
                 bouncyMat.bounceCombine = PhysicsMaterialCombine.Maximum;
                 sphereCol.material = bouncyMat;
@@ -130,7 +130,7 @@ namespace BladeSpinners.Gameplay.Movement
                     Debug.LogWarning("[BeyMovement] ⚠️  'Ground' layer not found! Will raycast all layers instead");
                 
                 // List all objects in scene with colliders
-                Collider[] allColliders = FindObjectsOfType<Collider>();
+                Collider[] allColliders = FindObjectsByType<Collider>(FindObjectsSortMode.None);
                 Debug.Log($"[BeyMovement] Found {allColliders.Length} colliders in scene");
                 foreach (var col in allColliders)
                 {

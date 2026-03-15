@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using BladeSpinners.Gameplay;
 
 namespace BladeSpinners.Gameplay.Effects
 {
@@ -205,9 +206,7 @@ namespace BladeSpinners.Gameplay.Effects
 
             // Create a fresh Unlit transparent material — avoids URP Lit
             // shader variant issues when switching from Opaque to Transparent
-            Shader unlitShader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (unlitShader == null)
-                unlitShader = Shader.Find("Unlit/Color");
+            Shader unlitShader = ShaderProvider.URPUnlit;
 
             Material fadeMat = new Material(unlitShader);
             fadeMat.SetColor("_BaseColor", startColor);

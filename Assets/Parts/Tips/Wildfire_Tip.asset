@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Wildfire_Tip
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Wildfire_Tip
+  partType: 0
+  occupiesSlots: 00000000
+  rarity: 2
+  tags: 
+  partID: wildfire_tip_1903995758
+  description: A Rare Tip from the Wildfire set.
+  icon: {fileID: 0}
+  meshSeed: 1062963662
+  primaryColor: {r: 0.87387764, g: 0.25767213, b: 0.0965183, a: 1}
+  secondaryColor: {r: 0.9376801, g: 0.63319916, b: 0.55356944, a: 1}
+  tipBehavior: 6
+  behaviorBasedStaminaDrainModifier: 1.9381629
+  uphillResistanceMultiplier: 1.2419008
+  slopeMultiplier: 2.1219227
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

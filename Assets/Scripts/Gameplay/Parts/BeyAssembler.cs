@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using BladeSpinners.Core;
+using BladeSpinners.Gameplay;
 
 namespace BladeSpinners.Gameplay.Parts
 {
@@ -116,20 +117,20 @@ namespace BladeSpinners.Gameplay.Parts
         {
             if (urpLitShader == null)
             {
-                // Try URP Lit first, then fallback
-                urpLitShader = Shader.Find("Universal Render Pipeline/Lit");
-                if (urpLitShader == null)
-                    urpLitShader = Shader.Find("Universal Render Pipeline/Simple Lit");
-                if (urpLitShader == null)
-                    urpLitShader = Shader.Find("Standard"); // last resort
+                urpLitShader = ShaderProvider.URPLit;
+
+                if (urpLitShader != null)
+                    Debug.Log($"[BeyAssembler] Using shader: {urpLitShader.name}");
+                else
+                    Debug.LogWarning("[BeyAssembler] No shader found! Parts will appear magenta.");
             }
 
             if (bouncyMaterial == null)
             {
                 bouncyMaterial = new PhysicsMaterial("BeyPartBounce");
                 bouncyMaterial.bounciness = 0.4f;
-                bouncyMaterial.dynamicFriction = 0.1f;
-                bouncyMaterial.staticFriction = 0.1f;
+                bouncyMaterial.dynamicFriction = 0f;
+                bouncyMaterial.staticFriction = 0f;
                 bouncyMaterial.frictionCombine = PhysicsMaterialCombine.Minimum;
                 bouncyMaterial.bounceCombine = PhysicsMaterialCombine.Maximum;
             }
@@ -255,6 +256,8 @@ namespace BladeSpinners.Gameplay.Parts
 
             // Second pass: build, stack using mesh connection points (top of previous = bottom of next)
             float currentY = -totalHeight / 2f;
+            float energyRingLocalY = 0f;
+            bool hasEnergyRingLocalY = false;
 
             for (int i = 0; i < parts.Length; i++)
             {
@@ -267,6 +270,12 @@ namespace BladeSpinners.Gameplay.Parts
                 // Connection point: position so this mesh's bottom (bounds.min.y) sits at currentY
                 float meshBottomOffset = meshBounds.min.y;
                 float localY = currentY - meshBottomOffset;
+
+                // FaceBolt should connect at the same vertical anchor as the EnergyRing.
+                if (slots[i] == PartType.FaceBolt && hasEnergyRingLocalY)
+                {
+                    localY = energyRingLocalY;
+                }
 
                 GameObject partObj = new GameObject($"Part_{slots[i]}");
                 partObj.transform.SetParent(beyModelTransform, false);
@@ -281,7 +290,15 @@ namespace BladeSpinners.Gameplay.Parts
                 mf.sharedMesh = partMesh;
 
                 MeshRenderer mr = partObj.AddComponent<MeshRenderer>();
-                Material mat = new Material(urpLitShader != null ? urpLitShader : Shader.Find("Universal Render Pipeline/Lit"));
+                Shader shaderToUse = urpLitShader ?? ShaderProvider.URPLit;
+                if (shaderToUse == null)
+                {
+                    Debug.LogWarning($"[BeyAssembler] No shader found for part {slots[i]}, skipping material.");
+                    partObjects[slots[i]] = partObj;
+                    currentY += meshBounds.size.y;
+                    continue;
+                }
+                Material mat = new Material(shaderToUse);
 
                 // URP Lit uses _BaseColor (not _Color), _Metallic, _Smoothness (not _Glossiness)
                 mat.SetColor("_BaseColor", parts[i].PrimaryColor);
@@ -321,6 +338,17 @@ namespace BladeSpinners.Gameplay.Parts
 
                 partObjects[slots[i]] = partObj;
 
+                if (slots[i] == PartType.EnergyRing)
+                {
+                    energyRingLocalY = localY;
+                    hasEnergyRingLocalY = true;
+                }
+
+                if (slots[i] == PartType.FaceBolt && parts[i].FaceBoltEmblem != null)
+                {
+                    CreateFaceBoltEmblemVisual(partObj.transform, meshBounds, parts[i].FaceBoltEmblem);
+                }
+
                 // Advance currentY to the top of this mesh (connection point for the next part)
                 currentY += meshBounds.size.y;
             }
@@ -355,6 +383,34 @@ namespace BladeSpinners.Gameplay.Parts
                 else
                     DestroyImmediate(child.gameObject);
             }
+        }
+
+        private void CreateFaceBoltEmblemVisual(Transform faceBoltTransform, Bounds faceBoltBounds, Sprite emblemSprite)
+        {
+            if (faceBoltTransform == null || emblemSprite == null)
+                return;
+
+            GameObject emblemObject = new GameObject("FaceBoltEmblem");
+            emblemObject.transform.SetParent(faceBoltTransform, false);
+
+            float topY = faceBoltBounds.max.y + 0.002f;
+            emblemObject.transform.localPosition = new Vector3(0f, topY, 0f);
+            emblemObject.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+            float targetDiameter = Mathf.Max(faceBoltBounds.extents.x, faceBoltBounds.extents.z) * 1.6f;
+            float spriteDiameter = Mathf.Max(0.0001f, Mathf.Max(emblemSprite.bounds.size.x, emblemSprite.bounds.size.y));
+            float scale = targetDiameter / spriteDiameter;
+            emblemObject.transform.localScale = Vector3.one * scale;
+
+            SpriteRenderer renderer = emblemObject.AddComponent<SpriteRenderer>();
+            renderer.sprite = emblemSprite;
+            renderer.color = Color.white;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.sortingOrder = 20;
+            renderer.maskInteraction = SpriteMaskInteraction.None;
+
+            emblemObject.layer = faceBoltTransform.gameObject.layer;
         }
 
         // ================================================================
