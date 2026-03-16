@@ -20,11 +20,14 @@
 - [x] Third-person camera orbiting Bey
 - [x] Focus indicator arrow above currently focused enemy (hidden when no focus)
 - [x] Main player Bey prefab coordination (PlayerManager - ready for GameObject setup)
+- [x] Camera speed-line effect updated to animated triangle/wedge streaks with off-screen bases
+- [x] Camera occluders between player and camera fade to configurable partial opacity and restore correctly
 
 ## Inventory & Part Management
 - [x] PartInventory (run-temporary parts)
 - [x] PartDatabase (permanent parts registry)
 - [x] Part equipping/swapping logic (integrated into BeyConfiguration)
+- [x] Duplicate run-drop guard prevents adding the same dropped part twice to run inventory
 
 ## World Generation
 - [ ] Map chunk prefabs (flat, ramps, platforms, bowls, bridges, hazards)
@@ -76,16 +79,27 @@
 - [x] Main menu runtime GUI (Start Run, Inventory, Settings, Keybinds)
 - [x] Main menu runtime GUI visual refresh (flat cel-shaded panels, black toon outlines, responsive layout scaling)
 - [x] Pause menu runtime GUI (Resume, Run Inventory, Settings, Keybinds, Return Main Menu)
+- [x] Between-arena intermission menu for run inventory/build changes before advancing
 - [x] Pause menu Esc toggle migrated to Input System API (fixes legacy Input.GetKeyDown exception)
 - [x] Inventory/part swapping runtime MVP (main-menu loadout seeding + run-time equip from run inventory)
 - [x] Starter unlock flow now supports configurable base parts via `StarterPartsConfig` (`Resources/StarterPartsConfig.asset`)
 - [x] Spinning Bey preview + live stats window in inventory GUI
+- [x] Preview drag is vertical-only and resets when moving between menu states
 - [x] Preview/Run stat panel now includes live Spin and Mana current values
+- [x] Settings panel uses themed sliders and exposes clipping opacity control
+- [x] Settings panel exposes stat-rings UI opacity (0-100%) affecting both ring lines and ring text
+- [x] Death screen layout scales more responsively and fits killer-build content more aggressively
+- [x] Run-loss salvage UI allows choosing limited eligible parts to transfer to main inventory (depth-scaled count + rarity cap)
 - [ ] Achievement screen
 - [ ] Room transition UI
 
 ## Run Flow (Current Phase)
-- [x] Start Run launches random procedural test arena at runtime (current placeholder before multi-level run progression)
+- [x] Start Run builds a structured run progression instead of a single placeholder arena
+- [x] Runs currently use multi-level, multi-arena progression with deterministic arena seeds
+- [x] Enemy count and enemy-part rarity scale with run depth
+- [x] Arena clear opens an intermission menu instead of forcing an immediate next-arena transition
+- [x] Full run completion transfers all run-inventory parts to main inventory
+- [x] Mid-run loss supports limited salvage transfer selection instead of all-or-nothing loss
 
 ## Build & Runtime Safety
 - [x] `ShaderProvider` utility centralizes build-safe shader loading via `Resources/` reference materials (`URPLitReference.mat`, `URPUnlitReference.mat`)
@@ -96,6 +110,7 @@
 - [x] `OnGUI` wrapped in try-catch with on-screen error overlay in builds
 - [x] `StartRun()` catch block shows visible error text instead of silently returning to menu
 - [x] Resolution-aware UI scaling (`GetUiScale()`) based on 1080p baseline, clamped 0.85–2.25×
+- [x] `StarterPartsConfig` includes build-safe runtime part catalog references so non-base part sets are available in builds
 
 ## Visual Part Identity
 - [x] Face Bolt emblem visible on Face Bolt mesh in-game
@@ -122,4 +137,4 @@
 
 ---
 
-**Last Updated:** March 15, 2026
+**Last Updated:** March 16, 2026

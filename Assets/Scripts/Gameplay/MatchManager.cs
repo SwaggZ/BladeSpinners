@@ -15,15 +15,26 @@ namespace BladeSpinners.Gameplay
     public class MatchManager : MonoBehaviour
     {
         public enum MatchState { WaitingToStart, InProgress, PlayerWon, PlayerLost }
+        public enum PlayerDefeatReason
+        {
+            Unknown,
+            SpunOut,
+            BurstedByEnemy,
+            KnockedOutByEnemy,
+            JumpedOut
+        }
 
         [Header("Match Settings")]
         [SerializeField] private float countdownDuration = 3f;
         [SerializeField] private float postMatchDelay = 3f;
         [SerializeField] private bool autoRestartOnPlayerWin = false;
-        [SerializeField] private bool autoRestartOnPlayerLoss = true;
+        [SerializeField] private bool autoRestartOnPlayerLoss = false;
+        [SerializeField] private float ringOutYThreshold = -2.5f;
+
+        private const float EnemyCollisionKillWindowSeconds = 2f;
 
         [Header("Enemy Part Drops")]
-        [SerializeField, Range(0f, 1f)] private float anyPartDropChance = 0.6f;
+        [SerializeField, Range(0f, 1f)] private float anyPartDropChance = 0.97f;
         [SerializeField] private Vector3 dropSpawnOffset = new Vector3(0f, 0.35f, 0f);
         [SerializeField] private Vector3 dropVisualScale = new Vector3(1.75f, 1.75f, 1.75f);
         [SerializeField] private bool useTransparentDropMaterial = true;
@@ -36,12 +47,23 @@ namespace BladeSpinners.Gameplay
         private PlayerManager playerManager;
         private readonly List<EnemyBeyController> enemies = new List<EnemyBeyController>();
         private readonly List<EnemyBeyController> aliveEnemies = new List<EnemyBeyController>();
+        private readonly List<BeyPart> lastEnemyAggressorParts = new List<BeyPart>(5);
+
+        private float lastPlayerEnemyHitTime = -999f;
+        private PlayerDefeatReason lastPlayerDefeatReason = PlayerDefeatReason.Unknown;
+        private string lastPlayerDefeatMessage = "";
 
         public event System.Action<MatchState> OnMatchStateChanged;
         public event System.Action<string> OnBeyBurst;
+        public event System.Action<PlayerDefeatReason, string> OnPlayerDefeated;
 
         public MatchState CurrentState => currentState;
         public int EnemiesRemaining => aliveEnemies.Count;
+        public float CountdownRemaining => currentState == MatchState.WaitingToStart ? Mathf.Max(0f, stateTimer) : 0f;
+        public float CountdownDuration => countdownDuration;
+        public PlayerDefeatReason LastPlayerDefeatReason => lastPlayerDefeatReason;
+        public string LastPlayerDefeatMessage => lastPlayerDefeatMessage;
+        public IReadOnlyList<BeyPart> LastKillerParts => lastEnemyAggressorParts;
 
         public void RegisterPlayer(PlayerManager player)
         {
@@ -64,8 +86,28 @@ namespace BladeSpinners.Gameplay
                 playerManager.BeyConfiguration.SetSpinDrainPaused(false);
             }
 
+            ResetDefeatTracking();
+            SetCombatControllersEnabled(false);
+
             SetState(MatchState.WaitingToStart);
             stateTimer = countdownDuration;
+        }
+
+        public void NotifyPlayerJump()
+        {
+            // Kept for compatibility with callers. Death attribution now depends
+            // strictly on recent blade collision timing.
+        }
+
+        public void NotifyPlayerHitByEnemy(BeyConfiguration enemyConfig, bool wasKnockback)
+        {
+            lastPlayerEnemyHitTime = Time.time;
+            CacheKillerParts(enemyConfig);
+        }
+
+        public void RequestRestart()
+        {
+            RestartMatch();
         }
 
         private void Start()
@@ -105,7 +147,10 @@ namespace BladeSpinners.Gameplay
                 case MatchState.WaitingToStart:
                     stateTimer -= Time.deltaTime;
                     if (stateTimer <= 0f)
+                    {
+                        SetCombatControllersEnabled(true);
                         SetState(MatchState.InProgress);
+                    }
                     break;
 
                 case MatchState.InProgress:
@@ -134,10 +179,13 @@ namespace BladeSpinners.Gameplay
 
         private void CheckForBursts()
         {
+            if (CheckForPlayerRingOut())
+                return;
+
             if (playerManager != null && playerManager.BeyConfiguration != null && playerManager.BeyConfiguration.IsBurst)
             {
                 OnBeyBurst?.Invoke("Player");
-                HandlePlayerBurst();
+                HandlePlayerBurst(GetBurstDefeatReason(), BuildBurstDefeatMessage());
                 return;
             }
 
@@ -150,12 +198,29 @@ namespace BladeSpinners.Gameplay
                     continue;
                 }
 
+                if (enemy.transform.position.y <= ringOutYThreshold)
+                {
+                    string ringOutEnemyName = enemy.gameObject.name;
+                    Debug.Log($"💥 {ringOutEnemyName} RING-OUT! Triggering disassembly...");
+                    OnBeyBurst?.Invoke(ringOutEnemyName);
+                    HandleEnemyBurst(enemy);
+                    aliveEnemies.RemoveAt(i);
+
+                    if (aliveEnemies.Count == 0)
+                    {
+                        HandlePlayerWin();
+                        return;
+                    }
+
+                    continue;
+                }
+
                 if (!enemy.BeyConfiguration.IsBurst)
                     continue;
 
-                string enemyName = enemy.gameObject.name;
-                Debug.Log($"💥 {enemyName} BURST! Triggering disassembly...");
-                OnBeyBurst?.Invoke(enemyName);
+                string burstEnemyName = enemy.gameObject.name;
+                Debug.Log($"💥 {burstEnemyName} BURST! Triggering disassembly...");
+                OnBeyBurst?.Invoke(burstEnemyName);
                 HandleEnemyBurst(enemy);
                 aliveEnemies.RemoveAt(i);
 
@@ -167,9 +232,75 @@ namespace BladeSpinners.Gameplay
             }
         }
 
-        private void HandlePlayerBurst()
+        private bool CheckForPlayerRingOut()
         {
-            Debug.Log("💥 PLAYER BURST! You lost!");
+            if (playerManager == null)
+                return false;
+
+            if (playerManager.transform.position.y > ringOutYThreshold)
+                return false;
+
+            PlayerDefeatReason reason = GetRingOutDefeatReason();
+            HandlePlayerBurst(reason, BuildRingOutDefeatMessage(reason));
+            return true;
+        }
+
+        private PlayerDefeatReason GetBurstDefeatReason()
+        {
+            if (WasRecentEnemyCollision())
+                return PlayerDefeatReason.BurstedByEnemy;
+
+            return PlayerDefeatReason.SpunOut;
+        }
+
+        private PlayerDefeatReason GetRingOutDefeatReason()
+        {
+            if (WasRecentEnemyCollision())
+                return PlayerDefeatReason.KnockedOutByEnemy;
+
+            return PlayerDefeatReason.JumpedOut;
+        }
+
+        private bool WasRecentEnemyCollision()
+        {
+            return Time.time - lastPlayerEnemyHitTime <= EnemyCollisionKillWindowSeconds;
+        }
+
+        private string BuildBurstDefeatMessage()
+        {
+            if (WasRecentEnemyCollision())
+                return "An enemy bursted you.";
+
+            return "You spun out naturally.";
+        }
+
+        private string BuildRingOutDefeatMessage(PlayerDefeatReason reason)
+        {
+            if (reason == PlayerDefeatReason.KnockedOutByEnemy)
+                return "An enemy knocked you out of the arena.";
+
+            return "You flew out.";
+        }
+
+        private void CacheKillerParts(BeyConfiguration enemyConfig)
+        {
+            lastEnemyAggressorParts.Clear();
+            if (enemyConfig == null)
+                return;
+
+            lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.Tip));
+            lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.Track));
+            lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.FusionWheel));
+            lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.EnergyRing));
+            lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.FaceBolt));
+        }
+
+        private void HandlePlayerBurst(PlayerDefeatReason reason, string message)
+        {
+            if (currentState == MatchState.PlayerLost)
+                return;
+
+            Debug.Log($"💥 PLAYER DEFEATED! Reason={reason} Message={message}");
 
             if (playerManager != null)
             {
@@ -179,6 +310,11 @@ namespace BladeSpinners.Gameplay
                 burstEffect.TriggerBurst();
             }
 
+            lastPlayerDefeatReason = reason;
+            lastPlayerDefeatMessage = string.IsNullOrWhiteSpace(message) ? "You were defeated." : message;
+            OnPlayerDefeated?.Invoke(lastPlayerDefeatReason, lastPlayerDefeatMessage);
+
+            SetCombatControllersEnabled(false);
             SetState(MatchState.PlayerLost);
             stateTimer = postMatchDelay;
         }
@@ -275,10 +411,10 @@ namespace BladeSpinners.Gameplay
             return rarity switch
             {
                 RarityTier.Common => 1f,
-                RarityTier.Uncommon => 0.7f,
-                RarityTier.Rare => 0.45f,
-                RarityTier.Epic => 0.25f,
-                RarityTier.Legendary => 0.1f,
+                RarityTier.Uncommon => 0.9f,
+                RarityTier.Rare => 0.72f,
+                RarityTier.Epic => 0.5f,
+                RarityTier.Legendary => 0.24f,
                 _ => 0.5f
             };
         }
@@ -293,8 +429,57 @@ namespace BladeSpinners.Gameplay
             }
 
             AutoCollectAllDroppedParts();
+            SetCombatControllersEnabled(false);
             SetState(MatchState.PlayerWon);
             stateTimer = autoRestartOnPlayerWin ? postMatchDelay : 0f;
+        }
+
+        private void SetCombatControllersEnabled(bool enabled)
+        {
+            if (playerManager != null)
+            {
+                if (playerManager.InputHandler != null)
+                    playerManager.InputHandler.enabled = enabled;
+                if (playerManager.MovementController != null)
+                    playerManager.MovementController.enabled = enabled;
+
+                Rigidbody playerRb = playerManager.GetComponent<Rigidbody>();
+                if (!enabled && playerRb != null)
+                {
+                    playerRb.linearVelocity = Vector3.zero;
+                    playerRb.angularVelocity = Vector3.zero;
+                }
+            }
+
+            for (int i = 0; i < enemies.Count; i++)
+            {
+                EnemyBeyController enemy = enemies[i];
+                if (enemy == null)
+                    continue;
+
+                AIInputHandler ai = enemy.GetComponent<AIInputHandler>();
+                if (ai != null)
+                    ai.enabled = enabled;
+
+                BeyMovementController move = enemy.GetComponent<BeyMovementController>();
+                if (move != null)
+                    move.enabled = enabled;
+
+                Rigidbody enemyRb = enemy.GetComponent<Rigidbody>();
+                if (!enabled && enemyRb != null)
+                {
+                    enemyRb.linearVelocity = Vector3.zero;
+                    enemyRb.angularVelocity = Vector3.zero;
+                }
+            }
+        }
+
+        private void ResetDefeatTracking()
+        {
+            lastPlayerEnemyHitTime = -999f;
+            lastEnemyAggressorParts.Clear();
+            lastPlayerDefeatReason = PlayerDefeatReason.Unknown;
+            lastPlayerDefeatMessage = "";
         }
 
         private void AutoCollectAllDroppedParts()
@@ -357,6 +542,8 @@ namespace BladeSpinners.Gameplay
             aliveEnemies.RemoveAll(e => e == null);
             enemies.RemoveAll(e => e == null);
 
+            ResetDefeatTracking();
+            SetCombatControllersEnabled(false);
             SetState(MatchState.WaitingToStart);
             stateTimer = countdownDuration;
         }

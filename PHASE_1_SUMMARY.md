@@ -1,5 +1,7 @@
 # Phase 1: Movement & Player Gameplay - COMPLETE ✅
 
+> Historical milestone note: this document describes the completed phase-1 foundation. The live project has since advanced beyond this snapshot with runtime menus, multi-arena run progression, responsive overlays, and camera occluder fading.
+
 ## Summary
 Phase 1 is now complete! All core movement, physics, and player control systems are implemented and ready for integration into scenes.
 
@@ -111,7 +113,7 @@ To use this system in a scene, you need:
 Each stat belongs to exactly one slot type, making composition transparent and predictable.
 
 ## Next Steps (Phase 2: World Generation)
-The movement foundation is ready! Next:
+This section is preserved as the original handoff from the end of phase 1:
 1. Create dungeon layout generator
 2. Build map chunk system
 3. Implement room types and transitions
@@ -164,4 +166,4 @@ Assets/Scripts/
 
 ---
 **Status**: ✅ Complete and ready for Phase 2 (World Generation)
-**Last Updated**: February 23, 2026
+**Last Updated**: March 16, 2026

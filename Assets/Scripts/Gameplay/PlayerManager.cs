@@ -182,12 +182,18 @@ namespace BladeSpinners.Gameplay
         /// </summary>
         public void AddPartToInventory(BeyPart part)
         {
-            bool added = runInventory.AddPart(part);
+            if (part == null) return;
 
-            if (!added)
+            // Prevent duplicates — same ScriptableObject reference already in run inventory
+            if (runInventory.Contains(part))
             {
-                Debug.LogWarning($"Could not add part {part.PartName} to inventory - slot full");
+                Debug.Log($"[PartDrop] Skipped duplicate: {part.PartName} already in run inventory.");
+                return;
             }
+
+            bool added = runInventory.AddPart(part);
+            if (!added)
+                Debug.LogWarning($"Could not add part {part.PartName} to inventory - slot full");
         }
 
         /// <summary>

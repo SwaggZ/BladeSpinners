@@ -1,5 +1,6 @@
 using UnityEngine;
 using BladeSpinners.Core;
+using BladeSpinners.Gameplay;
 using BladeSpinners.Gameplay.Parts;
 
 namespace BladeSpinners.Gameplay.Movement
@@ -63,6 +64,7 @@ namespace BladeSpinners.Gameplay.Movement
 
         // How quickly momentum fades while airborne (per second)
         private const float AIRBORNE_MOMENTUM_DECAY = 1.0f;
+        private const float STEERING_FORCE_MULTIPLIER = 1.85f;
 
         // BeyModel child transform — this is what tilts/spins, not the root
         [SerializeField]
@@ -437,7 +439,7 @@ namespace BladeSpinners.Gameplay.Movement
 
             // Sideways force scales with speed — faster = wider arcs
             float gmTurn = GameManager.GetForBey(isEnemy, g => g.turnSpeedMultiplier, g => g.enemyTurnSpeedMultiplier);
-            float sideForce = steeringInput * speed * steerStrength * rb.mass * gmTurn;
+            float sideForce = steeringInput * speed * steerStrength * rb.mass * gmTurn * STEERING_FORCE_MULTIPLIER;
             rb.AddForce(sideDirection * sideForce, ForceMode.Force);
         }
 
@@ -497,6 +499,12 @@ namespace BladeSpinners.Gameplay.Movement
             rb.AddForce(Vector3.up * jumpForce, ForceMode.VelocityChange);
             isGrounded = false;
             jumpGraceTimer = JUMP_GRACE_DURATION;
+
+            if (!isEnemy)
+            {
+                MatchManager match = FindFirstObjectByType<MatchManager>();
+                match?.NotifyPlayerJump();
+            }
             
             if (debugMovement)
                 Debug.Log("[BeyMovement] JUMP");
@@ -616,6 +624,9 @@ namespace BladeSpinners.Gameplay.Movement
         public Rigidbody Rb => rb;
         public bool IsGrounded => isGrounded;
         public Vector3 CurrentVelocity => rb.linearVelocity;
+        public float CurrentHorizontalSpeed => rb != null
+            ? new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z).magnitude
+            : 0f;
         public float MomentumStrength => momentumStrength;
         public float CurrentBoostMultiplier => boost;
         public ITipBehavior ActiveTipBehavior => activeTipBehavior;

@@ -7,16 +7,65 @@ using BladeSpinners.Gameplay.Combat;
 using BladeSpinners.Gameplay.Movement;
 using BladeSpinners.Gameplay.Parts;
 using BladeSpinners.World;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace BladeSpinners.Gameplay.UI
 {
     public static class RuntimeRunBuilder
     {
+        private const int DefaultLevelCount = 3;
+        private const int DefaultArenasPerLevel = 3;
+
+        public sealed class RunProgression
+        {
+            public int RunSeed { get; }
+            public int TotalLevels { get; }
+            public int ArenasPerLevel { get; }
+
+            public int CurrentLevelIndex { get; private set; }
+            public int CurrentArenaIndex { get; private set; }
+
+            public int TotalArenaCount => TotalLevels * ArenasPerLevel;
+            public int DepthIndex => CurrentLevelIndex * ArenasPerLevel + CurrentArenaIndex;
+            public int CurrentLevelOneBased => CurrentLevelIndex + 1;
+            public int CurrentArenaOneBased => CurrentArenaIndex + 1;
+            public bool IsLastArena => DepthIndex >= TotalArenaCount - 1;
+
+            public RunProgression(int runSeed, int totalLevels, int arenasPerLevel)
+            {
+                RunSeed = runSeed;
+                TotalLevels = Mathf.Max(1, totalLevels);
+                ArenasPerLevel = Mathf.Max(1, arenasPerLevel);
+                CurrentLevelIndex = 0;
+                CurrentArenaIndex = 0;
+            }
+
+            public bool TryAdvance()
+            {
+                if (IsLastArena)
+                    return false;
+
+                CurrentArenaIndex++;
+                if (CurrentArenaIndex >= ArenasPerLevel)
+                {
+                    CurrentArenaIndex = 0;
+                    CurrentLevelIndex = Mathf.Min(CurrentLevelIndex + 1, TotalLevels - 1);
+                }
+
+                return true;
+            }
+        }
+
         public struct RunContext
         {
             public PlayerManager Player;
             public MatchManager Match;
             public ThirdPersonCameraController CameraController;
+            public RunProgression Progression;
+            public int ArenaSeed;
+            public int DepthIndex;
         }
 
         private static readonly BindingFlags Flags = BindingFlags.NonPublic | BindingFlags.Instance;
@@ -26,15 +75,31 @@ namespace BladeSpinners.Gameplay.UI
             List<BeyPart> ownedParts,
             List<BeyPart> enemyPartPool,
             int seed,
-            int enemyCount)
+            int enemyCount,
+            RunProgression progression = null,
+            List<BeyPart> carriedInventory = null)
         {
             ClearSceneForRun();
+
+            RunProgression activeProgression = progression
+                ?? new RunProgression(seed, DefaultLevelCount, DefaultArenasPerLevel);
+            int depthIndex = activeProgression.DepthIndex;
+            int arenaSeed = ComputeArenaSeed(activeProgression.RunSeed, depthIndex);
+            int depthScaledEnemyCount = Mathf.Clamp(enemyCount + depthIndex / 2, 2, GameConstants.ENEMY_MAX_PER_COMBAT_ROOM);
 
             GameObject gmObj = new GameObject("GameManager");
             gmObj.AddComponent<GameManager>();
 
-            GameObject arena = ProceduralArenaGenerator.Generate(seed, RoomType.Combat);
-            arena.name = "Arena";
+            int spinPickupCount = Mathf.Max(depthScaledEnemyCount + 1, 3);
+            int staminaPickupCount = Mathf.Max(1, depthScaledEnemyCount / 2);
+            GameObject arena = ProceduralArenaGenerator.Generate(
+                arenaSeed,
+                RoomType.Combat,
+                -1,
+                -1,
+                staminaPickupCount,
+                spinPickupCount);
+            arena.name = $"Arena_L{activeProgression.CurrentLevelOneBased}_A{activeProgression.CurrentArenaOneBased}";
 
             GameObject playerObj = CreatePlayerBey(selectedLoadout);
             PlayerManager playerManager = playerObj.GetComponent<PlayerManager>();
@@ -43,13 +108,19 @@ namespace BladeSpinners.Gameplay.UI
             MatchManager match = CreateMatchManager();
             match.RegisterPlayer(playerManager);
 
-            SeedRunInventory(playerManager, selectedLoadout);
+            SeedRunInventory(playerManager, selectedLoadout, carriedInventory);
 
             List<Transform> enemyTransforms = new List<Transform>();
-            List<BeyPart> enemyCatalog = (enemyPartPool != null && enemyPartPool.Count > 0) ? enemyPartPool : ownedParts;
-            for (int i = 0; i < enemyCount; i++)
+            List<BeyPart> enemyCatalog = BuildExpandedEnemyCatalog(selectedLoadout, ownedParts, enemyPartPool);
+            for (int i = 0; i < depthScaledEnemyCount; i++)
             {
-                GameObject enemy = CreateEnemyBey(i, enemyCount, playerObj.transform, enemyCatalog);
+                GameObject enemy = CreateEnemyBey(
+                    i,
+                    depthScaledEnemyCount,
+                    playerObj.transform,
+                    enemyCatalog,
+                    depthIndex,
+                    Mathf.Max(1, activeProgression.TotalArenaCount));
                 EnemyBeyController enemyCtrl = enemy.GetComponent<EnemyBeyController>();
                 match.RegisterEnemy(enemyCtrl);
                 enemyTransforms.Add(enemy.transform);
@@ -66,8 +137,21 @@ namespace BladeSpinners.Gameplay.UI
             {
                 Player = playerManager,
                 Match = match,
-                CameraController = camController
+                CameraController = camController,
+                Progression = activeProgression,
+                ArenaSeed = arenaSeed,
+                DepthIndex = depthIndex
             };
+        }
+
+        public static RunProgression CreateRunProgression(int runSeed, int levelCount = DefaultLevelCount, int arenasPerLevel = DefaultArenasPerLevel)
+        {
+            return new RunProgression(runSeed, levelCount, arenasPerLevel);
+        }
+
+        public static void ClearRunObjectsForMainMenu()
+        {
+            ClearSceneForRun();
         }
 
         private static void ClearSceneForRun()
@@ -158,7 +242,13 @@ namespace BladeSpinners.Gameplay.UI
             return root;
         }
 
-        private static GameObject CreateEnemyBey(int index, int totalEnemies, Transform playerTarget, List<BeyPart> catalog)
+        private static GameObject CreateEnemyBey(
+            int index,
+            int totalEnemies,
+            Transform playerTarget,
+            List<BeyPart> catalog,
+            int depthIndex,
+            int totalArenaCount)
         {
             float angle = (float)index / Mathf.Max(1, totalEnemies) * Mathf.PI * 2f;
             Vector3 spawn = new Vector3(Mathf.Cos(angle) * 10f, 3f, Mathf.Sin(angle) * 10f);
@@ -213,7 +303,8 @@ namespace BladeSpinners.Gameplay.UI
             typeof(BeyAssembler).GetField("beyModelTransform", Flags)?.SetValue(assembler, spinChild.transform);
 
             assembler.SetConfiguration(config);
-            ApplyLoadoutToAssembler(assembler, GetRandomLoadout(catalog, 9000 + index * 97));
+            int enemySeed = 9000 + index * 97 + depthIndex * 211;
+            ApplyLoadoutToAssembler(assembler, GetRandomLoadout(catalog, enemySeed, depthIndex, totalArenaCount));
             enemy.Initialize(config, playerTarget);
 
             return root;
@@ -250,17 +341,31 @@ namespace BladeSpinners.Gameplay.UI
             return matchObject.AddComponent<MatchManager>();
         }
 
-        private static void SeedRunInventory(PlayerManager player, Dictionary<PartType, BeyPart> selectedLoadout)
+        private static void SeedRunInventory(
+            PlayerManager player,
+            Dictionary<PartType, BeyPart> selectedLoadout,
+            List<BeyPart> carriedInventory)
         {
-            if (player == null || selectedLoadout == null)
+            if (player == null)
                 return;
 
-            foreach (KeyValuePair<PartType, BeyPart> kv in selectedLoadout)
+            if (selectedLoadout != null)
             {
-                if (kv.Value != null)
+                foreach (KeyValuePair<PartType, BeyPart> kv in selectedLoadout)
                 {
-                    player.AddPartToInventory(kv.Value);
+                    if (kv.Value != null)
+                        player.AddPartToInventory(kv.Value);
                 }
+            }
+
+            if (carriedInventory == null)
+                return;
+
+            for (int i = 0; i < carriedInventory.Count; i++)
+            {
+                BeyPart part = carriedInventory[i];
+                if (part != null)
+                    player.AddPartToInventory(part);
             }
         }
 
@@ -278,8 +383,11 @@ namespace BladeSpinners.Gameplay.UI
             }
         }
 
-        private static Dictionary<PartType, BeyPart> GetRandomLoadout(List<BeyPart> catalog, int seed)
+        private static Dictionary<PartType, BeyPart> GetRandomLoadout(List<BeyPart> catalog, int seed, int depthIndex, int totalArenaCount)
         {
+            if (catalog == null)
+                catalog = new List<BeyPart>();
+
             Dictionary<PartType, List<BeyPart>> byType = new Dictionary<PartType, List<BeyPart>>();
             foreach (PartType type in Enum.GetValues(typeof(PartType)))
             {
@@ -298,6 +406,7 @@ namespace BladeSpinners.Gameplay.UI
 
             System.Random rng = new System.Random(seed);
             Dictionary<PartType, BeyPart> loadout = new Dictionary<PartType, BeyPart>();
+            float depth01 = Mathf.Clamp01(totalArenaCount <= 1 ? 1f : (float)depthIndex / (totalArenaCount - 1));
             foreach (PartType type in Enum.GetValues(typeof(PartType)))
             {
                 List<BeyPart> list = byType[type];
@@ -307,10 +416,109 @@ namespace BladeSpinners.Gameplay.UI
                     continue;
                 }
 
-                loadout[type] = list[rng.Next(0, list.Count)];
+                loadout[type] = ChoosePartForDepth(list, rng, depth01);
             }
 
             return loadout;
+        }
+
+        private static BeyPart ChoosePartForDepth(List<BeyPart> parts, System.Random rng, float depth01)
+        {
+            if (parts == null || parts.Count == 0)
+                return null;
+
+            int maxRarityIndex = Enum.GetValues(typeof(RarityTier)).Length - 1;
+            int targetRarity = Mathf.Clamp(Mathf.RoundToInt(depth01 * maxRarityIndex), 0, maxRarityIndex);
+            int floorRarity = Mathf.Clamp(Mathf.FloorToInt(depth01 * Mathf.Max(1, maxRarityIndex - 1)), 0, maxRarityIndex);
+
+            float totalWeight = 0f;
+            float[] weights = new float[parts.Count];
+            for (int i = 0; i < parts.Count; i++)
+            {
+                BeyPart part = parts[i];
+                int rarityIndex = part != null ? (int)part.Rarity : 0;
+                int rarityDistance = Mathf.Abs(rarityIndex - targetRarity);
+
+                float weight = 1f / (1f + rarityDistance * rarityDistance);
+                if (rarityIndex < targetRarity)
+                    weight *= 0.65f;
+                if (rarityIndex > targetRarity)
+                    weight *= 1.15f;
+                if (rarityIndex < floorRarity)
+                    weight *= 0.2f;
+
+                weights[i] = Mathf.Max(0.0001f, weight);
+                totalWeight += weights[i];
+            }
+
+            float roll = (float)rng.NextDouble() * totalWeight;
+            for (int i = 0; i < parts.Count; i++)
+            {
+                roll -= weights[i];
+                if (roll <= 0f)
+                    return parts[i];
+            }
+
+            return parts[parts.Count - 1];
+        }
+
+        private static List<BeyPart> BuildExpandedEnemyCatalog(
+            Dictionary<PartType, BeyPart> selectedLoadout,
+            List<BeyPart> ownedParts,
+            List<BeyPart> enemyPartPool)
+        {
+            HashSet<BeyPart> unique = new HashSet<BeyPart>();
+            AddParts(unique, enemyPartPool);
+            AddParts(unique, ownedParts);
+
+            if (selectedLoadout != null)
+            {
+                foreach (KeyValuePair<PartType, BeyPart> kv in selectedLoadout)
+                {
+                    if (kv.Value != null)
+                        unique.Add(kv.Value);
+                }
+            }
+
+            AddParts(unique, Resources.FindObjectsOfTypeAll<BeyPart>());
+
+#if UNITY_EDITOR
+            string[] guids = AssetDatabase.FindAssets("t:BeyPart");
+            for (int i = 0; i < guids.Length; i++)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guids[i]);
+                BeyPart part = AssetDatabase.LoadAssetAtPath<BeyPart>(path);
+                if (part != null)
+                    unique.Add(part);
+            }
+#endif
+
+            return new List<BeyPart>(unique);
+        }
+
+        private static int ComputeArenaSeed(int runSeed, int depthIndex)
+        {
+            unchecked
+            {
+                return runSeed * 73856093 ^ depthIndex * 19349663;
+            }
+        }
+
+        private static void AddParts(IEnumerable<BeyPart> source, HashSet<BeyPart> target)
+        {
+            if (source == null || target == null)
+                return;
+
+            foreach (BeyPart part in source)
+            {
+                if (part != null)
+                    target.Add(part);
+            }
+        }
+
+        private static void AddParts(HashSet<BeyPart> target, IEnumerable<BeyPart> source)
+        {
+            AddParts(source, target);
         }
     }
 }

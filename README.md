@@ -35,6 +35,8 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **Auto-target switching** — When a locked enemy bursts, camera instantly switches to the next closest enemy
 - **Scroll cycling** — Scroll wheel to cycle between enemy targets
 - **Focused enemy arrow** — Small arrow appears above the currently focused enemy and hides when no enemy is focused
+- **Speed wedges** — High-speed motion uses animated off-screen triangle streaks instead of flat line strips
+- **Occluder fade** — Walls and arena pieces between the camera and player fade to a configurable partial opacity instead of fully disappearing
 
 ### AI Opponents
 - **State machine AI** — Chase, Attack, and Reposition states with configurable ranges
@@ -51,15 +53,24 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **Larger pickup radius + clear reward** — Part pickups use a larger trigger radius and are auto-collected when all enemies are destroyed
 - **No forced center teleport on win** — Auto-restart on player win is disabled by default (can be toggled in `MatchManager`)
 - **Spin holds on enemy clear** — When all enemies are destroyed, player spin drain pauses during victory state
+- **Run progression** — Runs now span multiple levels and arenas instead of a single placeholder combat room
+- **Depth scaling** — Deeper arenas increase enemy count and bias enemy loadouts toward higher-rarity parts
+- **Duplicate drop guard** — If a dropped part already exists in run inventory, it is skipped instead of duplicated
 - **Auto-discovery** — All beys are found at runtime — no manual wiring required
 - **Balance sliders** — 26 GameManager sliders (13 global + 13 enemy) adjustable at runtime in the Inspector
 
 ### Menus & Inventory (MVP)
 - **Runtime main menu overlay** — Start Run, Inventory, Settings, Keybinds
 - **Runtime pause menu** — Resume, Run Inventory, Settings, Keybinds, Return to Main Menu
+- **Between-arena intermission** — Arena clears open a build-management menu before the next arena starts
 - **Run inventory progression** — Run starts with selected main-menu loadout; dropped parts are added and can be equipped during run
 - **Live spinning preview window** — Inventory shows a spinning Bey preview and live stats while parts are changed
-- **Start Run now launches random test arena** — Creates a random procedural arena + player + enemies (current phase test-run flow)
+- **Preview drag pitch** — Menu previews rotate vertically only and reset cleanly when changing panels
+- **Runtime settings sliders** — Settings panel includes themed sliders for volume, sensitivity, and clipping opacity
+- **Rings UI opacity** — Settings includes a 0-100% slider that fades both stat rings and ring text
+- **Defeat salvage flow** — On run loss, players choose a limited number of eligible run parts to keep (cap scales with run depth and rarity gate)
+- **Run completion transfer** — On full run completion, all run-inventory parts transfer to main inventory
+- **Structured test run flow** — Start Run currently creates a 3-level, 3-arena-per-level progression loop with carry-over inventory and build changes between arenas
 - **Resolution-aware scaling** — UI scales with screen resolution using a 1080p baseline (works at FHD, 1440p, 4K)
 
 ### Build Safety
@@ -67,6 +78,7 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **IL2CPP stripping protection** — `link.xml` preserves all Assembly-CSharp code for reflection-heavy runtime wiring
 - **Graceful error handling** — Bootstrap, initialization, and UI rendering wrapped in try-catch with on-screen error overlay in builds
 - **Scene camera guarantee** — Main Camera baked into SampleScene + runtime fallback creation
+- **Build-safe part catalog** — `Resources/StarterPartsConfig.asset` stores a runtime catalog reference list so all BeyPart assets are included in builds
 
 ### Arena
 - **Procedural generation** — Arenas built at runtime with configurable geometry
@@ -110,6 +122,14 @@ Assets/
 ## Additional Docs
 
 - See `PART_SET_GENERATION_GUIDE.md` for single-set and massive-batch part generation workflows.
+
+## Current Runtime Loop
+
+1. Start a run from the main menu with your selected loadout.
+2. Fight through a depth-based sequence of arenas grouped into levels.
+3. Collect dropped parts and re-equip from run inventory during pause or intermission menus.
+4. After each arena clear, use the between-arena menu to adjust your build before continuing.
+5. Progress deeper into the run as enemy counts and rarity quality increase.
 
 ## Balance Tuning
 

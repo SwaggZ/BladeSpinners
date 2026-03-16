@@ -14,7 +14,7 @@ namespace BladeSpinners.Core
         // Boost & Movement
         public const float BOOST_FORCE_MULTIPLIER = 1.5f;
         public const float BOOST_STAMINA_DRAIN_MULTIPLIER = 3f;
-        public const float BASE_FORWARD_FORCE = 100f;
+        public const float BASE_FORWARD_FORCE = 78f;
         public const float BASE_TURN_SPEED = 180f; // degrees per second
         public const float JUMP_FORCE = 5f;
 

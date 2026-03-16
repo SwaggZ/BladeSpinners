@@ -47,6 +47,7 @@ namespace BladeSpinners.Gameplay
         [Header("Behavior")]
         [SerializeField] private float speedReference = 30f;
         [SerializeField] private float speedBoostAllowance = 12f;
+        [SerializeField, Range(0f, 1f)] private float uiOpacity = 1f;
 
         private RingGroup spinRing;
         private RingGroup manaRing;
@@ -78,6 +79,8 @@ namespace BladeSpinners.Gameplay
             {
                 BuildVisuals();
             }
+
+            ApplyOpacityToAllVisuals();
         }
 
         private void Awake()
@@ -185,6 +188,16 @@ namespace BladeSpinners.Gameplay
             SetRingFill(spinRing, 0f);
             SetRingFill(manaRing, 0f);
             SetRingFill(speedRing, 0f);
+            ApplyOpacityToAllVisuals();
+        }
+
+        public void SetUiOpacity(float opacity)
+        {
+            uiOpacity = Mathf.Clamp01(opacity);
+            if (!visualsCreated)
+                return;
+
+            ApplyOpacityToAllVisuals();
         }
 
         private RingGroup CreateRingGroup(string tag, float radius, Color color, string labelText)
@@ -219,11 +232,7 @@ namespace BladeSpinners.Gameplay
             Material material = new Material(shader);
             material.SetColor("_BaseColor", color);
             material.SetColor("_Color", color);
-            material.SetFloat("_Cull", 0f); // render both sides so rings remain visible from above/below
-            material.SetFloat("_Surface", 1f); // transparent mode
-            material.SetFloat("_Blend", 0f);
-            material.SetFloat("_ZWrite", 0f); // avoid coplanar depth fighting artifacts
-            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            ConfigureLineMaterialForTransparency(material);
             material.renderQueue = renderQueue;
 
             LineRenderer line = lineObject.AddComponent<LineRenderer>();
@@ -292,6 +301,91 @@ namespace BladeSpinners.Gameplay
                 ring.FillLine.SetPosition(i, position);
                 ring.FillOutline.SetPosition(i, position);
             }
+        }
+
+        private void ApplyOpacityToAllVisuals()
+        {
+            ApplyRingOpacity(spinRing, spinColor);
+            ApplyRingOpacity(manaRing, manaColor);
+            ApplyRingOpacity(speedRing, speedColor);
+        }
+
+        private void ApplyRingOpacity(RingGroup ring, Color sourceColor)
+        {
+            if (ring.Root == null)
+                return;
+
+            Color darkBaseColor = GetDarkBaseColor(sourceColor);
+            Color brightFillColor = GetBrightFillColor(sourceColor);
+            Color blackOutline = new Color(0f, 0f, 0f, uiOpacity);
+
+            SetLineOpacity(ring.BgOutline, blackOutline);
+            SetLineOpacity(ring.FillOutline, blackOutline);
+            SetLineOpacity(ring.BgFill, WithAlpha(darkBaseColor, uiOpacity));
+            SetLineOpacity(ring.FillLine, WithAlpha(brightFillColor, uiOpacity));
+
+            TextMesh[] textMeshes = ring.Root.GetComponentsInChildren<TextMesh>(true);
+            for (int i = 0; i < textMeshes.Length; i++)
+            {
+                TextMesh textMesh = textMeshes[i];
+                if (textMesh == null)
+                    continue;
+
+                bool isOutline = textMesh.gameObject.name.Contains("Outline");
+                Color textColor = isOutline
+                    ? new Color(0f, 0f, 0f, 0.9f * uiOpacity)
+                    : WithAlpha(sourceColor, uiOpacity);
+                textMesh.color = textColor;
+
+                MeshRenderer renderer = textMesh.GetComponent<MeshRenderer>();
+                if (renderer != null && renderer.material != null)
+                {
+                    if (renderer.material.HasProperty("_BaseColor")) renderer.material.SetColor("_BaseColor", textColor);
+                    if (renderer.material.HasProperty("_Color")) renderer.material.SetColor("_Color", textColor);
+                }
+            }
+        }
+
+        private static void SetLineOpacity(LineRenderer line, Color color)
+        {
+            if (line == null)
+                return;
+
+            line.startColor = color;
+            line.endColor = color;
+            line.colorGradient = CreateFlatGradient(color);
+
+            if (line.material != null)
+            {
+                ConfigureLineMaterialForTransparency(line.material);
+                if (line.material.HasProperty("_BaseColor")) line.material.SetColor("_BaseColor", color);
+                if (line.material.HasProperty("_Color")) line.material.SetColor("_Color", color);
+            }
+        }
+
+        private static void ConfigureLineMaterialForTransparency(Material material)
+        {
+            if (material == null)
+                return;
+
+            // Force URP Unlit into alpha-blended transparent mode so line alpha actually fades.
+            if (material.HasProperty("_Cull")) material.SetFloat("_Cull", 0f);
+            if (material.HasProperty("_Surface")) material.SetFloat("_Surface", 1f);
+            if (material.HasProperty("_Blend")) material.SetFloat("_Blend", 0f);
+            if (material.HasProperty("_SrcBlend")) material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            if (material.HasProperty("_DstBlend")) material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            if (material.HasProperty("_ZWrite")) material.SetFloat("_ZWrite", 0f);
+
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.DisableKeyword("_ALPHAMODULATE_ON");
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        }
+
+        private static Color WithAlpha(Color source, float alpha)
+        {
+            source.a = Mathf.Clamp01(alpha);
+            return source;
         }
 
         private Color GetDarkBaseColor(Color source)

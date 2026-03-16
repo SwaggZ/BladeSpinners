@@ -1,5 +1,6 @@
 using UnityEngine;
 using BladeSpinners.Core;
+using BladeSpinners.Gameplay;
 using BladeSpinners.Gameplay.Parts;
 using BladeSpinners.Gameplay.Movement;
 
@@ -109,6 +110,8 @@ namespace BladeSpinners.Gameplay.Combat
                 }
             }
 
+            NotifyPlayerEnemyHit(otherBey);
+
             // ── Knockback ──────────────────────────────────────────
             // Direction: push each bey AWAY from the other.
             // Strength: base impulse scaled by weight ratio + speed.
@@ -143,6 +146,29 @@ namespace BladeSpinners.Gameplay.Combat
             // Don't wait for MatchManager's next Update() — prevents ghost collisions.
             TryImmediateBurst(beyConfiguration);
             TryImmediateBurst(otherBey.beyConfiguration);
+        }
+
+        private void NotifyPlayerEnemyHit(BeyCollisionDetector otherBey)
+        {
+            if (otherBey == null || beyConfiguration == null || otherBey.beyConfiguration == null)
+                return;
+
+            MatchManager match = FindFirstObjectByType<MatchManager>();
+            if (match == null)
+                return;
+
+            // Case A: this is player, other is enemy.
+            if (!beyConfiguration.IsEnemy && otherBey.beyConfiguration.IsEnemy)
+            {
+                match.NotifyPlayerHitByEnemy(otherBey.beyConfiguration, true);
+                return;
+            }
+
+            // Case B: this is enemy, other is player.
+            if (beyConfiguration.IsEnemy && !otherBey.beyConfiguration.IsEnemy)
+            {
+                match.NotifyPlayerHitByEnemy(beyConfiguration, true);
+            }
         }
 
         /// <summary>
