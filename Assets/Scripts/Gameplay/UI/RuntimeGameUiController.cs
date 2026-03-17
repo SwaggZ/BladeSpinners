@@ -420,7 +420,7 @@ namespace BladeSpinners.Gameplay.UI
             float remainingY = reasonRect.yMax + sectionGap;
             float remainingH = Mathf.Max(60f, content.yMax - remainingY);
 
-            float lootH = hasLoot ? Mathf.Clamp(remainingH * (showKillerBuild ? 0.32f : 0.46f), 90f, 230f) : 0f;
+            float lootH = hasLoot ? Mathf.Max(90f, remainingH * (showKillerBuild ? 0.40f : 0.80f)) : 0f;
             float killerH = showKillerBuild ? Mathf.Max(120f, remainingH - lootH - (hasLoot ? sectionGap : 0f)) : 0f;
 
             if (showKillerBuild)

@@ -45,7 +45,7 @@ namespace BladeSpinners.Gameplay.Movement
 
         // How quickly momentum strength builds when holding W (per second, 0→1 scale)
         // Lighter beys ramp up faster, heavier ones slower.
-        private const float BASE_MOMENTUM_BUILDUP = 3.5f;
+        private const float BASE_MOMENTUM_BUILDUP = 2.2f;
 
         // How quickly momentum strength decays when NOT pressing W (per second)
         private const float BASE_MOMENTUM_DECAY = 2.5f;

@@ -3,29 +3,37 @@ using UnityEngine;
 namespace BladeSpinners.World
 {
     /// <summary>
-    /// Simple bob animation for pickup placeholder objects.
-    /// Gently floats up and down to indicate collectibility.
+    /// Bob animation + billboard facing for pickup sprites.
+    /// Gently floats up and down, always faces the camera.
     /// </summary>
     public class PickupBobAnimation : MonoBehaviour
     {
         private float bobSpeed = 2f;
-        private float bobHeight = 0.15f;
-        private float rotateSpeed = 90f;
+        private float bobHeight = 0.25f;
         private Vector3 startPos;
+        private Camera mainCamera;
 
         private void Start()
         {
             startPos = transform.localPosition;
+            mainCamera = Camera.main;
         }
 
-        private void Update()
+        private void LateUpdate()
         {
             // Bob up and down
             float yOffset = Mathf.Sin(Time.time * bobSpeed) * bobHeight;
             transform.localPosition = startPos + Vector3.up * yOffset;
 
-            // Slow rotation
-            transform.Rotate(Vector3.up, rotateSpeed * Time.deltaTime, Space.Self);
+            // Billboard — always face camera
+            if (mainCamera == null)
+                mainCamera = Camera.main;
+            if (mainCamera != null)
+            {
+                transform.rotation = Quaternion.LookRotation(
+                    transform.position - mainCamera.transform.position,
+                    Vector3.up);
+            }
         }
     }
 }

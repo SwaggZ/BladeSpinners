@@ -14,7 +14,7 @@ namespace BladeSpinners.Core
         // Boost & Movement
         public const float BOOST_FORCE_MULTIPLIER = 1.5f;
         public const float BOOST_STAMINA_DRAIN_MULTIPLIER = 3f;
-        public const float BASE_FORWARD_FORCE = 78f;
+        public const float BASE_FORWARD_FORCE = 52f;
         public const float BASE_TURN_SPEED = 180f; // degrees per second
         public const float JUMP_FORCE = 5f;
 
@@ -92,20 +92,25 @@ namespace BladeSpinners.Core
         // Arena Generation
         public const float ARENA_MIN_RADIUS = 20f;
         public const float ARENA_MAX_RADIUS = 45f;
-        public const float ARENA_MIN_DEPTH = 1f;    // bowl concavity depth
-        public const float ARENA_MAX_DEPTH = 2f;
-        public const float ARENA_RIM_HEIGHT = 10f;     // wall segments around the bowl lip
+        public const float ARENA_MIN_DEPTH = 0.3f;   // bowl concavity depth (nearly flat)
+        public const float ARENA_MAX_DEPTH = 4f;    // deep concave bowl
+        public const float ARENA_RIM_HEIGHT = 3f;      // wall segments around the bowl lip
         public const float ARENA_RIM_THICKNESS = 0.6f;
         public const float ARENA_FLOOR_FLAT_RATIO = 0.35f; // fraction of radius that is flat floor
         public const int   ARENA_RING_SEGMENTS = 64;       // mesh resolution
         public const int   ARENA_RADIAL_SEGMENTS = 24;
-        public const int   ARENA_MAX_INNER_WALLS = 10;
-        public const int   ARENA_MAX_PLATFORMS = 10;
+        public const int   ARENA_MAX_INNER_WALLS = 3;
+        public const int   ARENA_MAX_PLATFORMS = 3;
         public const float ARENA_PLATFORM_MAX_HEIGHT = 0.6f;
         public const float ARENA_INNER_WALL_MAX_HEIGHT = 1.8f;
         public const int   ARENA_MAX_PICKUPS = 10;
         public const int   ARENA_MIN_RIM_WALLS = 1;
         public const int   ARENA_MAX_RIM_WALLS = 9;
         public const float ARENA_RIM_WALL_ARC_FRACTION = 0.35f; // each wall covers this fraction of its slot
+        public const int   ARENA_MAX_RAMPS = 1;
+        public const int   ARENA_MAX_BUMPERS = 2;
+        public const int   ARENA_MAX_PILLARS = 1;
+        public const int   ARENA_MAX_SPIRES = 1;
+        public const float PICKUP_TRIGGER_RADIUS = 1.8f;  // larger collection distance
     }
 }

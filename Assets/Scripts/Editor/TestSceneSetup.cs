@@ -48,8 +48,14 @@ namespace BladeSpinners.Editor
             PlayerManager playerManager = playerBey.GetComponent<PlayerManager>();
             matchManager.RegisterPlayer(playerManager);
 
+            // Determine arena shape from seed (mirrors ProceduralArenaGenerator logic)
+            System.Random shapeRng = new System.Random(seed);
+            ArenaShapeDefinition[] allShapes = ArenaShapeLibrary.GetAllShapes();
+            ArenaShapeDefinition arenaShape = allShapes[shapeRng.Next(allShapes.Length)];
+            bool arenaHasHole = arenaShape.HoleRadiusRatio > 0.001f;
+            float arenaRadius = arenaShape.Radius;
+
             // Spawn enemy beys
-            float arenaRadius = 20f; // approximate; enemies spawn inside the bowl
             List<Transform> enemyTransforms = new List<Transform>();
             for (int i = 0; i < enemyCount; i++)
             {
@@ -57,6 +63,21 @@ namespace BladeSpinners.Editor
                 EnemyBeyController enemyCtrl = enemy.GetComponent<EnemyBeyController>();
                 matchManager.RegisterEnemy(enemyCtrl);
                 enemyTransforms.Add(enemy.transform);
+            }
+
+            // For hole arenas, reposition all beys in a circle around the hole
+            if (arenaHasHole)
+            {
+                float safeR = arenaRadius * 0.5f; // halfway out — well clear of the hole
+                int totalBeys = 1 + enemyCount;
+
+                playerBey.transform.position = new Vector3(0f, 3f, safeR);
+                for (int i = 0; i < enemyTransforms.Count; i++)
+                {
+                    float angle = (float)(i + 1) / totalBeys * Mathf.PI * 2f;
+                    enemyTransforms[i].position = new Vector3(
+                        Mathf.Cos(angle) * safeR, 3f, Mathf.Sin(angle) * safeR);
+                }
             }
 
             // Wire enemy transforms into camera so middle-click / scroll can cycle targets

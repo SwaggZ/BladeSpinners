@@ -29,7 +29,7 @@ namespace BladeSpinners.Gameplay
         [SerializeField] private float postMatchDelay = 3f;
         [SerializeField] private bool autoRestartOnPlayerWin = false;
         [SerializeField] private bool autoRestartOnPlayerLoss = false;
-        [SerializeField] private float ringOutYThreshold = -2.5f;
+        [SerializeField] private float ringOutYThreshold = -10f;
 
         private const float EnemyCollisionKillWindowSeconds = 2f;
 
@@ -43,6 +43,10 @@ namespace BladeSpinners.Gameplay
 
         private MatchState currentState = MatchState.WaitingToStart;
         private float stateTimer;
+
+        /// <summary>Where to place the player on restart. Set by RuntimeRunBuilder for hole arenas.</summary>
+        private Vector3 playerSpawnPosition = new Vector3(0f, 3f, 0f);
+        public void SetPlayerSpawnPosition(Vector3 pos) => playerSpawnPosition = pos;
 
         private PlayerManager playerManager;
         private readonly List<EnemyBeyController> enemies = new List<EnemyBeyController>();
@@ -522,7 +526,7 @@ namespace BladeSpinners.Gameplay
                 playerManager.BeyConfiguration?.SetMana(GameConstants.DEFAULT_MANA_POOL);
                 playerManager.BeyConfiguration?.SetSpinDrainPaused(false);
 
-                playerManager.transform.position = new Vector3(0, 3, 0);
+                playerManager.transform.position = playerSpawnPosition;
                 Rigidbody rb = playerManager.GetComponent<Rigidbody>();
                 if (rb != null)
                 {

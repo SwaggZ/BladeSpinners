@@ -126,6 +126,27 @@ namespace BladeSpinners.Gameplay.UI
                 enemyTransforms.Add(enemy.transform);
             }
 
+            // Hole-aware spawn: if arena has a center hole, move all beys to a ring
+            System.Random shapeRng = new System.Random(arenaSeed);
+            ArenaShapeDefinition[] allShapes = ArenaShapeLibrary.GetAllShapes();
+            ArenaShapeDefinition arenaShape = allShapes[shapeRng.Next(allShapes.Length)];
+            Debug.Log($"[RuntimeRunBuilder] Arena shape: {arenaShape.Name}, HoleRadiusRatio={arenaShape.HoleRadiusRatio}, seed={arenaSeed}");
+            if (arenaShape.HoleRadiusRatio > 0.001f)
+            {
+                float holeR = arenaShape.Radius * arenaShape.HoleRadiusRatio;
+                float safeR = arenaShape.Radius * 0.5f; // halfway out — well clear of the hole
+                int totalBeys = 1 + depthScaledEnemyCount;
+                playerObj.transform.position = new Vector3(0f, 3f, safeR);
+                Debug.Log($"[RuntimeRunBuilder] Hole arena detected — holeR={holeR:F2}, player spawn at Z={safeR:F2}");
+                for (int i = 0; i < enemyTransforms.Count; i++)
+                {
+                    float angle = (float)(i + 1) / totalBeys * Mathf.PI * 2f;
+                    enemyTransforms[i].position = new Vector3(
+                        Mathf.Cos(angle) * safeR, 3f, Mathf.Sin(angle) * safeR);
+                }
+                match.SetPlayerSpawnPosition(playerObj.transform.position);
+            }
+
             if (camController != null)
             {
                 camController.SetEnemyTransforms(enemyTransforms);
