@@ -20,6 +20,7 @@ namespace BladeSpinners.Gameplay.Parts
         private float currentSpin;
         private float currentMana;
         private bool spinDrainPaused;
+        private float manaRegenDelayRemaining;
 
         /// <summary>
         /// Event fired when spin value changes. Subscribers check spin thresholds.
@@ -185,13 +186,17 @@ namespace BladeSpinners.Gameplay.Parts
                 cachedStats.ManaRegenRate = part.ManaRegenRate;
 
                 // Face Bolt stats
-                cachedStats.EquippedAbility = part.EquippedAbility;
+                if (part.PartType == PartType.FaceBolt)
+                {
+                    cachedStats.EquippedAbility = FaceBoltAbilityResolver.Resolve(part);
+                }
             }
 
             // Calculate total stamina drain as Fusion Wheel mass drain + Tip behavior drain modifier
             cachedStats.TotalStaminaDrainRate = 
                 (GameConstants.BASE_MASS_DRAIN_RATE * (cachedStats.Weight / 25f)) + 
                 (GameConstants.BASE_BEHAVIOR_DRAIN_RATE * cachedStats.BehaviorBasedStaminaDrainModifier);
+
         }
 
         /// <summary>
@@ -260,6 +265,12 @@ namespace BladeSpinners.Gameplay.Parts
             float gmPool = GameManager.Get(g => g.manaPoolMultiplier);
             currentMana = Mathf.Clamp(value, GameConstants.MIN_MANA, GetStatBlock().ManaPoolSize * gmPool);
 
+            // Any mana spend (ability, boost upkeep, etc.) resets regen delay.
+            if (currentMana < oldMana)
+            {
+                manaRegenDelayRemaining = GameConstants.MANA_REGEN_DELAY_AFTER_USE;
+            }
+
             if (oldMana != currentMana)
             {
                 OnManaChanged?.Invoke(currentMana);
@@ -271,9 +282,15 @@ namespace BladeSpinners.Gameplay.Parts
         /// </summary>
         public void RegenMana(float deltaTime)
         {
+            if (manaRegenDelayRemaining > 0f)
+            {
+                manaRegenDelayRemaining = Mathf.Max(0f, manaRegenDelayRemaining - deltaTime);
+                return;
+            }
+
             BeyStatBlock stats = GetStatBlock();
             float gmRegen = GameManager.GetForBey(IsEnemy, g => g.manaRegenMultiplier, g => g.enemyManaRegenMultiplier);
-            float regen = stats.ManaRegenRate * deltaTime * gmRegen;
+            float regen = stats.ManaRegenRate * deltaTime * gmRegen * GameConstants.BASE_MANA_REGEN_SCALAR;
             SetMana(currentMana + regen);
         }
 
@@ -295,6 +312,7 @@ namespace BladeSpinners.Gameplay.Parts
             float gmCost = GameManager.GetForBey(IsEnemy, g => g.abilityCostMultiplier, g => g.enemyAbilityCostMultiplier);
             SetMana(currentMana - amount * gmCost);
         }
+
     }
 
     /// <summary>

@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using BladeSpinners.Gameplay.Movement;
 using BladeSpinners.Gameplay.Parts;
+using BladeSpinners.Gameplay.Effects;
 
 namespace BladeSpinners.Gameplay
 {
@@ -149,6 +150,7 @@ namespace BladeSpinners.Gameplay
             {
                 beyConfiguration.SpendMana(manaCost);
                 stats.EquippedAbility.Activate(beyMovementController);
+                AbilityEmblemHologramEffect.Spawn(beyMovementController);
             }
         }
 

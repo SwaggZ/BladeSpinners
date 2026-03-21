@@ -3,6 +3,7 @@ using BladeSpinners.Core;
 using BladeSpinners.Gameplay;
 using BladeSpinners.Gameplay.Parts;
 using BladeSpinners.Gameplay.Movement;
+using BladeSpinners.Gameplay.Effects;
 
 namespace BladeSpinners.Gameplay.Combat
 {
@@ -21,6 +22,13 @@ namespace BladeSpinners.Gameplay.Combat
         [SerializeField]
         private float collisionCooldown = 0.2f; // Prevent repeated collisions in same frame
 
+        [Header("Temporary Hit VFX")]
+        [SerializeField]
+        private bool spawnPlaceholderHitParticle = true;
+
+        [SerializeField]
+        private Color placeholderHitColor = new Color(1f, 0.78f, 0.2f, 1f);
+
         private float lastCollisionTime = -1f;
 
         /// <summary>
@@ -30,25 +38,31 @@ namespace BladeSpinners.Gameplay.Combat
 
         private void OnTriggerEnter(Collider other)
         {
-            // Skip if either bey is already dead
-            if (beyConfiguration != null && beyConfiguration.IsBurst) return;
+            TryProcessCollision(other.GetComponentInParent<BeyCollisionDetector>());
+        }
+
+        private void OnCollisionEnter(Collision collision)
+        {
+            TryProcessCollision(collision.collider.GetComponentInParent<BeyCollisionDetector>());
+        }
+
+        private void TryProcessCollision(BeyCollisionDetector otherBeyCollider)
+        {
+            // Skip if either bey is invalid/dead
+            if (otherBeyCollider == null || otherBeyCollider == this)
+                return;
+
+            if (beyConfiguration != null && beyConfiguration.IsBurst)
+                return;
+
+            if (otherBeyCollider.beyConfiguration != null && otherBeyCollider.beyConfiguration.IsBurst)
+                return;
 
             // Check collision cooldown
             if (Time.time - lastCollisionTime < collisionCooldown)
                 return;
 
-            // Check if other object is a Bey
-            BeyCollisionDetector otherBeyCollider = other.GetComponent<BeyCollisionDetector>();
-            if (otherBeyCollider == null)
-                return;
-
-            // Skip if other bey is dead
-            if (otherBeyCollider.beyConfiguration != null && otherBeyCollider.beyConfiguration.IsBurst)
-                return;
-
-            // Deduplication: OnTriggerEnter fires on BOTH beys. Only the one
-            // with the lower instance ID processes the collision to prevent
-            // double damage/knockback.
+            // Deduplication: process only on lower instance id
             if (GetInstanceID() > otherBeyCollider.GetInstanceID())
                 return;
 
@@ -135,6 +149,8 @@ namespace BladeSpinners.Gameplay.Combat
             float knockbackOnOther = baseKnockback * (thisWeight / Mathf.Max(otherWeight, 1f))
                                    * (1f + relSpeed * 0.05f);
 
+            SpawnPlaceholderHitParticle(otherBey, relSpeed);
+
             movementController.ApplyKnockback(-knockDir, knockbackOnThis);
             otherBey.movementController.ApplyKnockback(knockDir, knockbackOnOther);
 
@@ -192,6 +208,15 @@ namespace BladeSpinners.Gameplay.Combat
                     break;
                 }
             }
+        }
+
+        private void SpawnPlaceholderHitParticle(BeyCollisionDetector otherBey, float relativeSpeed)
+        {
+            if (!spawnPlaceholderHitParticle || otherBey == null)
+                return;
+
+            Vector3 spawnPos = (transform.position + otherBey.transform.position) * 0.5f + Vector3.up * 0.15f;
+            BeyHitImpactEffect.Spawn(spawnPos, placeholderHitColor, relativeSpeed);
         }
     }
 }

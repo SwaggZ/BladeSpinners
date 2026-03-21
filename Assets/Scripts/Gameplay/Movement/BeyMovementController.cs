@@ -111,17 +111,23 @@ namespace BladeSpinners.Gameplay.Movement
             rb = GetComponent<Rigidbody>();
             isEnemy = GetComponent<EnemyBeyController>() != null;
             groundLayer = LayerMask.GetMask("Ground");
+
+            if (rb != null)
+            {
+                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                rb.interpolation = RigidbodyInterpolation.Interpolate;
+            }
             
             // Add bouncy physics material for realistic Beyblade landing
             SphereCollider sphereCol = GetComponent<SphereCollider>();
             if (sphereCol != null && !sphereCol.isTrigger && sphereCol.sharedMaterial == null)
             {
                 PhysicsMaterial bouncyMat = new PhysicsMaterial("BeyBounce");
-                bouncyMat.bounciness = 0.4f; // Moderate bounce on landing
+                bouncyMat.bounciness = 0.02f;
                 bouncyMat.dynamicFriction = 0f; // Zero friction to reduce collision sticking
                 bouncyMat.staticFriction = 0f;
                 bouncyMat.frictionCombine = PhysicsMaterialCombine.Minimum;
-                bouncyMat.bounceCombine = PhysicsMaterialCombine.Maximum;
+                bouncyMat.bounceCombine = PhysicsMaterialCombine.Minimum;
                 sphereCol.material = bouncyMat;
             }
             
@@ -178,6 +184,14 @@ namespace BladeSpinners.Gameplay.Movement
                 if (contact.normal.y > 0.5f) // ~60° from horizontal or flatter
                 {
                     isGrounded = true;
+
+                    if (rb != null && rb.linearVelocity.y > 1.2f)
+                    {
+                        Vector3 velocity = rb.linearVelocity;
+                        velocity.y = 1.2f;
+                        rb.linearVelocity = velocity;
+                    }
+
                     if (debugMovement)
                         Debug.Log($"[BeyMovement] GROUNDED via collision: {collision.gameObject.name}, normal: {contact.normal}");
                     return;
@@ -228,11 +242,12 @@ namespace BladeSpinners.Gameplay.Movement
             // Skip movement forces during knockback stun — let the impulse carry the bey
             if (knockbackStunTimer > 0f)
             {
-                // Still drain spin and regen mana even during stun
-                BeyStatBlock stunStats = beyConfiguration.GetStatBlock();
-                float stunDrainMul = boost > 1f ? GameConstants.BOOST_STAMINA_DRAIN_MULTIPLIER : 1f;
-                beyConfiguration.DrainSpin(Time.fixedDeltaTime, stunDrainMul);
-                beyConfiguration.RegenMana(Time.fixedDeltaTime);
+                // Still drain spin during stun; boost now consumes mana instead of extra spin.
+                beyConfiguration.DrainSpin(Time.fixedDeltaTime, 1f);
+                if (boost > 1f)
+                    DrainBoostMana(Time.fixedDeltaTime);
+                else
+                    beyConfiguration.RegenMana(Time.fixedDeltaTime);
                 if (beyConfiguration.IsBurst) OnBurst();
                 return;
             }
@@ -255,11 +270,12 @@ namespace BladeSpinners.Gameplay.Movement
                 ApplySteeringInput(cachedSteeringInput);
             }
 
-            BeyStatBlock stats = beyConfiguration.GetStatBlock();
-            float drainMultiplier = boost > 1f ? GameConstants.BOOST_STAMINA_DRAIN_MULTIPLIER : 1f;
-            beyConfiguration.DrainSpin(Time.fixedDeltaTime, drainMultiplier);
+            beyConfiguration.DrainSpin(Time.fixedDeltaTime, 1f);
 
-            beyConfiguration.RegenMana(Time.fixedDeltaTime);
+            if (boost > 1f)
+                DrainBoostMana(Time.fixedDeltaTime);
+            else
+                beyConfiguration.RegenMana(Time.fixedDeltaTime);
 
             if (beyConfiguration.IsBurst)
             {
@@ -445,6 +461,12 @@ namespace BladeSpinners.Gameplay.Movement
 
         public void StartBoost()
         {
+            if (beyConfiguration == null || beyConfiguration.CurrentMana <= GameConstants.MIN_MANA)
+            {
+                StopBoost();
+                return;
+            }
+
             float gmBoost = GameManager.GetForBey(isEnemy, g => g.boostMultiplier, g => g.enemyBoostMultiplier);
             boost = GameConstants.BOOST_FORCE_MULTIPLIER * gmBoost;
             if (debugMovement)
@@ -456,6 +478,20 @@ namespace BladeSpinners.Gameplay.Movement
             boost = 1f;
             if (debugMovement)
                 Debug.Log("[BeyMovement] BOOST OFF");
+        }
+
+        private void DrainBoostMana(float deltaTime)
+        {
+            if (beyConfiguration == null)
+                return;
+
+            float manaDrain = GameConstants.BOOST_MANA_DRAIN_PER_SECOND * deltaTime;
+            beyConfiguration.SetMana(beyConfiguration.CurrentMana - manaDrain);
+
+            if (beyConfiguration.CurrentMana <= GameConstants.MIN_MANA)
+            {
+                StopBoost();
+            }
         }
 
         /// <summary>

@@ -32,6 +32,8 @@
 ## World Generation
 - [ ] Map chunk prefabs (flat, ramps, platforms, bowls, bridges, hazards)
 - [x] Procedural arena platforms use cylindrical `MeshCollider` shape (not box/capsule)
+- [x] Arena shape library — 10 named bowl variants (ClassicRound, TripleBattle, StarStorm, BoltBlast, NotchRing, Pentagon, Square, Triangle, MaxStampede, TwinBasin) with distinct footprints, depths, and lobe/gear counts; random selection per seed
+- [x] Hole-aware bey spawn — arenas with center hole use `HoleRadiusRatio`; all beys are offset to a safe outer ring on start to avoid the pit
 - [ ] DungeonLayoutGenerator (grid-based layout, room connection)
 - [ ] MapChunkAssembler (build individual maps from chunks)
 - [ ] Room types spawned (Combat, Loot, Workshop, Boss, Secret, Start, Exit)
@@ -53,6 +55,8 @@
 - [x] JSON batch duplicate protection (skip existing set names instead of overwriting)
 - [x] Mass generator list-wide seed randomize button
 - [x] Face Bolt emblem sprite field on part data (for UI/future hologram use)
+- [x] Face Bolt ability report window supports one-click `Bake Unique Assignments` (writes explicit ability refs to Face Bolt assets and auto-generates unique variants when required)
+- [x] Bowl prototype gallery (`BowlPrototypeGalleryGenerator`) — attach to a GameObject and trigger `GeneratePrototypes` from context menu to preview all arena shapes side-by-side
 
 ## Test Scene Setup
 - [x] Enemy test Beys use existing part pool (no automatic per-enemy set generation)
@@ -67,7 +71,8 @@
 - [ ] Boss enemy system with named configs
 
 ## Abilities & Combat Enhancement
-- [x] BeyAbility base & concrete implementations (SpinDash, GravityWell, ShieldBurst, OrbitLock, StaminaLeech)
+- [x] BeyAbility base & concrete implementations (Dash, Shield, Spin Drain, Ground Pound, Flash Step, Dragon Burst, Poison Cloud, Gravity Clash)
+- [x] Abilities are attached to Face Bolt parts; different Face Bolts resolve to different abilities by default
 - [x] BeyPassive base & implementations (SpinRecovery, LowSpinSurge, ImpactShield, MomentumHarvest)
 - [x] ThresholdBehaviorModifier for spin-triggered changes
 - [ ] Integrate abilities into ProceduralPartGenerator
@@ -78,15 +83,27 @@
 - [x] Stat ring labels + black text outlines render in front of curve layers
 - [x] Main menu runtime GUI (Start Run, Inventory, Settings, Keybinds)
 - [x] Main menu runtime GUI visual refresh (flat cel-shaded panels, black toon outlines, responsive layout scaling)
+- [x] Runtime menu GUI concept refresh adds neon arena backdrop, gradient headers, and glass-panel chrome inspired by current visual references
+- [x] Runtime menu art pass now favors high-energy speedline motifs and solid arcade accents over muddy gradients, with larger readable action buttons
+- [x] Menu readability polish: left loadout text now sits on stronger dark backing, hot-side red striping reduced, and `START RUN` stripe effects are clipped strictly inside button bounds
 - [x] Pause menu runtime GUI (Resume, Run Inventory, Settings, Keybinds, Return Main Menu)
 - [x] Between-arena intermission menu for run inventory/build changes before advancing
 - [x] Pause menu Esc toggle migrated to Input System API (fixes legacy Input.GetKeyDown exception)
 - [x] Inventory/part swapping runtime MVP (main-menu loadout seeding + run-time equip from run inventory)
+- [x] Garage redesign with top navigation, centered Bey stage, orbiting part nodes, and bottom action bar
+- [x] Garage slot-swap modal for quick per-slot part replacement directly around the preview Bey
+- [x] Runtime-only 3-slot build save/load flow added to the garage action bar (non-persistent until SaveManager exists)
+- [x] Garage auto-optimize now equips the highest-rated owned part per slot using runtime UI scoring
+- [x] Inventory and salvage selection show selected part stats plus ability details
 - [x] Starter unlock flow now supports configurable base parts via `StarterPartsConfig` (`Resources/StarterPartsConfig.asset`)
 - [x] Spinning Bey preview + live stats window in inventory GUI
+- [x] Bey preview render texture uses transparent camera clear so menu UI shows behind the model
+- [x] Garage preview stage keeps the UI backdrop visible behind the Bey by avoiding an opaque preview plate
+- [x] Per-part 3D rendered previews in garage orbit slots, Current Build panel, and swap modal (FaceBolt retains emblem sprite everywhere)
 - [x] Preview drag is vertical-only and resets when moving between menu states
 - [x] Preview/Run stat panel now includes live Spin and Mana current values
 - [x] Settings panel uses themed sliders and exposes clipping opacity control
+- [x] Keybind reference folded into Settings while pause/intermission menus were rethemed to match the new garage shell
 - [x] Settings panel exposes stat-rings UI opacity (0-100%) affecting both ring lines and ring text
 - [x] Death screen layout scales more responsively and fits killer-build content more aggressively
 - [x] Run-loss salvage UI allows choosing limited eligible parts to transfer to main inventory (depth-scaled count + rarity cap)
@@ -116,7 +133,7 @@
 - [x] Face Bolt emblem visible on Face Bolt mesh in-game
 - [x] Face Bolt widened; Energy Ring center hole constrained to stay slightly larger than Face Bolt width (close-fit clearance)
 - [x] Face Bolt vertical anchor aligned to Energy Ring connection location
-- [ ] Ability-activation hologram using Face Bolt emblem
+- [x] Ability-activation hologram using Face Bolt emblem
 
 ## Persistence
 - [ ] SaveManager & JSON serialization
@@ -124,6 +141,7 @@
 - [ ] Run save (current dungeon state, inventory, spin/mana)
 
 ## Polish & Audio (Last)
+- [x] Temporary placeholder hit particle spawns on Bey-to-Bey collision (for later replacement)
 - [ ] Particle effects (pickups, abilities, impacts)
 - [ ] Sound effects & SFX manager
 - [ ] Visual feedback & juice
@@ -137,4 +155,4 @@
 
 ---
 
-**Last Updated:** March 16, 2026
+**Last Updated:** March 21, 2026

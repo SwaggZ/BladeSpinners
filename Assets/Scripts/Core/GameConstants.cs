@@ -14,6 +14,7 @@ namespace BladeSpinners.Core
         // Boost & Movement
         public const float BOOST_FORCE_MULTIPLIER = 1.5f;
         public const float BOOST_STAMINA_DRAIN_MULTIPLIER = 3f;
+        public const float BOOST_MANA_DRAIN_PER_SECOND = 18f;
         public const float BASE_FORWARD_FORCE = 52f;
         public const float BASE_TURN_SPEED = 180f; // degrees per second
         public const float JUMP_FORCE = 5f;
@@ -32,6 +33,8 @@ namespace BladeSpinners.Core
         public const float DEFAULT_MANA_POOL = 100f;
         public const float MIN_MANA = 0f;
         public const float MAX_MANA = 300f;
+        public const float BASE_MANA_REGEN_SCALAR = 0.6f;
+        public const float MANA_REGEN_DELAY_AFTER_USE = 3f;
 
         // Pickup Values
         public const float PICKUP_SPIN_SMALL = 15f;

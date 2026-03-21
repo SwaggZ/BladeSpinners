@@ -35,5 +35,5 @@ MonoBehaviour:
   massBasedStaminaDrainRate: 0.5
   manaPoolSize: 100
   manaRegenRate: 20
-  equippedAbility: {fileID: 0}
+  equippedAbility: {fileID: 11400000, guid: 45fb38915fac82049bd5fb22ba14ece9, type: 2}
   faceBoltEmblem: {fileID: 21300000, guid: bcc372c731e7ed2469f1ac7c63ea634a, type: 3}

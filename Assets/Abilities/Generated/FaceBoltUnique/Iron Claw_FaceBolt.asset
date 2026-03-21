@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 845aec8794add124fbdb30f8344fde5e, type: 3}
+  m_Name: Iron Claw_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.GroundPoundAbility
+  abilityName: 'Ground Pound [Iron Claw_FaceBolt]'
+  description: Slam downward and shock nearby enemies with spin damage and knockback.
+  manaCost: 45
+  rarity: 1
+  icon: {fileID: 0}
+  slamForce: 26
+  impactRadius: 6
+  spinDamage: 16
+  knockbackImpulse: 10

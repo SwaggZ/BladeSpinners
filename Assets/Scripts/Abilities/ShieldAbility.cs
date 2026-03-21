@@ -14,10 +14,6 @@ namespace BladeSpinners.Abilities
         [SerializeField] private float duration = 3f;
         [SerializeField] private float weightBoost = 30f; // added to effective weight
 
-        private BeyMovementController activeController;
-        private float remainingTime;
-        private bool isActive;
-
         private void OnEnable()
         {
             abilityName = "Shield";
@@ -30,39 +26,13 @@ namespace BladeSpinners.Abilities
         {
             if (beyController == null) return;
 
-            activeController = beyController;
-            remainingTime = duration;
-            isActive = true;
+            AbilityRuntimeEffects runtime = AbilityRuntimeEffects.GetOrCreate(beyController);
+            if (runtime == null)
+                return;
 
-            // Boost the Rigidbody mass to simulate increased weight
-            if (beyController.Rb != null)
-                beyController.Rb.mass += weightBoost * 0.1f; // scale down to RB mass units
+            runtime.ApplyTempMassBoost(weightBoost * 0.1f, duration);
 
             Debug.Log($"[Ability] Shield activated! +{weightBoost} effective weight for {duration}s");
-        }
-
-        public override void Update()
-        {
-            if (!isActive) return;
-
-            remainingTime -= Time.deltaTime;
-            if (remainingTime <= 0f)
-            {
-                Deactivate();
-            }
-        }
-
-        public override void Deactivate()
-        {
-            if (!isActive) return;
-            isActive = false;
-
-            // Revert the mass boost
-            if (activeController != null && activeController.Rb != null)
-                activeController.Rb.mass -= weightBoost * 0.1f;
-
-            activeController = null;
-            Debug.Log("[Ability] Shield expired.");
         }
     }
 }

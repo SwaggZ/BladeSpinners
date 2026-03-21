@@ -6,6 +6,9 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 
 ### Combat & Physics
 - **Momentum-based movement** — Ice-skating style physics where velocity persists and redirects gradually, just like a real spinning top
+- **Boost uses mana** — Holding boost consumes mana over time and automatically cuts out when mana is empty
+- **Slower mana recharge baseline** — Global mana regen is tuned down for tighter ability pacing
+- **Mana regen delay** — Mana starts recharging only after 3 seconds without mana spending
 - **Spin exchange combat** — Collisions transfer spin based on speed, weight, and attack stats; beys burst when spin hits zero
 - **Knockback with hitstun** — Hits send beys flying with a brief stun window so impacts feel real
 - **Weight-based inertia** — Heavier beys are harder to push but slower to accelerate
@@ -17,6 +20,7 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **Procedural generation** — Each part has unique stats, colors, and meshes generated at runtime
 - **Tip behaviors** — Different tips change movement physics (aggressive, defensive, orbital patterns)
 - **Stat-driven gameplay** — Parts determine speed, weight, attack, defense, stamina, and special abilities
+- **Expanded ability roster** — Dash, Shield, Spin Drain, Ground Pound, Flash Step, Dragon Burst, Poison Cloud, Gravity Clash
 - **Face Bolt emblems** — Each Face Bolt can have a unique emblem sprite rendered directly on the Face Bolt in-game (also planned for special-attack hologram visuals)
 
 ### Content Pipeline
@@ -28,6 +32,7 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **Deterministic seeds** — Rebuild identical sets from the same naming/seed inputs
 - **Custom set entry list** — Resize a list and configure each set's Name, Seed, Rarity, Emblem, and Color
 - **One-click seed randomization** — Randomize every list entry seed with `Randomize All Seeds`
+- **Unique Face Bolt assignment bake** — `Blade Spinners → Reports → Face Bolt Ability Report` includes `Bake Unique Assignments` to ensure no two Face Bolts share the same ability asset
 
 ### Camera
 - **Free orbit mode** — GTA-style camera with mouse/gamepad orbit
@@ -42,12 +47,15 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **State machine AI** — Chase, Attack, and Reposition states with configurable ranges
 - **7-ray obstacle avoidance** — Enemies detect and dodge walls/arena edges
 - **Boost & ability usage** — AI activates boost during attacks and uses abilities when in range
+- **Face Bolt ability ownership** — Ability is sourced from the equipped Face Bolt; different Face Bolt parts resolve to different abilities by default
 - **Tunable difficulty** — 13 enemy-specific multipliers stack on global balance sliders
 - **Test scene uses existing parts** — Enemy setup pulls from existing part assets instead of auto-generating new sets
 
 ### Match System
 - **Match lifecycle** — Countdown → In Progress → Win/Loss with auto-restart
 - **Burst effects** — Dead beys stop, parts detach and fall to the ground, fading out over 7 seconds
+- **Collision hit placeholder VFX** — Temporary particle burst spawns on Bey-to-Bey impacts (ready to be replaced by final hit effect)
+- **Ability emblem hologram burst** — On ability cast, a one-shot hologram of the caster's Face Bolt emblem launches above the Bey like a firework (non-following)
 - **Enemy part drops** — On enemy burst: roll for any drop, roll one equipped part (equal chance), then rarity gate roll (higher rarity drops less)
 - **Dropped-part visuals** — Drop pickups now render as the actual procedural mesh of the dropped part
 - **Larger pickup radius + clear reward** — Part pickups use a larger trigger radius and are auto-collected when all enemies are destroyed
@@ -60,16 +68,24 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **Balance sliders** — 26 GameManager sliders (13 global + 13 enemy) adjustable at runtime in the Inspector
 
 ### Menus & Inventory (MVP)
-- **Runtime main menu overlay** — Start Run, Inventory, Settings, Keybinds
+- **Runtime garage shell** — Main menu now uses a top-nav garage layout with brand lockup, Garage/Inventory/Settings tabs, centered Bey stage, orbiting part nodes, and a dedicated bottom action bar
 - **Runtime pause menu** — Resume, Run Inventory, Settings, Keybinds, Return to Main Menu
 - **Between-arena intermission** — Arena clears open a build-management menu before the next arena starts
 - **Run inventory progression** — Run starts with selected main-menu loadout; dropped parts are added and can be equipped during run
-- **Live spinning preview window** — Inventory shows a spinning Bey preview and live stats while parts are changed
+- **Garage swap modal** — Clicking a part node around the preview Bey opens a compact slot-filtered modal for fast part swapping
+- **Current build rail** — Garage shows current build name, Face Bolt identity, computed overall score, equipped-part rows with rarity-color pills, and hover stats cards
+- **Runtime build slots** — `Save Build` stores up to 3 garage loadouts in-memory for the current play session and allows quick reloads from the garage action bar
+- **Auto optimize** — Garage can auto-equip the highest-rated owned part per slot using the UI-side runtime power score heuristic
+- **Live spinning preview window** — Inventory shows a spinning Bey preview with a side-by-side overall build summary while parts are changed
+- **Selected-part detail panel** — Choosing a part in inventory or end-of-run salvage now shows that part's stats, rarity, description, and Face Bolt ability data
 - **Preview drag pitch** — Menu previews rotate vertically only and reset cleanly when changing panels
+- **Transparent preview stage** — Garage preview now renders without an opaque panel fill so the UI backdrop shows behind the Bey model
 - **Runtime settings sliders** — Settings panel includes themed sliders for volume, sensitivity, and clipping opacity
+- **Settings-integrated keybinds** — Keybind reference now lives inside the settings page instead of a separate top-level tab
 - **Rings UI opacity** — Settings includes a 0-100% slider that fades both stat rings and ring text
 - **Defeat salvage flow** — On run loss, players choose a limited number of eligible run parts to keep (cap scales with run depth and rarity gate)
 - **Run completion transfer** — On full run completion, all run-inventory parts transfer to main inventory
+- **Run menu theme pass** — Pause and between-arena menus now use the same cyan garage framing, tabs, and build-management layout as the main garage
 - **Structured test run flow** — Start Run currently creates a 3-level, 3-arena-per-level progression loop with carry-over inventory and build changes between arenas
 - **Resolution-aware scaling** — UI scales with screen resolution using a 1080p baseline (works at FHD, 1440p, 4K)
 
@@ -82,6 +98,8 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 
 ### Arena
 - **Procedural generation** — Arenas built at runtime with configurable geometry
+- **10 named arena shapes** — ClassicRound, TripleBattle (gear-tooth rim), StarStorm, BoltBlast (gated circle), NotchRing, Pentagon, Square, Triangle, MaxStampede (raised inner tier), and TwinBasin (figure-8 dual basin); shape is chosen randomly per arena seed
+- **Hole-aware bey spawns** — Arenas defined with a center hole (`HoleRadiusRatio > 0`) automatically move all beys to a safe outer ring at match start to prevent falling through the pit
 - **Ground layer physics** — Proper layer separation for grounding, triggers, and collision detection
 
 ## Project Structure
@@ -116,12 +134,14 @@ Assets/
 1. Open the project in Unity 6 (URP)
 2. Open `Window → Blade Spinners → Setup Test Scene` to generate a test arena with player + enemies
 3. Press Play
-4. **WASD** — Move | **Mouse** — Camera | **Shift** — Boost | **Space** — Jump | **E** — Ability
+4. **WASD** — Move | **Mouse** — Camera | **Shift** — Boost (drains mana) | **Space** — Jump | **E** — Ability
 5. **Middle-click** — Lock on to nearest enemy | **Scroll** — Cycle targets | **Middle-click** — Release
 
 ## Additional Docs
 
 - See `PART_SET_GENERATION_GUIDE.md` for single-set and massive-batch part generation workflows.
+- Open `Blade Spinners → Reports → Face Bolt Ability Report` to view all Face Bolt-to-ability mappings and export `FACEBOLT_ABILITY_REPORT.md` to the project root.
+- Use `Bake Unique Assignments` in the Face Bolt report window to enforce unique ability assignment per Face Bolt; this creates per-bolt variants in `Assets/Abilities/Generated/FaceBoltUnique` when needed and writes explicit assignments onto Face Bolt assets.
 
 ## Current Runtime Loop
 
