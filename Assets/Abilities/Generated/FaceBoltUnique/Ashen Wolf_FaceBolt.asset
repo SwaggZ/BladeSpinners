@@ -12,13 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62a022de98fcf42499b502bb0b490e9e, type: 3}
   m_Name: Ashen Wolf_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.FireBoltAbility
-  abilityName: Ashen Wolf_FaceBolt
-  description: Launches a homing bolt of flame that burns the target on impact.
-  manaCost: 55
+  abilityName: 'Fire Bolt [Ashen Wolf_FaceBolt]'
+  description: 'Launches a homing bolt of flame that burns the target on impact.
+    [Behavior 40EEC1CA]'
+  manaCost: 47.528328
   rarity: 1
   icon: {fileID: 0}
-  projectileSpeed: 22
-  directHitDamage: 20
-  burnDamagePerSecond: 5
-  burnDuration: 3
-  homingStrength: 4
+  projectileSpeed: 17.247252
+  directHitDamage: 17.548649
+  burnDamagePerSecond: 3.470372
+  burnDuration: 2.5854497
+  homingStrength: 5.539976

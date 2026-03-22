@@ -13,10 +13,11 @@ MonoBehaviour:
   m_Name: Scorpion_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.PoisonCloudAbility
   abilityName: 'Poison Cloud [Scorpion_FaceBolt]'
-  description: Creates a toxic cloud that continuously drains enemy spin.
-  manaCost: 65
-  rarity: 2
+  description: 'Creates a toxic cloud that continuously drains enemy spin. [Behavior
+    3279F516]'
+  manaCost: 75.6718
+  rarity: 1
   icon: {fileID: 0}
-  radius: 5
-  duration: 4.5
-  damagePerSecond: 5
+  radius: 6.854227
+  duration: 7.2845592
+  damagePerSecond: 6.1769958

@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Voidheart_EnergyRing
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Voidheart_EnergyRing
+  partType: 3
+  occupiesSlots: 03000000
+  rarity: 3
+  tags: 
+  partID: voidheart_energyring_1757414810
+  description: A Epic EnergyRing from the Voidheart set.
+  icon: {fileID: 0}
+  meshSeed: 923783916
+  primaryColor: {r: 0.17266922, g: 0.010806618, b: 0.26902163, a: 1}
+  secondaryColor: {r: 0.4336442, g: 0.3228399, b: 0.499603, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 284.29065
+  manaRegenRate: 30.24766
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

@@ -12,11 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0d1c2c8e4d4746740b87660a5574b905, type: 3}
   m_Name: Berserker_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.BerserkAbility
-  abilityName: Berserker_FaceBolt
-  description: Enter a frenzied state, dramatically increasing speed at the cost of stability.
-  manaCost: 50
+  abilityName: 'Berserk [Berserker_FaceBolt]'
+  description: 'Enter a frenzied state, dramatically increasing speed at the cost
+    of stability. [Behavior 3CD7D3FD]'
+  manaCost: 47.19547
   rarity: 1
   icon: {fileID: 0}
-  speedMultiplier: 2.2
-  massDelta: -0.4
-  duration: 5
+  speedMultiplier: 2.2049313
+  massDelta: -0.41554487
+  duration: 7.4320226

@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Boulderback_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Boulderback_FaceBolt
+  partType: 4
+  occupiesSlots: 04000000
+  rarity: 1
+  tags: 
+  partID: boulderback_facebolt_229470434
+  description: A Uncommon FaceBolt from the Boulderback set.
+  icon: {fileID: 0}
+  meshSeed: 1442179945
+  primaryColor: {r: 0.68105185, g: 0.63079756, b: 0.58109206, a: 1}
+  secondaryColor: {r: 0.86426336, g: 0.8428763, b: 0.82172287, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 11400000, guid: b46e542dd2c2dd44484e50bc0e3aa75a, type: 2}
+  faceBoltEmblem: {fileID: 21300000, guid: 3c86e9a2d63ed4441b2abdf61f73d9d5, type: 3}

@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: Ricochet_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.RicochetShotAbility
   abilityName: 'Ricochet Shot [Ricochet_FaceBolt]'
-  description: Fires a bolt that bounces between enemies, dealing spin damage on
-    each hit.
-  manaCost: 55
-  rarity: 1
+  description: 'Fires a bolt that bounces between enemies, dealing spin damage on
+    each hit. [Behavior 53AEBF34]'
+  manaCost: 63.12239
+  rarity: 0
   icon: {fileID: 0}
-  projectileSpeed: 18
-  damagePerBounce: 10
-  maxBounces: 5
-  bounceRadius: 8
+  projectileSpeed: 12.195723
+  damagePerBounce: 6.837647
+  maxBounces: 7
+  bounceRadius: 10.259784

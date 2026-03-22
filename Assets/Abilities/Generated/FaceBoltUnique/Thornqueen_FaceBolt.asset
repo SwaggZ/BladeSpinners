@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 349a0ab736a07b94995e0b489dd31b2b, type: 3}
+  m_Name: Thornqueen_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.DragonBurstAbility
+  abilityName: 'Dragon Burst [Thornqueen_FaceBolt]'
+  description: 'Legendary surge attack that blasts enemies in a forward cone. [Behavior
+    F39D7F6]'
+  manaCost: 120
+  rarity: 1
+  icon: {fileID: 0}
+  surgeImpulse: 26.13813
+  coneRange: 11.261719
+  coneHalfAngle: 46.729782
+  spinDamage: 27.885382
+  knockbackImpulse: 17.175367

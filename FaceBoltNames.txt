@@ -1,0 +1,150 @@
+Abyssal Tide
+Acid Rain
+Amber Bite
+Amber Gale
+Apex
+Arcane Fury
+Arctic Fox
+Ashbringer
+Ashen Wolf
+Ashfall
+Barrier
+Berserker
+Blizzard
+Blood Moon
+Bog Trotter
+Boulderback
+Brackwater
+Bramble
+Briar Patch
+Buzz Blade
+Celestial Edge
+Chain Lightning
+Cinderpaw
+Cobalt Rush
+Coldsnap
+Coppercoil
+Copperhead
+Cragback
+Crimson Slash
+Crimson Tide
+Crystalline
+Cursed Steel
+Dawnbreaker
+Death Dealer
+Deflector
+Dragonheart
+Driftwood
+Dusk Blade
+Duskfire
+Duskwarden
+Dustwalker
+Eclipse
+Electra
+Ember
+Emerald Storm
+Eternal Flame
+Eternal Frost
+Flintlock
+Foxfire
+Frost Bite
+Frostfang
+Frostfire
+Galeforce
+Galestrike
+Genesis
+Gilded Wrath
+Glacial Wrath
+Glacier
+Gorebound
+Gravel
+Gravelmaw
+Gravestone
+Greymantle
+Hellbound
+Hexblade
+Icebreaker
+Inferno
+Iron Claw
+Iron Tide
+Ironbark
+Ironclad
+Ironhide
+Ironveil
+Jade Fang
+Lucky Star
+Lunar Fang
+Magma Core
+Mirage
+Mirewalker
+Molten Crown
+Mossbark
+Mudpaw
+Mudslide
+Multishot
+Necrotic Edge
+Nettleback
+Night Stalker
+Obsidian
+Patchwork
+Pebble
+Phantom Arrow
+Phantom Storm
+Phantom
+Pinecone
+Plague Doctor
+Pyreborn
+Ragnarok
+Rampager
+Ricochet
+Ruinbringer
+Runebreaker
+Runic Edge
+Rustblade
+Sandstorm
+Sanguine Blade
+Sapphire Edge
+Scarlet Fang
+Scorpion
+Serpent King
+Shadow Wyrm
+Silt
+Siltcrawler
+Solar Flare
+Soul Eater
+Soul Reaver
+Spellweaver
+Splinter
+Starfall
+Stone Guard
+Stonecrusher
+Stonefist
+Stormcaller
+Stormking
+Stormveil
+Supernova
+Swiftfoot
+Tempest
+Thornback
+Thornqueen
+Thornwall
+Thornweed
+Thunder Bolt
+Tidal Wave
+Tidecaller
+Titan's Wrath
+Tumbleweed
+Umbra
+Undertow
+Venom Fang
+Venomstrike
+Verdant
+Void Reaper
+Voidheart
+Voidwalker
+Warden
+Wildfire
+Windcutter
+Worldender
+Wraithblade
+Wraithcoil

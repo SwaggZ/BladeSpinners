@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: Solar Flare_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.SolarFlareAbility
   abilityName: 'Solar Flare [Solar Flare_FaceBolt]'
-  description: Detonates a brilliant explosion of solar energy, dealing heavy damage
-    and knocking enemies back.
-  manaCost: 80
-  rarity: 3
+  description: 'Detonates a brilliant explosion of solar energy, dealing heavy damage
+    and knocking enemies back. [Behavior 713D2947]'
+  manaCost: 93.13051
+  rarity: 1
   icon: {fileID: 0}
-  explosionRadius: 8
-  centerDamage: 35
-  knockbackImpulse: 22
-  blindDuration: 1.5
+  explosionRadius: 10.891053
+  centerDamage: 50.00258
+  knockbackImpulse: 17.594893
+  blindDuration: 1.3535134

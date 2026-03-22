@@ -9,16 +9,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 349a0ab736a07b94995e0b489dd31b2b, type: 3}
+  m_Script: {fileID: 11500000, guid: 73bca8c1644e43c4fb198f826f74ccf9, type: 3}
   m_Name: Dragonheart_FaceBolt
-  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.DragonBurstAbility
-  abilityName: Dragonheart_FaceBolt
-  description: Legendary surge attack that blasts enemies in a forward cone.
-  manaCost: 95
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.FlashStepAbility
+  abilityName: 'Flash Step [Dragonheart_FaceBolt]'
+  description: 'Instantly step forward and keep momentum. [Behavior 5786FA78]'
+  manaCost: 42.07481
   rarity: 3
   icon: {fileID: 0}
-  surgeImpulse: 18
-  coneRange: 10
-  coneHalfAngle: 28
-  spinDamage: 24
-  knockbackImpulse: 14
+  stepDistance: 10.1737
+  endImpulse: 7.9745135

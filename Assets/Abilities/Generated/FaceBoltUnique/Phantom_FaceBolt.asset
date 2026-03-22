@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: Phantom_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.MirageCloneAbility
   abilityName: 'Mirage Clone [Phantom_FaceBolt]'
-  description: Spawns phantom copies that orbit and confuse enemies. When destroyed,
-    each clone explodes.
-  manaCost: 65
+  description: 'Spawns phantom copies that orbit and confuse enemies. When destroyed,
+    each clone explodes. [Behavior DCF060C]'
+  manaCost: 73.026024
   rarity: 2
   icon: {fileID: 0}
   cloneCount: 3
-  spawnRadius: 2.5
-  cloneDuration: 5
-  cloneExplosionDamage: 8
+  spawnRadius: 2.163092
+  cloneDuration: 4.5138965
+  cloneExplosionDamage: 10.657854

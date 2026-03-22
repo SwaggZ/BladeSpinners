@@ -12,11 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ef0d1c402a15544bbe97df775a7b373, type: 3}
   m_Name: Deflector_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.ThornsAbility
-  abilityName: Deflector_FaceBolt
-  description: Envelop the bey in rotating spikes. Any enemy that clashes with you takes reflected spin damage.
-  manaCost: 45
-  rarity: 1
+  abilityName: 'Thorns [Deflector_FaceBolt]'
+  description: 'Envelop the bey in rotating spikes. Any enemy that clashes with you
+    takes reflected spin damage. [Behavior 66266DB6]'
+  manaCost: 43.7518
+  rarity: 3
   icon: {fileID: 0}
-  reflectRatio: 0.6
-  bonusDamage: 8
-  duration: 4
+  reflectRatio: 0.60472095
+  bonusDamage: 6.982964
+  duration: 4.0729604

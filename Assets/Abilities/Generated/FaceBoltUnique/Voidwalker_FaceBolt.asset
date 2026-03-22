@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55788913076723647b9ddba14e3f0280, type: 3}
+  m_Name: Voidwalker_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.VampireDrainAbility
+  abilityName: 'Vampire Drain [Voidwalker_FaceBolt]'
+  description: 'Siphons spin energy from surrounding enemies, restoring your own.
+    [Behavior 6E71E98C]'
+  manaCost: 70.19891
+  rarity: 2
+  icon: {fileID: 0}
+  radius: 9.884764
+  drainAmount: 27.818014
+  healRatio: 0.7129498

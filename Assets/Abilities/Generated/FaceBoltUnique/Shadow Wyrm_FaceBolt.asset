@@ -13,12 +13,13 @@ MonoBehaviour:
   m_Name: Shadow Wyrm_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.DragonBurstAbility
   abilityName: 'Dragon Burst [Shadow Wyrm_FaceBolt]'
-  description: Legendary surge attack that blasts enemies in a forward cone.
-  manaCost: 95
-  rarity: 3
+  description: 'Legendary surge attack that blasts enemies in a forward cone. [Behavior
+    1AD59684]'
+  manaCost: 118.72056
+  rarity: 2
   icon: {fileID: 0}
-  surgeImpulse: 18
-  coneRange: 10
-  coneHalfAngle: 28
-  spinDamage: 24
-  knockbackImpulse: 14
+  surgeImpulse: 15.161095
+  coneRange: 11.886035
+  coneHalfAngle: 39.98975
+  spinDamage: 25.557762
+  knockbackImpulse: 13.272066

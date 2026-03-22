@@ -12,12 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac6fa5770b39c774cb7ac505c83ffc4c, type: 3}
   m_Name: Emerald Storm_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.TidalWaveAbility
-  abilityName: Emerald Storm_FaceBolt
-  description: Unleashes a crashing wave that blasts all nearby enemies outward and slows them.
-  manaCost: 60
-  rarity: 2
+  abilityName: 'Tidal Wave [Emerald Storm_FaceBolt]'
+  description: 'Unleashes a crashing wave that blasts all nearby enemies outward
+    and slows them. [Behavior 48F64F40]'
+  manaCost: 64.27633
+  rarity: 0
   icon: {fileID: 0}
-  waveRadius: 9
-  knockbackImpulse: 18
-  spinDamage: 10
-  slowDuration: 2
+  waveRadius: 8.782997
+  knockbackImpulse: 21.965582
+  spinDamage: 10.18333
+  slowDuration: 2.2824733

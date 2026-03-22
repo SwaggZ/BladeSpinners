@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: Supernova_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.SolarFlareAbility
   abilityName: 'Solar Flare [Supernova_FaceBolt]'
-  description: Detonates a brilliant explosion of solar energy, dealing heavy damage
-    and knocking enemies back.
-  manaCost: 80
-  rarity: 3
+  description: 'Detonates a brilliant explosion of solar energy, dealing heavy damage
+    and knocking enemies back. [Behavior 424A5981]'
+  manaCost: 88.10601
+  rarity: 2
   icon: {fileID: 0}
-  explosionRadius: 8
-  centerDamage: 35
-  knockbackImpulse: 22
-  blindDuration: 1.5
+  explosionRadius: 8.539776
+  centerDamage: 45.167797
+  knockbackImpulse: 19.942005
+  blindDuration: 1.4790058

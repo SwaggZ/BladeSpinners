@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Ironveil_FusionWheel
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Ironveil_FusionWheel
+  partType: 2
+  occupiesSlots: 02000000
+  rarity: 2
+  tags: 
+  partID: ironveil_fusionwheel_1422269917
+  description: A Rare FusionWheel from the Ironveil set.
+  icon: {fileID: 0}
+  meshSeed: 277980125
+  primaryColor: {r: 0.34818405, g: 0.41502425, b: 0.67657864, a: 1}
+  secondaryColor: {r: 0.78529215, g: 0.80730927, b: 0.89346516, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 31.950495
+  massBasedStaminaDrainRate: 1.0467366
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

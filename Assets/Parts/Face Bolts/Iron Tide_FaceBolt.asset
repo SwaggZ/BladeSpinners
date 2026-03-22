@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Iron Tide_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Iron Tide_FaceBolt
+  partType: 4
+  occupiesSlots: 04000000
+  rarity: 2
+  tags: 
+  partID: iron tide_facebolt_141454534
+  description: A Rare FaceBolt from the Iron Tide set.
+  icon: {fileID: 0}
+  meshSeed: 610920222
+  primaryColor: {r: 0.25042647, g: 0.44282997, b: 0.7233484, a: 1}
+  secondaryColor: {r: 0.54176265, g: 0.65938485, b: 0.8308744, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 11400000, guid: cc633df0732ecd0438c568828e16a06d, type: 2}
+  faceBoltEmblem: {fileID: 21300000, guid: 098d67d551f927249a5a4a2e4f6a0c3a, type: 3}

@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62a022de98fcf42499b502bb0b490e9e, type: 3}
+  m_Name: Duskwarden_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.FireBoltAbility
+  abilityName: 'Fire Bolt [Duskwarden_FaceBolt]'
+  description: 'Launches a homing bolt of flame that burns the target on impact.
+    [Behavior 216EA2DD]'
+  manaCost: 46.93702
+  rarity: 2
+  icon: {fileID: 0}
+  projectileSpeed: 17.74804
+  directHitDamage: 18.54096
+  burnDamagePerSecond: 3.5587373
+  burnDuration: 4.0544457
+  homingStrength: 5.4544835

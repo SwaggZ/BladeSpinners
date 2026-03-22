@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Stormveil_FusionWheel
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Stormveil_FusionWheel
+  partType: 2
+  occupiesSlots: 02000000
+  rarity: 2
+  tags: 
+  partID: stormveil_fusionwheel_306154782
+  description: A Rare FusionWheel from the Stormveil set.
+  icon: {fileID: 0}
+  meshSeed: 2027077430
+  primaryColor: {r: 0.24875954, g: 0.4367901, b: 0.72920907, a: 1}
+  secondaryColor: {r: 0.750584, g: 0.81301117, b: 0.91009593, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 41.995575
+  massBasedStaminaDrainRate: 0.830333
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

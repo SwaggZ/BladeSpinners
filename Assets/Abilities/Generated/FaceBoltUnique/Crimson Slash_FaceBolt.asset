@@ -9,16 +9,17 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 62a022de98fcf42499b502bb0b490e9e, type: 3}
+  m_Script: {fileID: 11500000, guid: 349a0ab736a07b94995e0b489dd31b2b, type: 3}
   m_Name: Crimson Slash_FaceBolt
-  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.FireBoltAbility
-  abilityName: Crimson Slash_FaceBolt
-  description: Launches a homing bolt of flame that burns the target on impact.
-  manaCost: 55
-  rarity: 1
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.DragonBurstAbility
+  abilityName: 'Dragon Burst [Crimson Slash_FaceBolt]'
+  description: 'Legendary surge attack that blasts enemies in a forward cone. [Behavior
+    20DCD66A]'
+  manaCost: 89.64764
+  rarity: 3
   icon: {fileID: 0}
-  projectileSpeed: 22
-  directHitDamage: 20
-  burnDamagePerSecond: 5
-  burnDuration: 3
-  homingStrength: 4
+  surgeImpulse: 16.719152
+  coneRange: 8.312573
+  coneHalfAngle: 34.685734
+  spinDamage: 37.246784
+  knockbackImpulse: 21.085402

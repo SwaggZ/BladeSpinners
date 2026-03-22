@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: Phantom Arrow_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.RicochetShotAbility
   abilityName: 'Ricochet Shot [Phantom Arrow_FaceBolt]'
-  description: Fires a bolt that bounces between enemies, dealing spin damage on
-    each hit.
-  manaCost: 55
+  description: 'Fires a bolt that bounces between enemies, dealing spin damage on
+    each hit. [Behavior 350B53A4]'
+  manaCost: 57.18729
   rarity: 1
   icon: {fileID: 0}
-  projectileSpeed: 18
-  damagePerBounce: 10
+  projectileSpeed: 25.19763
+  damagePerBounce: 11.05255
   maxBounces: 5
-  bounceRadius: 8
+  bounceRadius: 7.8953424

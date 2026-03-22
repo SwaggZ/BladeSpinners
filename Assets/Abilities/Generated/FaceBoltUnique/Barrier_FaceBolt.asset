@@ -12,10 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d025b99335eea543b494eb4753bfec6, type: 3}
   m_Name: Barrier_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.ShieldAbility
-  abilityName: Barrier_FaceBolt
-  description: Temporarily increases weight, reducing spin damage taken.
-  manaCost: 50
+  abilityName: 'Shield [Barrier_FaceBolt]'
+  description: 'Temporarily increases weight, reducing spin damage taken. [Behavior
+    1442EFE9]'
+  manaCost: 64.64221
   rarity: 1
   icon: {fileID: 0}
-  duration: 3
-  weightBoost: 30
+  duration: 4.5587015
+  weightBoost: 42.724197

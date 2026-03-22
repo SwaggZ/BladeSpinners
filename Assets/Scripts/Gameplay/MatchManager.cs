@@ -292,11 +292,11 @@ namespace BladeSpinners.Gameplay
             if (enemyConfig == null)
                 return;
 
-            lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.Tip));
-            lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.Track));
-            lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.FusionWheel));
-            lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.EnergyRing));
             lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.FaceBolt));
+            lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.EnergyRing));
+            lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.FusionWheel));
+            lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.Track));
+            lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.Tip));
         }
 
         private void HandlePlayerBurst(PlayerDefeatReason reason, string message)
@@ -375,9 +375,14 @@ namespace BladeSpinners.Gameplay
 
             Material material = new Material(ShaderProvider.URPLit);
             Color color = part.PrimaryColor;
-            color.a = useTransparentDropMaterial ? Mathf.Clamp01(dropVisualAlpha) : 1f;
+            bool isEnergyRing = part.PartType == PartType.EnergyRing;
+            color.a = isEnergyRing ? 0.56f : (useTransparentDropMaterial ? Mathf.Clamp01(dropVisualAlpha) : 1f);
             material.color = color;
-            if (useTransparentDropMaterial)
+            if (part.PartType == PartType.FusionWheel && material.HasProperty("_Metallic"))
+                material.SetFloat("_Metallic", 1f);
+            if (part.PartType == PartType.FusionWheel && material.HasProperty("_Smoothness"))
+                material.SetFloat("_Smoothness", 0.92f);
+            if (isEnergyRing || useTransparentDropMaterial)
             {
                 ApplyTransparentMaterialSettings(material);
             }

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2f3d96332c9c6f4aa3468bb8fdee12f, type: 3}
+  m_Name: Coppercoil_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.SolarFlareAbility
+  abilityName: 'Solar Flare [Coppercoil_FaceBolt]'
+  description: 'Detonates a brilliant explosion of solar energy, dealing heavy damage
+    and knocking enemies back. [Behavior 4C985347]'
+  manaCost: 95.07471
+  rarity: 2
+  icon: {fileID: 0}
+  explosionRadius: 12
+  centerDamage: 36.979866
+  knockbackImpulse: 17.403532
+  blindDuration: 2.3215668

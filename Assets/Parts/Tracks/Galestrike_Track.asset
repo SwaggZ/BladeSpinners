@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Galestrike_Track
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Galestrike_Track
+  partType: 1
+  occupiesSlots: 01000000
+  rarity: 3
+  tags: 
+  partID: galestrike_track_735706030
+  description: A Epic Track from the Galestrike set.
+  icon: {fileID: 0}
+  meshSeed: 1236584987
+  primaryColor: {r: 0.20452516, g: 0.428593, b: 0.6372892, a: 1}
+  secondaryColor: {r: 0.5427651, g: 0.67155814, b: 0.7915157, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 0.05247392
+  jumpArcModifier: 1.0508648
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

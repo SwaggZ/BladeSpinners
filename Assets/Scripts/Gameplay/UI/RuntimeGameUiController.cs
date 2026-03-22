@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using BladeSpinners.Core;
 using BladeSpinners.Gameplay;
 using BladeSpinners.Abilities;
@@ -12,6 +13,8 @@ namespace BladeSpinners.Gameplay.UI
 {
     public class RuntimeGameUiController : MonoBehaviour
     {
+        private const string PartsDebugSceneName = "PartsDebugScene";
+
         // ── Enum types ───────────────────────────────────────────────────────────
         private enum RootUiState { MainMenu, InRun, Paused, BetweenArenas }
         private enum MenuPanel   { Home, Inventory, Settings, Keybinds }
@@ -122,6 +125,8 @@ namespace BladeSpinners.Gameplay.UI
         private static readonly Color OVERLAY    = new Color(0f, 0f, 0f, 0.76f);
         private static readonly Color RED_DANGER = new Color(0.65f, 0.07f, 0.07f, 1f);
 
+        private static readonly PartType[] PART_DISPLAY_ORDER = { PartType.FaceBolt, PartType.EnergyRing, PartType.FusionWheel, PartType.Track, PartType.Tip };
+
         private const string StarterConfigResourcePath = "StarterPartsConfig";
         private readonly BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Instance;
 
@@ -132,6 +137,9 @@ namespace BladeSpinners.Gameplay.UI
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
+            if (IsPartsDebugSceneActive())
+                return;
+
             Debug.Log("[BladeSpinners] Bootstrap() called");
             if (instance != null) return;
 
@@ -151,6 +159,12 @@ namespace BladeSpinners.Gameplay.UI
 
         private void Awake()
         {
+            if (IsPartsDebugSceneActive())
+            {
+                Destroy(gameObject);
+                return;
+            }
+
             Debug.Log("[BladeSpinners] Awake() called");
             if (instance != null && instance != this) { Destroy(gameObject); return; }
             instance = this;
@@ -202,6 +216,12 @@ namespace BladeSpinners.Gameplay.UI
             }
 
             Debug.Log("[BladeSpinners] Awake() finished successfully");
+        }
+
+        private static bool IsPartsDebugSceneActive()
+        {
+            Scene activeScene = SceneManager.GetActiveScene();
+            return activeScene.IsValid() && string.Equals(activeScene.name, PartsDebugSceneName, StringComparison.Ordinal);
         }
 
         private void Update()
@@ -498,7 +518,6 @@ namespace BladeSpinners.Gameplay.UI
                 if (previewTexture != null)
                 {
                     GUI.DrawTexture(previewRect, previewTexture, ScaleMode.ScaleToFit, true);
-                    HandlePreviewDragInput(previewRect);
                 }
 
                 DrawRect(buildCard, new Color(0f, 0f, 0f, 0.30f));
@@ -543,7 +562,9 @@ namespace BladeSpinners.Gameplay.UI
 
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("■", sectionLabelStyle, GUILayout.Width(18f));
-                GUILayout.Label(PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant(), resolvedItemStyle, GUILayout.ExpandWidth(true));
+                int partScore = Mathf.RoundToInt(GetPartPowerScore(part));
+                string partLabel = $"{PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant()}  —  SCORE {partScore}";
+                GUILayout.Label(partLabel, resolvedItemStyle, GUILayout.ExpandWidth(true));
                 GUILayout.EndHorizontal();
                 GUILayout.Space(2f);
             }
@@ -623,7 +644,8 @@ namespace BladeSpinners.Gameplay.UI
                 bool    isFocused  = selectedLootPart == part;
 
                 GUILayout.BeginHorizontal();
-                string partLabel = $"{PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant()}  [{part.Rarity.ToString().ToUpper()}]  —  {part.PartType.ToString().ToUpper()}";
+                int partScore = Mathf.RoundToInt(GetPartPowerScore(part));
+                string partLabel = $"{PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant()}  [{part.Rarity.ToString().ToUpper()}]  —  {part.PartType.ToString().ToUpper()}  —  SCORE {partScore}";
                 GUILayout.Label(partLabel, rowLabel, GUILayout.ExpandWidth(true));
                 if (InlineBtn(isFocused ? "VIEWING" : "VIEW", btnW, btnH, isFocused))
                     selectedLootPart = part;
@@ -665,6 +687,7 @@ namespace BladeSpinners.Gameplay.UI
             foreach (BeyPart p in parts)
                 if (p != null && !ownedParts.Contains(p))
                     ownedParts.Add(p);
+            AutoSave();
         }
 
         private static Dictionary<PartType, BeyPart> BuildLoadoutFromParts(IReadOnlyList<BeyPart> parts)
@@ -807,7 +830,7 @@ namespace BladeSpinners.Gameplay.UI
             GUILayout.Label("CLICK A SLOT TO OPEN ITS PART LIST", bodyLabelStyle);
             GUILayout.Space(Mathf.Clamp(6f * uiScale, 6f, 12f));
 
-            foreach (PartType type in Enum.GetValues(typeof(PartType)))
+            foreach (PartType type in PART_DISPLAY_ORDER)
             {
                 currentLoadout.TryGetValue(type, out BeyPart equippedPart);
                 string slotLabel = type.ToString().ToUpper();
@@ -870,6 +893,7 @@ namespace BladeSpinners.Gameplay.UI
                     {
                         selectedMainMenuLoadout[selectedType] = part;
                         RefreshPreviewFromLoadout(selectedMainMenuLoadout);
+                        AutoSave();
                     }
                 }
                 GUILayout.EndHorizontal();
@@ -1173,7 +1197,7 @@ namespace BladeSpinners.Gameplay.UI
             GUILayout.BeginArea(new Rect(bgRect.x + innerPadX, bgRect.y + innerPadY, bgRect.width - innerPadX * 2f, bgRect.height - innerPadY * 2f));
             GUILayout.Label("CURRENT LOADOUT", sectionLabelStyle);
             GUILayout.Space(4);
-            foreach (PartType type in Enum.GetValues(typeof(PartType)))
+            foreach (PartType type in PART_DISPLAY_ORDER)
             {
                 selectedMainMenuLoadout.TryGetValue(type, out BeyPart part);
                 string name = part != null ? PartDisplayNameFormatter.ToShortDisplayName(part).ToUpper() : "NONE";
@@ -1409,7 +1433,7 @@ namespace BladeSpinners.Gameplay.UI
             BeyPart hoveredPart = null;
             Rect hoveredRow = Rect.zero;
             float currentY = listRect.y + 6f;
-            foreach (PartType type in Enum.GetValues(typeof(PartType)))
+            foreach (PartType type in PART_DISPLAY_ORDER)
             {
                 Rect row = new Rect(listRect.x + 4f, currentY, listRect.width - 8f, rowH);
                 currentY += rowH + 6f;
@@ -1487,21 +1511,34 @@ namespace BladeSpinners.Gameplay.UI
             Rect trackRect = new Rect(previewRect.xMax - nodeSize * 0.60f, previewRect.yMax - nodeSize * 0.92f, nodeSize, nodeSize);
             Rect tipRect = new Rect(previewRect.center.x - nodeSize * 0.5f, previewRect.yMax - smallYOffset, nodeSize, nodeSize);
 
-            DrawOrbitSlot(faceBoltRect, PartType.FaceBolt, loadout, "FACE BOLT");
-            DrawOrbitSlot(energyRingRect, PartType.EnergyRing, loadout, "ENERGY RING");
-            DrawOrbitSlot(fusionRect, PartType.FusionWheel, loadout, "FUSION WHEEL");
-            DrawOrbitSlot(trackRect, PartType.Track, loadout, "TRACK");
-            DrawOrbitSlot(tipRect, PartType.Tip, loadout, "TIP");
-
-            // Preview drag handled after orbit buttons so orbit clicks are not consumed first
-            if (previewTexture != null)
-                HandlePreviewDragInput(previewRect);
-
             Rect hintRect = new Rect(inner.x, inner.yMax - 42f, inner.width, 28f);
             DrawFittedLabel(hintRect, garageSwapSlot.HasValue ? $"SWAPPING {garageSwapSlot.Value.ToString().ToUpper()}" : "CLICK A PART NODE TO OPEN ITS SWAP MODAL", bodyLabelStyle, new Color(0.74f, 0.90f, 1f, 0.82f), 10);
 
             Rect swapModalRect = new Rect(area.xMax - Mathf.Clamp(area.width * 0.38f, 260f, 360f), area.y + 18f, Mathf.Clamp(area.width * 0.36f, 250f, 340f), area.height * 0.58f);
+
+            bool modalOpen = garageSwapSlot.HasValue;
+            bool suppressBackgroundInteraction = modalOpen
+                && Event.current != null
+                && (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.MouseDrag)
+                && swapModalRect.Contains(Event.current.mousePosition);
+
+            // Re-draw orbit slots with click suppression when modal overlays this area.
+            // (Keep visuals identical; only disable behind-modal interaction.)
+            DrawOrbitSlot(faceBoltRect, PartType.FaceBolt, loadout, "FACE BOLT", suppressBackgroundInteraction);
+            DrawOrbitSlot(energyRingRect, PartType.EnergyRing, loadout, "ENERGY RING", suppressBackgroundInteraction);
+            DrawOrbitSlot(fusionRect, PartType.FusionWheel, loadout, "FUSION WHEEL", suppressBackgroundInteraction);
+            DrawOrbitSlot(trackRect, PartType.Track, loadout, "TRACK", suppressBackgroundInteraction);
+            DrawOrbitSlot(tipRect, PartType.Tip, loadout, "TIP", suppressBackgroundInteraction);
+
+            // Preview drag handled after orbit buttons so orbit clicks are not consumed first.
+            // Also suppress drag input while interacting with the modal.
+            if (previewTexture != null && !suppressBackgroundInteraction)
+                HandlePreviewDragInput(previewRect);
+
             DrawGarageSwapModal(swapModalRect, loadout, useRunInventory, runPlayer);
+
+            if (suppressBackgroundInteraction)
+                Event.current.Use();
 
             // Close modal when clicking anywhere outside it (orbit slot clicks are already consumed before this point)
             if (garageSwapSlot.HasValue
@@ -1514,7 +1551,7 @@ namespace BladeSpinners.Gameplay.UI
             }
         }
 
-        private void DrawOrbitSlot(Rect rect, PartType type, Dictionary<PartType, BeyPart> loadout, string label)
+        private void DrawOrbitSlot(Rect rect, PartType type, Dictionary<PartType, BeyPart> loadout, string label, bool suppressInteraction = false)
         {
             loadout.TryGetValue(type, out BeyPart part);
             bool active = garageSwapSlot == type;
@@ -1534,7 +1571,7 @@ namespace BladeSpinners.Gameplay.UI
                 DrawPartSprite(iconRect, part);
             DrawFittedLabel(new Rect(rect.x + 6f, rect.yMax - 26f, rect.width - 12f, 18f), part != null ? PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant() : "EMPTY", bodyLabelStyle, Color.white, 9);
 
-            if (GUI.Button(rect, GUIContent.none, GUIStyle.none))
+            if (!suppressInteraction && GUI.Button(rect, GUIContent.none, GUIStyle.none))
                 garageSwapSlot = garageSwapSlot == type ? (PartType?)null : type;
         }
 
@@ -1907,6 +1944,7 @@ namespace BladeSpinners.Gameplay.UI
 
             RefreshPreviewFromLoadout(selectedMainMenuLoadout);
             ShowTransientUiMessage("Auto optimize equipped the highest rated owned parts.");
+            AutoSave();
         }
 
         private void EquipPartFromGarage(PartType slot, BeyPart part, bool useRunInventory, PlayerManager runPlayer)
@@ -1923,6 +1961,7 @@ namespace BladeSpinners.Gameplay.UI
             {
                 selectedMainMenuLoadout[slot] = part;
                 RefreshPreviewFromLoadout(selectedMainMenuLoadout);
+                AutoSave();
             }
         }
 
@@ -1952,6 +1991,7 @@ namespace BladeSpinners.Gameplay.UI
 
             BuildDefaultLoadout();
             RefreshPreviewFromLoadout(selectedMainMenuLoadout);
+            AutoSave();
         }
 
         private float GetBuildPowerScore(Dictionary<PartType, BeyPart> loadout)
@@ -2169,7 +2209,7 @@ namespace BladeSpinners.Gameplay.UI
                 return;
 
             rootState = RootUiState.BetweenArenas;
-            pausePanel = MenuPanel.Inventory;
+            pausePanel = MenuPanel.Home;
             Time.timeScale = 0f;
             ResetPreviewRotationState();
             UpdateCursorState();
@@ -2219,6 +2259,11 @@ namespace BladeSpinners.Gameplay.UI
         // ══════════════════════════════════════════════════════════════════════════
         //  DATA HELPERS
         // ══════════════════════════════════════════════════════════════════════════
+
+        private void AutoSave()
+        {
+            SaveManager.Save(ownedParts, selectedMainMenuLoadout);
+        }
 
         private void BuildDefaultLoadout()
         {
@@ -2290,6 +2335,30 @@ namespace BladeSpinners.Gameplay.UI
 
             if (enemyParts == null || enemyParts.Count == 0)
                 enemyParts = new List<BeyPart>(ownedParts);
+
+            // Load saved data (owned parts + loadout) from disk
+            List<BeyPart> allKnown = new List<BeyPart>(ownedParts);
+            for (int i = 0; i < enemyParts.Count; i++)
+                if (enemyParts[i] != null && !allKnown.Contains(enemyParts[i]))
+                    allKnown.Add(enemyParts[i]);
+
+            if (SaveManager.TryLoad(allKnown, out List<BeyPart> savedOwned, out Dictionary<PartType, BeyPart> savedLoadout))
+            {
+                // Merge: start from saved parts, add any starter parts not already present
+                List<BeyPart> starterOwned = ownedParts;
+                ownedParts = savedOwned;
+                for (int i = 0; i < starterOwned.Count; i++)
+                    if (starterOwned[i] != null && !ownedParts.Contains(starterOwned[i]))
+                        ownedParts.Add(starterOwned[i]);
+
+                // Apply saved loadout
+                selectedMainMenuLoadout.Clear();
+                foreach (KeyValuePair<PartType, BeyPart> kv in savedLoadout)
+                    if (kv.Value != null)
+                        selectedMainMenuLoadout[kv.Key] = kv.Value;
+
+                Debug.Log($"[SaveManager] Loaded save: {savedOwned.Count} parts, loadout restored.");
+            }
 
             BuildDefaultLoadout();
         }
@@ -2522,7 +2591,24 @@ namespace BladeSpinners.Gameplay.UI
                 if (shader != null)
                 {
                     Material mat = new Material(shader);
-                    mat.color = part.PrimaryColor;
+                    Color partColor = part.PrimaryColor;
+                    if (part.PartType == PartType.EnergyRing)
+                        partColor.a = 0.56f;
+                    mat.color = partColor;
+                    if (part.PartType == PartType.FusionWheel && mat.HasProperty("_Metallic"))
+                        mat.SetFloat("_Metallic", 1f);
+                    if (part.PartType == PartType.FusionWheel && mat.HasProperty("_Smoothness"))
+                        mat.SetFloat("_Smoothness", 0.92f);
+                    if (part.PartType == PartType.EnergyRing)
+                    {
+                        if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1f);
+                        if (mat.HasProperty("_Blend")) mat.SetFloat("_Blend", 0f);
+                        if (mat.HasProperty("_ZWrite")) mat.SetFloat("_ZWrite", 0f);
+                        if (mat.HasProperty("_SrcBlend")) mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                        if (mat.HasProperty("_DstBlend")) mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                        mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                        mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                    }
                     mr.sharedMaterial = mat;
                 }
 
@@ -2574,7 +2660,24 @@ namespace BladeSpinners.Gameplay.UI
                 if (shader != null)
                 {
                     Material mat = new Material(shader);
-                    mat.color = part.PrimaryColor;
+                    Color partColor = part.PrimaryColor;
+                    if (type == PartType.EnergyRing)
+                        partColor.a = 0.56f;
+                    mat.color = partColor;
+                    if (type == PartType.FusionWheel && mat.HasProperty("_Metallic"))
+                        mat.SetFloat("_Metallic", 1f);
+                    if (type == PartType.FusionWheel && mat.HasProperty("_Smoothness"))
+                        mat.SetFloat("_Smoothness", 0.92f);
+                    if (type == PartType.EnergyRing)
+                    {
+                        if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1f);
+                        if (mat.HasProperty("_Blend")) mat.SetFloat("_Blend", 0f);
+                        if (mat.HasProperty("_ZWrite")) mat.SetFloat("_ZWrite", 0f);
+                        if (mat.HasProperty("_SrcBlend")) mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                        if (mat.HasProperty("_DstBlend")) mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                        mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                        mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                    }
                     mr.sharedMaterial = mat;
                 }
 

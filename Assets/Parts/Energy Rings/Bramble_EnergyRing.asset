@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Bramble_EnergyRing
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Bramble_EnergyRing
+  partType: 3
+  occupiesSlots: 03000000
+  rarity: 0
+  tags: 
+  partID: bramble_energyring_1520303786
+  description: A Common EnergyRing from the Bramble set.
+  icon: {fileID: 0}
+  meshSeed: 28489342
+  primaryColor: {r: 0.39462093, g: 0.5356504, b: 0.3641369, a: 1}
+  secondaryColor: {r: 0.63094205, g: 0.716918, b: 0.61235803, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 289.83472
+  manaRegenRate: 28.302841
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

@@ -19,6 +19,8 @@ namespace BladeSpinners.Gameplay.Parts
     [ExecuteInEditMode]
     public class BeyAssembler : MonoBehaviour
     {
+        private const float FaceBoltEmblemWorldSize = 0.07f;
+
         [Header("Part Slots — drag BeyPart assets here")]
         [SerializeField] private BeyPart tipPart;
         [SerializeField] private BeyPart trackPart;
@@ -280,7 +282,9 @@ namespace BladeSpinners.Gameplay.Parts
                 GameObject partObj = new GameObject($"Part_{slots[i]}");
                 partObj.transform.SetParent(beyModelTransform, false);
                 partObj.transform.localPosition = new Vector3(0, localY, 0);
-                partObj.transform.localRotation = Quaternion.identity;
+                partObj.transform.localRotation = slots[i] == PartType.FaceBolt
+                    ? Quaternion.Euler(0f, 30f, 0f)
+                    : Quaternion.identity;
                 partObj.hideFlags = HideFlags.DontSave; // Don't serialize generated objects
 
                 // Inherit layer from root bey (Bey layer) so physics ignoring works
@@ -301,18 +305,35 @@ namespace BladeSpinners.Gameplay.Parts
                 Material mat = new Material(shaderToUse);
 
                 // URP Lit uses _BaseColor (not _Color), _Metallic, _Smoothness (not _Glossiness)
-                mat.SetColor("_BaseColor", parts[i].PrimaryColor);
+                Color partColor = parts[i].PrimaryColor;
+                if (slots[i] == PartType.EnergyRing)
+                    partColor.a = 0.56f;
+                else
+                    partColor.a = 1f;
+                mat.SetColor("_BaseColor", partColor);
 
                 // Material style per slot
                 switch (slots[i])
                 {
                     case PartType.FusionWheel:
-                        mat.SetFloat("_Metallic", 0.8f);
-                        mat.SetFloat("_Smoothness", 0.6f);
+                        mat.SetColor("_BaseColor", GetFusionWheelMetalColor(partColor));
+                        mat.SetFloat("_Metallic", 1f);
+                        mat.SetFloat("_Smoothness", 1f);
+                        if (mat.HasProperty("_EnvironmentReflections")) mat.SetFloat("_EnvironmentReflections", 1f);
+                        if (mat.HasProperty("_SpecularHighlights")) mat.SetFloat("_SpecularHighlights", 1f);
                         break;
                     case PartType.EnergyRing:
                         mat.SetFloat("_Metallic", 0.3f);
                         mat.SetFloat("_Smoothness", 0.8f);
+
+                        // Semi-transparent plastic look for Energy Ring
+                        if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1f);
+                        if (mat.HasProperty("_Blend")) mat.SetFloat("_Blend", 0f);
+                        if (mat.HasProperty("_ZWrite")) mat.SetFloat("_ZWrite", 0f);
+                        if (mat.HasProperty("_SrcBlend")) mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                        if (mat.HasProperty("_DstBlend")) mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                        mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                        mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
                         break;
                     case PartType.FaceBolt:
                         mat.SetFloat("_Metallic", 0.9f);
@@ -395,12 +416,10 @@ namespace BladeSpinners.Gameplay.Parts
 
             float topY = faceBoltBounds.max.y + 0.002f;
             emblemObject.transform.localPosition = new Vector3(0f, topY, 0f);
-            emblemObject.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-
-            float targetDiameter = Mathf.Max(faceBoltBounds.extents.x, faceBoltBounds.extents.z) * 1.6f;
-            float spriteDiameter = Mathf.Max(0.0001f, Mathf.Max(emblemSprite.bounds.size.x, emblemSprite.bounds.size.y));
-            float scale = targetDiameter / spriteDiameter;
-            emblemObject.transform.localScale = Vector3.one * scale;
+            emblemObject.transform.localRotation = Quaternion.Euler(90f, 0f, -30f);
+            float spriteWorldDiameter = Mathf.Max(emblemSprite.bounds.size.x, emblemSprite.bounds.size.y);
+            float normalizedScale = (spriteWorldDiameter > 0f) ? FaceBoltEmblemWorldSize / spriteWorldDiameter : 0.008f;
+            emblemObject.transform.localScale = Vector3.one * normalizedScale;
 
             SpriteRenderer renderer = emblemObject.AddComponent<SpriteRenderer>();
             renderer.sprite = emblemSprite;
@@ -411,6 +430,14 @@ namespace BladeSpinners.Gameplay.Parts
             renderer.maskInteraction = SpriteMaskInteraction.None;
 
             emblemObject.layer = faceBoltTransform.gameObject.layer;
+        }
+
+        private static Color GetFusionWheelMetalColor(Color source)
+        {
+            float luminance = source.grayscale;
+            Color neutral = new Color(luminance, luminance, luminance, 1f);
+            Color coated = Color.Lerp(neutral, new Color(source.r, source.g, source.b, 1f), 0.18f);
+            return Color.Lerp(coated, new Color(0.72f, 0.72f, 0.72f, 1f), 0.2f);
         }
 
         // ================================================================

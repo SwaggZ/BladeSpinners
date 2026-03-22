@@ -9,13 +9,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 905d04a315441b947a4883f7c1522017, type: 3}
+  m_Script: {fileID: 11500000, guid: c3dba9900120f384dbfe5e5ce77d4b34, type: 3}
   m_Name: Hexblade_FaceBolt
-  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.SpinDrainAbility
-  abilityName: Hexblade_FaceBolt
-  description: Steals spin from all nearby enemies.
-  manaCost: 80
-  rarity: 2
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.SerpentCoilAbility
+  abilityName: 'Serpent Coil [Hexblade_FaceBolt]'
+  description: 'Lashes out with a serpentine force, dragging the nearest enemy close
+    and coiling them in place. [Behavior B8A127B]'
+  manaCost: 48.83471
+  rarity: 1
   icon: {fileID: 0}
-  drainRadius: 6
-  spinStolen: 20
+  pullRange: 12.782695
+  pullImpulse: 16.201017
+  immobilizeDuration: 2.3965058
+  spinDamage: 13.883455

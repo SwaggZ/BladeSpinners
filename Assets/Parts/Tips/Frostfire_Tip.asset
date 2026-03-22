@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Frostfire_Tip
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Frostfire_Tip
+  partType: 0
+  occupiesSlots: 00000000
+  rarity: 4
+  tags: 
+  partID: frostfire_tip_2097899359
+  description: A Legendary Tip from the Frostfire set.
+  icon: {fileID: 0}
+  meshSeed: 1276400005
+  primaryColor: {r: 0.5053442, g: 0.65821576, b: 1, a: 1}
+  secondaryColor: {r: 0.7635117, g: 0.83659756, b: 1, a: 1}
+  tipBehavior: 22
+  behaviorBasedStaminaDrainModifier: 1.9062219
+  uphillResistanceMultiplier: 1.966545
+  slopeMultiplier: 2.3813422
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

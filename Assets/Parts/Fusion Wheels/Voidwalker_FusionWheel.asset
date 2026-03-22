@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Voidwalker_FusionWheel
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Voidwalker_FusionWheel
+  partType: 2
+  occupiesSlots: 02000000
+  rarity: 3
+  tags: 
+  partID: voidwalker_fusionwheel_1503138116
+  description: A Epic FusionWheel from the Voidwalker set.
+  icon: {fileID: 0}
+  meshSeed: 1903820509
+  primaryColor: {r: 0.18536693, g: 0, b: 0.350517, a: 1}
+  secondaryColor: {r: 0.44064572, g: 0.3133666, b: 0.5540433, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 47.711983
+  massBasedStaminaDrainRate: 0.57422173
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

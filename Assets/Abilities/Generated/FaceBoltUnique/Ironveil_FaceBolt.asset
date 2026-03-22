@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 349a0ab736a07b94995e0b489dd31b2b, type: 3}
+  m_Name: Ironveil_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.DragonBurstAbility
+  abilityName: 'Dragon Burst [Ironveil_FaceBolt]'
+  description: 'Legendary surge attack that blasts enemies in a forward cone. [Behavior
+    797931F2]'
+  manaCost: 118.75855
+  rarity: 0
+  icon: {fileID: 0}
+  surgeImpulse: 15.321974
+  coneRange: 7.9249616
+  coneHalfAngle: 30.653286
+  spinDamage: 25.046774
+  knockbackImpulse: 18.052414

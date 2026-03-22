@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: Serpent King_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.SerpentCoilAbility
   abilityName: 'Serpent Coil [Serpent King_FaceBolt]'
-  description: Lashes out with a serpentine force, dragging the nearest enemy close
-    and coiling them in place.
-  manaCost: 55
+  description: 'Lashes out with a serpentine force, dragging the nearest enemy close
+    and coiling them in place. [Behavior 6F6C5EC5]'
+  manaCost: 55.506878
   rarity: 2
   icon: {fileID: 0}
-  pullRange: 9
-  pullImpulse: 14
-  immobilizeDuration: 2
-  spinDamage: 15
+  pullRange: 7.698036
+  pullImpulse: 19.130047
+  immobilizeDuration: 2.1673872
+  spinDamage: 13.955248

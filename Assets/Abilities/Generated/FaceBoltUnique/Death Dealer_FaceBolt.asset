@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 905d04a315441b947a4883f7c1522017, type: 3}
   m_Name: Death Dealer_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.SpinDrainAbility
-  abilityName: Death Dealer_FaceBolt
-  description: Steals spin from all nearby enemies.
-  manaCost: 80
-  rarity: 2
+  abilityName: 'Spin Drain [Death Dealer_FaceBolt]'
+  description: 'Steals spin from all nearby enemies. [Behavior 22BC7B21]'
+  manaCost: 89.10611
+  rarity: 3
   icon: {fileID: 0}
-  drainRadius: 6
-  spinStolen: 20
+  drainRadius: 5.8368044
+  spinStolen: 16.38443

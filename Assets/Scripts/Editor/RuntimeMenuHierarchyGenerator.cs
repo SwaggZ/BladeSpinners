@@ -10,6 +10,7 @@ namespace BladeSpinners.Editor
     public static class RuntimeMenuHierarchyGenerator
     {
         private const string RuntimeUiObjectName = "RuntimeGameUiController";
+        private const string PartsDebugSceneName = "PartsDebugScene";
 
         static RuntimeMenuHierarchyGenerator()
         {
@@ -41,6 +42,9 @@ namespace BladeSpinners.Editor
 
             Scene scene = SceneManager.GetActiveScene();
             if (!scene.IsValid() || !scene.isLoaded)
+                return;
+
+            if (scene.name == PartsDebugSceneName)
                 return;
 
             RuntimeGameUiController existing = Object.FindFirstObjectByType<RuntimeGameUiController>();

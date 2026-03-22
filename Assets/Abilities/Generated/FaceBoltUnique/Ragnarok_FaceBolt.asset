@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08c5b4b2d2ca57140bd2e46dd35697dc, type: 3}
+  m_Name: Ragnarok_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.RicochetShotAbility
+  abilityName: 'Ricochet Shot [Ragnarok_FaceBolt]'
+  description: 'Fires a bolt that bounces between enemies, dealing spin damage on
+    each hit. [Behavior 465B4917]'
+  manaCost: 57.377064
+  rarity: 2
+  icon: {fileID: 0}
+  projectileSpeed: 27.193146
+  damagePerBounce: 14.129809
+  maxBounces: 5
+  bounceRadius: 6.798914

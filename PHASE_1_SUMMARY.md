@@ -1,6 +1,8 @@
 # Phase 1: Movement & Player Gameplay - COMPLETE ✅
 
-> Historical milestone note: this document describes the completed phase-1 foundation. The live project has since advanced beyond this snapshot with runtime menus, multi-arena run progression, responsive overlays, and camera occluder fading.
+> Date baseline: all existing entries in this file are tagged as updated on 21/3/2026.
+
+> Historical milestone note: this document describes the completed phase-1 foundation. The live project has since advanced far beyond this snapshot with 52 abilities, 150 Face Bolts, procedural arenas with obstacle types, runtime garage/inventory menus, multi-arena run progression, death-screen overlays, DBZ-style auras, slope-aware physics, and camera occluder fading.
 
 ## Summary
 Phase 1 is now complete! All core movement, physics, and player control systems are implemented and ready for integration into scenes.
@@ -25,7 +27,7 @@ Phase 1 is now complete! All core movement, physics, and player control systems 
 
 ### Movement System (BladeSpinners.Gameplay.Movement)
 - **ITipBehavior.cs**: Interface for all tip behaviors
-- **7 Concrete Behaviors**: FlatTip, SharpTip, RoundTip, RubberFlatTip, BallTip, SpikeTip, OrbitTip
+- **8 Concrete Behaviors**: FlatTip, SharpTip, RoundTip, RubberFlatTip, BallTip, SpikeTip, OrbitTip, plus 23+ MFB-style catalog variants (WD, Q, ES, W2D, MS, EDS, SF, MB, BS, SD, HF, DS, S, FS, B, RS, F, D, R2F, EWD, D:D, CS, B:D)
   - Each controls grip, uphill resistance, tilt amount, and stamina drain characteristics
   - Force is ONLY applied along forward axis - steering rotates facing direction
   - Physics momentum handles all curved paths
@@ -166,4 +168,4 @@ Assets/Scripts/
 
 ---
 **Status**: ✅ Complete and ready for Phase 2 (World Generation)
-**Last Updated**: March 16, 2026
+**Last Updated**: March 22, 2026

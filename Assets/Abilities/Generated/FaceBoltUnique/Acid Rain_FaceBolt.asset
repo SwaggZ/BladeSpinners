@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62a022de98fcf42499b502bb0b490e9e, type: 3}
+  m_Name: Acid Rain_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.FireBoltAbility
+  abilityName: 'Fire Bolt [Acid Rain_FaceBolt]'
+  description: 'Launches a homing bolt of flame that burns the target on impact.
+    [Behavior 5183DE59]'
+  manaCost: 62.00853
+  rarity: 3
+  icon: {fileID: 0}
+  projectileSpeed: 23.784397
+  directHitDamage: 30.762217
+  burnDamagePerSecond: 6.5222383
+  burnDuration: 4.5454407
+  homingStrength: 5.4558377

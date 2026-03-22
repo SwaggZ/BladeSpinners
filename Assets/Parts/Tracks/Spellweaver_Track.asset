@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Spellweaver_Track
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Spellweaver_Track
+  partType: 1
+  occupiesSlots: 01000000
+  rarity: 4
+  tags: 
+  partID: spellweaver_track_40340092
+  description: A Legendary Track from the Spellweaver set.
+  icon: {fileID: 0}
+  meshSeed: 1049714799
+  primaryColor: {r: 0.44272223, g: 0.1877044, b: 0.567666, a: 1}
+  secondaryColor: {r: 0.6547436, g: 0.4967496, b: 0.7321514, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 0.04583136
+  jumpArcModifier: 0.7765972
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

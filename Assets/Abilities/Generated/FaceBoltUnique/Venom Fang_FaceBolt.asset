@@ -13,10 +13,11 @@ MonoBehaviour:
   m_Name: Venom Fang_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.PoisonCloudAbility
   abilityName: 'Poison Cloud [Venom Fang_FaceBolt]'
-  description: Creates a toxic cloud that continuously drains enemy spin.
-  manaCost: 65
-  rarity: 2
+  description: 'Creates a toxic cloud that continuously drains enemy spin. [Behavior
+    532FC313]'
+  manaCost: 75.259
+  rarity: 0
   icon: {fileID: 0}
-  radius: 5
-  duration: 4.5
-  damagePerSecond: 5
+  radius: 7.726542
+  duration: 4.6563296
+  damagePerSecond: 4.4833508

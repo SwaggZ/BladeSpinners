@@ -12,12 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: af3f20051758360489abb01c769725fd, type: 3}
   m_Name: Eclipse_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.MirageCloneAbility
-  abilityName: Eclipse_FaceBolt
-  description: Spawns phantom copies that orbit and confuse enemies. When destroyed, each clone explodes.
-  manaCost: 65
-  rarity: 2
+  abilityName: 'Mirage Clone [Eclipse_FaceBolt]'
+  description: 'Spawns phantom copies that orbit and confuse enemies. When destroyed,
+    each clone explodes. [Behavior 5291B10C]'
+  manaCost: 77.511475
+  rarity: 3
   icon: {fileID: 0}
   cloneCount: 3
-  spawnRadius: 2.5
-  cloneDuration: 5
-  cloneExplosionDamage: 8
+  spawnRadius: 2.8457248
+  cloneDuration: 4.425166
+  cloneExplosionDamage: 6.198298

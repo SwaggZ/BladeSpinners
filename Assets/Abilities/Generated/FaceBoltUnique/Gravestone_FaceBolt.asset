@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73bca8c1644e43c4fb198f826f74ccf9, type: 3}
+  m_Name: Gravestone_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.FlashStepAbility
+  abilityName: 'Flash Step [Gravestone_FaceBolt]'
+  description: 'Instantly step forward and keep momentum. [Behavior 4E51972E]'
+  manaCost: 49.243526
+  rarity: 3
+  icon: {fileID: 0}
+  stepDistance: 5.1022716
+  endImpulse: 10.947406

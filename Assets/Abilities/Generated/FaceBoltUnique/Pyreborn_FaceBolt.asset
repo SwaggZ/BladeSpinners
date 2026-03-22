@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b503df5f0330e1419c9f5d1f0770e3d, type: 3}
+  m_Name: Pyreborn_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.FreezeAbility
+  abilityName: 'Freeze [Pyreborn_FaceBolt]'
+  description: 'Encases nearby enemies in ice, halting their movement and shattering
+    their spin. [Behavior 40B766E]'
+  manaCost: 86.67089
+  rarity: 1
+  icon: {fileID: 0}
+  radius: 7.041205
+  freezeDuration: 2.5586743
+  spinDamage: 15.075151

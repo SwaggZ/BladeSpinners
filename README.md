@@ -1,5 +1,7 @@
 # Blade Spinners
 
+> Date baseline: all existing entries in this file are tagged as updated on 22/3/2026.
+
 A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops from procedural parts, battle AI opponents in generated arenas using momentum-based physics combat. Collisions exchange spin — last bey spinning wins.
 
 ## Features
@@ -12,6 +14,10 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **Spin exchange combat** — Collisions transfer spin based on speed, weight, and attack stats; beys burst when spin hits zero
 - **Knockback with hitstun** — Hits send beys flying with a brief stun window so impacts feel real
 - **Weight-based inertia** — Heavier beys are harder to push but slower to accelerate
+- **Arena zero-friction colliders** — All procedural arena MeshColliders share a zero-friction/zero-bounce PhysicMaterial to prevent polygon-edge catching on steep surfaces
+- **Slope-aware grounding** — Grounding force pushes along the surface normal on steep slopes instead of straight down, preventing beys from wedging into polygon edges
+- **Stuck & bounce recovery** — Detects sudden velocity drops and wild vertical bounces caused by polygon-edge catches; auto-nudges beys back into motion after a brief delay
+- **Tuned physics solver** — Increased solver iterations (10), velocity iterations (3), contact offset (0.04), and max depenetration velocity (20) for smoother collision resolution
 - **Live stat rings** — Player-only world-space rings around the Bey show Speed/Acceleration (magenta), Mana (cyan), and Spin/Stamina (yellow)
 - **Front-most stat labels** — Ring labels and black toon text outlines render in front of curve layers for readability
 
@@ -20,7 +26,7 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **Procedural generation** — Each part has unique stats, colors, and meshes generated at runtime
 - **Tip behaviors** — Different tips change movement physics (aggressive, defensive, orbital patterns)
 - **Stat-driven gameplay** — Parts determine speed, weight, attack, defense, stamina, and special abilities
-- **Expanded ability roster** — Dash, Shield, Spin Drain, Ground Pound, Flash Step, Dragon Burst, Poison Cloud, Gravity Clash
+- **52 ability types** — Dash, Shield, Spin Drain, Ground Pound, Flash Step, Dragon Burst, Poison Cloud, Gravity Clash, Freeze, Berserk, Tidal Wave, Chain Lightning, Fire Bolt, Solar Flare, Ricochet Shot, Mirage Clone, Vampire Drain, Serpent Coil, Lucky Star, Thorns, Meteor Strike, Whirlwind, Shadow Strike, Thunder Clap, Ice Shard, Arcane Nova, Void Pulse, Tornado, Phantom Slash, Iron Fortress, Phase Shift, Time Warp, Earthquake, Adrenaline Rush, Regeneration, Overcharge, War Cry, Molten Rain, Magnetic Field, Soul Link, Gravity Well, Nightfall, Crystal Barrage, Inferno, Static Discharge, Black Hole, Razor Wind, Acid Spray, Spectral Chains, Blood Pact, and Chrono Recall
 - **Face Bolt emblems** — Each Face Bolt can have a unique emblem sprite rendered directly on the Face Bolt in-game (also planned for special-attack hologram visuals)
 
 ### Content Pipeline
@@ -63,6 +69,7 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **Spin holds on enemy clear** — When all enemies are destroyed, player spin drain pauses during victory state
 - **Run progression** — Runs now span multiple levels and arenas instead of a single placeholder combat room
 - **Depth scaling** — Deeper arenas increase enemy count and bias enemy loadouts toward higher-rarity parts
+- **Per-run enemy variety** — Enemy bey seeds incorporate the unique run seed so loadouts differ between runs
 - **Duplicate drop guard** — If a dropped part already exists in run inventory, it is skipped instead of duplicated
 - **Auto-discovery** — All beys are found at runtime — no manual wiring required
 - **Balance sliders** — 26 GameManager sliders (13 global + 13 enemy) adjustable at runtime in the Inspector
@@ -71,10 +78,12 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **Runtime garage shell** — Main menu now uses a top-nav garage layout with brand lockup, Garage/Inventory/Settings tabs, centered Bey stage, orbiting part nodes, and a dedicated bottom action bar
 - **Runtime pause menu** — Resume, Run Inventory, Settings, Keybinds, Return to Main Menu
 - **Between-arena intermission** — Arena clears open a build-management menu before the next arena starts
+- **Intermission default tab** — Arena-clear intermission now opens on the Garage tab by default (instead of Inventory)
 - **Run inventory progression** — Run starts with selected main-menu loadout; dropped parts are added and can be equipped during run
 - **Garage swap modal** — Clicking a part node around the preview Bey opens a compact slot-filtered modal for fast part swapping
 - **Current build rail** — Garage shows current build name, Face Bolt identity, computed overall score, equipped-part rows with rarity-color pills, and hover stats cards
 - **Runtime build slots** — `Save Build` stores up to 3 garage loadouts in-memory for the current play session and allows quick reloads from the garage action bar
+- **Persistent save** — `SaveManager` auto-saves owned parts and equipped main-menu loadout to JSON on every inventory/garage change; data loads on startup and merges with starter parts
 - **Auto optimize** — Garage can auto-equip the highest-rated owned part per slot using the UI-side runtime power score heuristic
 - **Live spinning preview window** — Inventory shows a spinning Bey preview with a side-by-side overall build summary while parts are changed
 - **Selected-part detail panel** — Choosing a part in inventory or end-of-run salvage now shows that part's stats, rarity, description, and Face Bolt ability data
@@ -84,6 +93,8 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **Settings-integrated keybinds** — Keybind reference now lives inside the settings page instead of a separate top-level tab
 - **Rings UI opacity** — Settings includes a 0-100% slider that fades both stat rings and ring text
 - **Defeat salvage flow** — On run loss, players choose a limited number of eligible run parts to keep (cap scales with run depth and rarity gate)
+- **Death-screen control lock** — During defeat overlay, gameplay camera rotation and lock-on/target-switch controls are disabled
+- **Death-screen part scores** — Killer build and salvage rows now show each part's score value
 - **Run completion transfer** — On full run completion, all run-inventory parts transfer to main inventory
 - **Run menu theme pass** — Pause and between-arena menus now use the same cyan garage framing, tabs, and build-management layout as the main garage
 - **Structured test run flow** — Start Run currently creates a 3-level, 3-arena-per-level progression loop with carry-over inventory and build changes between arenas
@@ -97,8 +108,9 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **Build-safe part catalog** — `Resources/StarterPartsConfig.asset` stores a runtime catalog reference list so all BeyPart assets are included in builds
 
 ### Arena
-- **Procedural generation** — Arenas built at runtime with configurable geometry
+- **Procedural generation** — Arenas built at runtime via `ProceduralArenaGenerator` with configurable geometry, obstacles, and physics materials
 - **10 named arena shapes** — ClassicRound, TripleBattle (gear-tooth rim), StarStorm, BoltBlast (gated circle), NotchRing, Pentagon, Square, Triangle, MaxStampede (raised inner tier), and TwinBasin (figure-8 dual basin); shape is chosen randomly per arena seed
+- **Arena obstacles** — Generated per-arena: platforms, ramps, bumpers, pillars, spires, inner walls, and bridges; all carry shared zero-friction PhysicMaterial
 - **Hole-aware bey spawns** — Arenas defined with a center hole (`HoleRadiusRatio > 0`) automatically move all beys to a safe outer ring at match start to prevent falling through the pit
 - **Ground layer physics** — Proper layer separation for grounding, triggers, and collision detection
 

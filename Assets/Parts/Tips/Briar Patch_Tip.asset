@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Briar Patch_Tip
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Briar Patch_Tip
+  partType: 0
+  occupiesSlots: 00000000
+  rarity: 1
+  tags: 
+  partID: briar patch_tip_500368181
+  description: A Uncommon Tip from the Briar Patch set.
+  icon: {fileID: 0}
+  meshSeed: 343981840
+  primaryColor: {r: 0.4138298, g: 0.5309847, b: 0.2843481, a: 1}
+  secondaryColor: {r: 0.64822024, g: 0.71852875, b: 0.5705141, a: 1}
+  tipBehavior: 28
+  behaviorBasedStaminaDrainModifier: 2.2537403
+  uphillResistanceMultiplier: 1.5194598
+  slopeMultiplier: 1.9238737
+  spinThreshold: 79.53325
+  altTipBehavior: 7
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Mudslide_Tip
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Mudslide_Tip
+  partType: 0
+  occupiesSlots: 00000000
+  rarity: 0
+  tags: 
+  partID: mudslide_tip_700872640
+  description: A Common Tip from the Mudslide set.
+  icon: {fileID: 0}
+  meshSeed: 783629200
+  primaryColor: {r: 0.53143704, g: 0.39586517, b: 0.29919168, a: 1}
+  secondaryColor: {r: 0.70072025, g: 0.614128, b: 0.55238086, a: 1}
+  tipBehavior: 6
+  behaviorBasedStaminaDrainModifier: 1.8659931
+  uphillResistanceMultiplier: 1.6647737
+  slopeMultiplier: 1.4054
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

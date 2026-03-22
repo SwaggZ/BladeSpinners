@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: Swiftfoot_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.DashAbility
   abilityName: 'Dash [Swiftfoot_FaceBolt]'
-  description: Instant burst of speed in your current direction.
-  manaCost: 25
+  description: 'Instant burst of speed in your current direction. [Behavior 93E844B]'
+  manaCost: 30.305906
   rarity: 0
   icon: {fileID: 0}
-  dashForce: 40
+  dashForce: 36.760994

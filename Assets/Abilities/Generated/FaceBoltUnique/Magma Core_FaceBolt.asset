@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: Magma Core_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.SolarFlareAbility
   abilityName: 'Solar Flare [Magma Core_FaceBolt]'
-  description: Detonates a brilliant explosion of solar energy, dealing heavy damage
-    and knocking enemies back.
-  manaCost: 80
-  rarity: 3
+  description: 'Detonates a brilliant explosion of solar energy, dealing heavy damage
+    and knocking enemies back. [Behavior 127D4880]'
+  manaCost: 74.30063
+  rarity: 1
   icon: {fileID: 0}
-  explosionRadius: 8
-  centerDamage: 35
-  knockbackImpulse: 22
-  blindDuration: 1.5
+  explosionRadius: 7.7360115
+  centerDamage: 40.81145
+  knockbackImpulse: 30.443665
+  blindDuration: 1.2063261

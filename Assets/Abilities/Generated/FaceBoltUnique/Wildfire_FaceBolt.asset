@@ -13,12 +13,13 @@ MonoBehaviour:
   m_Name: Wildfire_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.FireBoltAbility
   abilityName: 'Fire Bolt [Wildfire_FaceBolt]'
-  description: Launches a homing bolt of flame that burns the target on impact.
-  manaCost: 55
-  rarity: 1
+  description: 'Launches a homing bolt of flame that burns the target on impact.
+    [Behavior 2C49B47]'
+  manaCost: 49.03823
+  rarity: 2
   icon: {fileID: 0}
-  projectileSpeed: 22
-  directHitDamage: 20
-  burnDamagePerSecond: 5
-  burnDuration: 3
-  homingStrength: 4
+  projectileSpeed: 22.64501
+  directHitDamage: 14.735906
+  burnDamagePerSecond: 6.131062
+  burnDuration: 4.661695
+  homingStrength: 4.70479

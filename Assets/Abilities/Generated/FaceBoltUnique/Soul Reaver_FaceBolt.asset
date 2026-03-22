@@ -13,10 +13,11 @@ MonoBehaviour:
   m_Name: Soul Reaver_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.VampireDrainAbility
   abilityName: 'Vampire Drain [Soul Reaver_FaceBolt]'
-  description: Siphons spin energy from surrounding enemies, restoring your own.
-  manaCost: 60
+  description: 'Siphons spin energy from surrounding enemies, restoring your own.
+    [Behavior 3BBF06EC]'
+  manaCost: 61.52205
   rarity: 2
   icon: {fileID: 0}
-  radius: 7
-  drainAmount: 25
-  healRatio: 0.7
+  radius: 6.2541456
+  drainAmount: 25.43744
+  healRatio: 0.7335192

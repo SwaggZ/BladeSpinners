@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.LuckyStarAbility
   abilityName: 'Lucky Star [Lucky Star_FaceBolt]'
   description: "Spins the wheel of fate \u2014 triggers a random powerful effect.
-    Could be anything!"
-  manaCost: 40
+    Could be anything! [Behavior 66BBB35A]"
+  manaCost: 52.58786
   rarity: 1
   icon: {fileID: 0}

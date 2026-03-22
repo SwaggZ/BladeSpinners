@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Night Stalker_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.FlashStepAbility
   abilityName: 'Flash Step [Night Stalker_FaceBolt]'
-  description: Instantly step forward and keep momentum.
-  manaCost: 40
-  rarity: 2
+  description: 'Instantly step forward and keep momentum. [Behavior 2DD4C9A3]'
+  manaCost: 39.19252
+  rarity: 1
   icon: {fileID: 0}
-  stepDistance: 7
-  endImpulse: 8
+  stepDistance: 5.0837517
+  endImpulse: 12.979378

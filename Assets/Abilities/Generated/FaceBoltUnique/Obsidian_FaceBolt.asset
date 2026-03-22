@@ -13,10 +13,11 @@ MonoBehaviour:
   m_Name: Obsidian_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.GravityClashAbility
   abilityName: 'Gravity Clash [Obsidian_FaceBolt]'
-  description: Pulls nearby enemies toward each other and forces a brutal collision.
-  manaCost: 75
-  rarity: 3
+  description: 'Pulls nearby enemies toward each other and forces a brutal collision.
+    [Behavior 6F93026E]'
+  manaCost: 85.34841
+  rarity: 1
   icon: {fileID: 0}
   searchRadius: 12
-  pullImpulse: 20
-  impactSpinDamage: 14
+  pullImpulse: 22.779541
+  impactSpinDamage: 16.401173

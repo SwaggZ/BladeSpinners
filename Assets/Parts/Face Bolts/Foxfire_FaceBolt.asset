@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Foxfire_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Foxfire_FaceBolt
+  partType: 4
+  occupiesSlots: 04000000
+  rarity: 2
+  tags: 
+  partID: foxfire_facebolt_1806536502
+  description: A Rare FaceBolt from the Foxfire set.
+  icon: {fileID: 0}
+  meshSeed: 1589519286
+  primaryColor: {r: 1, g: 0.52040446, b: 0.19429183, a: 1}
+  secondaryColor: {r: 1, g: 0.7847398, b: 0.6383684, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 11400000, guid: fb053b1ebea97e74a846dec1adcc65d8, type: 2}
+  faceBoltEmblem: {fileID: 21300000, guid: f0f60a33dc4377d4c8a95d0d67c1d180, type: 3}

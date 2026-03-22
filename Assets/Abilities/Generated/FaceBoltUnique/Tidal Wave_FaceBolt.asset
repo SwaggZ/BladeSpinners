@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: Tidal Wave_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.TidalWaveAbility
   abilityName: 'Tidal Wave [Tidal Wave_FaceBolt]'
-  description: Unleashes a crashing wave that blasts all nearby enemies outward and
-    slows them.
-  manaCost: 60
-  rarity: 2
+  description: 'Unleashes a crashing wave that blasts all nearby enemies outward
+    and slows them. [Behavior 764E15A]'
+  manaCost: 77.79568
+  rarity: 1
   icon: {fileID: 0}
-  waveRadius: 9
-  knockbackImpulse: 18
-  spinDamage: 10
-  slowDuration: 2
+  waveRadius: 9.376788
+  knockbackImpulse: 13.064038
+  spinDamage: 11.506923
+  slowDuration: 3.0983992

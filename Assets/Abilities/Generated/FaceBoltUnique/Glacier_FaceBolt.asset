@@ -9,14 +9,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0b503df5f0330e1419c9f5d1f0770e3d, type: 3}
+  m_Script: {fileID: 11500000, guid: c19a6c5c9c23b5846b425641e76c4516, type: 3}
   m_Name: Glacier_FaceBolt
-  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.FreezeAbility
-  abilityName: Glacier_FaceBolt
-  description: Encases nearby enemies in ice, halting their movement and shattering their spin.
-  manaCost: 65
-  rarity: 2
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.PoisonCloudAbility
+  abilityName: 'Poison Cloud [Glacier_FaceBolt]'
+  description: 'Creates a toxic cloud that continuously drains enemy spin. [Behavior
+    5EE9A692]'
+  manaCost: 72.21345
+  rarity: 1
   icon: {fileID: 0}
-  radius: 6
-  freezeDuration: 2.5
-  spinDamage: 18
+  radius: 3.4784257
+  duration: 3.107832
+  damagePerSecond: 6.4040313

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3dba9900120f384dbfe5e5ce77d4b34, type: 3}
+  m_Name: Siltcrawler_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.SerpentCoilAbility
+  abilityName: 'Serpent Coil [Siltcrawler_FaceBolt]'
+  description: 'Lashes out with a serpentine force, dragging the nearest enemy close
+    and coiling them in place. [Behavior 5D73B089]'
+  manaCost: 58.785206
+  rarity: 1
+  icon: {fileID: 0}
+  pullRange: 8.83805
+  pullImpulse: 22.147287
+  immobilizeDuration: 2.2335405
+  spinDamage: 13.273839

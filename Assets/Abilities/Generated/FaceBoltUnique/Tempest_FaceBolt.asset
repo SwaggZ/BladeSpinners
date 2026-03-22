@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: Tempest_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.ChainLightningAbility
   abilityName: 'Chain Lightning [Tempest_FaceBolt]'
-  description: Releases a bolt that arcs between multiple nearby enemies, stunning
-    and dealing spin damage.
-  manaCost: 70
-  rarity: 2
+  description: 'Releases a bolt that arcs between multiple nearby enemies, stunning
+    and dealing spin damage. [Behavior 6967540E]'
+  manaCost: 86.21818
+  rarity: 1
   icon: {fileID: 0}
-  initialRadius: 8
-  chainRadius: 6
-  maxChains: 4
-  damagePerHit: 12
-  stunDuration: 0.8
+  initialRadius: 11.516428
+  chainRadius: 5.0536976
+  maxChains: 6
+  damagePerHit: 16.526505
+  stunDuration: 0.6271728

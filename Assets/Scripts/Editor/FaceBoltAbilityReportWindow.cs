@@ -173,8 +173,7 @@ namespace BladeSpinners.Editor
                 return;
             }
 
-            Dictionary<Type, List<BeyAbility>> byType = GroupAbilitiesByType(allAbilityAssets);
-            HashSet<BeyAbility> used = new HashSet<BeyAbility>();
+            HashSet<string> usedBehaviorSignatures = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             int assignedCount = 0;
             int generatedCount = 0;
 
@@ -184,37 +183,20 @@ namespace BladeSpinners.Editor
                 if (part == null)
                     continue;
 
-                BeyAbility resolved = FaceBoltAbilityResolver.Resolve(part);
-                Type desiredType = resolved != null ? resolved.GetType() : null;
+                BeyAbility template = part.EquippedAbility;
+                if (template == null)
+                    template = FaceBoltAbilityResolver.Resolve(part);
+                if (template == null)
+                    template = allAbilityAssets[0];
 
-                BeyAbility selected = TakeUnusedAbilityOfType(byType, desiredType, used);
-                if (selected == null)
-                {
-                    BeyAbility template = FindTemplateAbility(byType, desiredType);
-                    if (template == null)
-                        template = allAbilityAssets[0];
-
-                    selected = CreateOrUpdateUniqueVariant(template, part);
-                    if (selected != null)
-                    {
-                        if (!byType.TryGetValue(selected.GetType(), out List<BeyAbility> list))
-                        {
-                            list = new List<BeyAbility>();
-                            byType[selected.GetType()] = list;
-                        }
-
-                        if (!list.Contains(selected))
-                            list.Add(selected);
-
-                        generatedCount++;
-                    }
-                }
+                BeyAbility selected = CreateOrUpdateUniqueVariant(template, part, i, usedBehaviorSignatures);
+                if (selected != null)
+                    generatedCount++;
 
                 if (selected == null)
                     continue;
 
                 AssignAbility(part, selected);
-                used.Add(selected);
                 assignedCount++;
             }
 
@@ -222,7 +204,7 @@ namespace BladeSpinners.Editor
             AssetDatabase.Refresh();
 
             Refresh();
-            status = $"Baked unique assignments for {assignedCount}/{faceBolts.Count} Face Bolts. Generated {generatedCount} unique ability variants.";
+            status = $"Baked strict unique-behavior assignments for {assignedCount}/{faceBolts.Count} Face Bolts. Generated/updated {generatedCount} unique ability variants.";
             Debug.Log($"[FaceBoltAbilityReport] {status}");
         }
 
@@ -351,7 +333,7 @@ namespace BladeSpinners.Editor
             return null;
         }
 
-        private static BeyAbility CreateOrUpdateUniqueVariant(BeyAbility template, BeyPart part)
+        private static BeyAbility CreateOrUpdateUniqueVariant(BeyAbility template, BeyPart part, int seedIndex, HashSet<string> usedBehaviorSignatures)
         {
             if (template == null || part == null)
                 return null;
@@ -365,7 +347,7 @@ namespace BladeSpinners.Editor
             {
                 if (existing.GetType() == template.GetType())
                 {
-                    SetAbilityDisplayName(existing, $"{template.AbilityName} [{faceBoltName}]");
+                    TuneUniqueAbilityVariant(existing, template, part, seedIndex, usedBehaviorSignatures);
                     EditorUtility.SetDirty(existing);
                     return existing;
                 }
@@ -375,10 +357,152 @@ namespace BladeSpinners.Editor
 
             BeyAbility variant = UnityEngine.Object.Instantiate(template);
             variant.name = safeName;
-            SetAbilityDisplayName(variant, $"{template.AbilityName} [{faceBoltName}]");
+            TuneUniqueAbilityVariant(variant, template, part, seedIndex, usedBehaviorSignatures);
             AssetDatabase.CreateAsset(variant, assetPath);
             EditorUtility.SetDirty(variant);
             return variant;
+        }
+
+        private static void TuneUniqueAbilityVariant(BeyAbility variant, BeyAbility template, BeyPart part, int seedIndex, HashSet<string> usedBehaviorSignatures)
+        {
+            string faceBoltName = string.IsNullOrWhiteSpace(part.PartName) ? part.name : part.PartName;
+            SetAbilityDisplayName(variant, $"{template.AbilityName} [{faceBoltName}]");
+
+            for (int attempt = 0; attempt < 32; attempt++)
+            {
+                int salt = seedIndex * 37 + attempt * 97;
+                ApplyUniqueBehaviorTuning(variant, part, salt);
+
+                string signature = ComputeBehaviorSignature(variant);
+                if (usedBehaviorSignatures == null || usedBehaviorSignatures.Add(signature))
+                    return;
+            }
+        }
+
+        private static void ApplyUniqueBehaviorTuning(BeyAbility ability, BeyPart part, int salt)
+        {
+            if (ability == null || part == null)
+                return;
+
+            int baseHash = (part.PartID + "|" + part.PartName + "|" + salt.ToString()).GetHashCode();
+            float Scale(float min, float max, int mix)
+            {
+                uint u = (uint)(baseHash ^ mix * 73856093);
+                float t = (u % 10000u) / 9999f;
+                return Mathf.Lerp(min, max, t);
+            }
+
+            SerializedObject so = new SerializedObject(ability);
+
+            SerializedProperty mana = so.FindProperty("manaCost");
+            if (mana != null && mana.propertyType == SerializedPropertyType.Float)
+                mana.floatValue = Mathf.Clamp(mana.floatValue * Scale(0.85f, 1.35f, 1), 8f, 120f);
+
+            SerializedProperty rarity = so.FindProperty("rarity");
+            if (rarity != null && rarity.propertyType == SerializedPropertyType.Enum)
+                rarity.enumValueIndex = Mathf.Clamp(Mathf.RoundToInt(Scale(0f, 4f, 2)), 0, 4);
+
+            SerializedProperty desc = so.FindProperty("description");
+            if (desc != null && desc.propertyType == SerializedPropertyType.String)
+                desc.stringValue = BuildUniqueDescription(desc.stringValue, part, salt);
+
+            SerializedProperty iterator = so.GetIterator();
+            bool enterChildren = true;
+            while (iterator.NextVisible(enterChildren))
+            {
+                enterChildren = false;
+                if (iterator.propertyPath == "m_Script"
+                    || iterator.propertyPath == "abilityName"
+                    || iterator.propertyPath == "description"
+                    || iterator.propertyPath == "icon"
+                    || iterator.propertyPath == "manaCost"
+                    || iterator.propertyPath == "rarity")
+                    continue;
+
+                if (iterator.propertyType == SerializedPropertyType.Float)
+                {
+                    if (Mathf.Approximately(iterator.floatValue, 0f))
+                        continue;
+
+                    float factor = Scale(0.82f, 1.28f, iterator.propertyPath.GetHashCode());
+                    float value = iterator.floatValue * factor;
+
+                    string p = iterator.propertyPath.ToLowerInvariant();
+                    if (p.Contains("duration")) value = Mathf.Clamp(value, 0.15f, 12f);
+                    else if (p.Contains("radius")) value = Mathf.Clamp(value, 0.2f, 12f);
+                    else if (p.Contains("damage") || p.Contains("drain")) value = Mathf.Clamp(value, 0.1f, 200f);
+                    else if (p.Contains("speed") || p.Contains("force") || p.Contains("impulse")) value = Mathf.Clamp(value, 0.1f, 300f);
+                    else value = Mathf.Clamp(value, -500f, 500f);
+
+                    iterator.floatValue = value;
+                }
+                else if (iterator.propertyType == SerializedPropertyType.Integer)
+                {
+                    if (iterator.intValue == 0)
+                        continue;
+
+                    float factor = Scale(0.85f, 1.20f, iterator.propertyPath.GetHashCode());
+                    int value = Mathf.RoundToInt(iterator.intValue * factor);
+                    iterator.intValue = Mathf.Clamp(value, -10000, 10000);
+                }
+            }
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(ability);
+        }
+
+        private static string BuildUniqueDescription(string baseDescription, BeyPart part, int salt)
+        {
+            string clean = string.IsNullOrWhiteSpace(baseDescription) ? "Unique face bolt ability variant." : baseDescription.Trim();
+            string token = Math.Abs((part.PartID + part.PartName + salt.ToString()).GetHashCode()).ToString("X");
+            return $"{clean} [Behavior {token}]";
+        }
+
+        private static string ComputeBehaviorSignature(BeyAbility ability)
+        {
+            if (ability == null)
+                return "null";
+
+            StringBuilder sb = new StringBuilder();
+            sb.Append(ability.GetType().FullName);
+
+            SerializedObject so = new SerializedObject(ability);
+            SerializedProperty iterator = so.GetIterator();
+            bool enterChildren = true;
+            while (iterator.NextVisible(enterChildren))
+            {
+                enterChildren = false;
+                if (iterator.propertyPath == "m_Script"
+                    || iterator.propertyPath == "abilityName"
+                    || iterator.propertyPath == "description"
+                    || iterator.propertyPath == "icon")
+                    continue;
+
+                sb.Append('|').Append(iterator.propertyPath).Append('=');
+                switch (iterator.propertyType)
+                {
+                    case SerializedPropertyType.Float:
+                        sb.Append(iterator.floatValue.ToString("0.#####"));
+                        break;
+                    case SerializedPropertyType.Integer:
+                        sb.Append(iterator.intValue);
+                        break;
+                    case SerializedPropertyType.Boolean:
+                        sb.Append(iterator.boolValue ? '1' : '0');
+                        break;
+                    case SerializedPropertyType.Enum:
+                        sb.Append(iterator.enumValueIndex);
+                        break;
+                    case SerializedPropertyType.String:
+                        sb.Append(iterator.stringValue);
+                        break;
+                    default:
+                        sb.Append(iterator.propertyType);
+                        break;
+                }
+            }
+
+            return sb.ToString();
         }
 
         private static void AssignAbility(BeyPart part, BeyAbility ability)

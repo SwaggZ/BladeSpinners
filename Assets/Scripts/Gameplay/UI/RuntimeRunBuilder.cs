@@ -120,7 +120,8 @@ namespace BladeSpinners.Gameplay.UI
                     playerObj.transform,
                     enemyCatalog,
                     depthIndex,
-                    Mathf.Max(1, activeProgression.TotalArenaCount));
+                    Mathf.Max(1, activeProgression.TotalArenaCount),
+                    activeProgression.RunSeed);
                 EnemyBeyController enemyCtrl = enemy.GetComponent<EnemyBeyController>();
                 match.RegisterEnemy(enemyCtrl);
                 enemyTransforms.Add(enemy.transform);
@@ -269,7 +270,8 @@ namespace BladeSpinners.Gameplay.UI
             Transform playerTarget,
             List<BeyPart> catalog,
             int depthIndex,
-            int totalArenaCount)
+            int totalArenaCount,
+            int runSeed)
         {
             float angle = (float)index / Mathf.Max(1, totalEnemies) * Mathf.PI * 2f;
             Vector3 spawn = new Vector3(Mathf.Cos(angle) * 10f, 3f, Mathf.Sin(angle) * 10f);
@@ -324,7 +326,7 @@ namespace BladeSpinners.Gameplay.UI
             typeof(BeyAssembler).GetField("beyModelTransform", Flags)?.SetValue(assembler, spinChild.transform);
 
             assembler.SetConfiguration(config);
-            int enemySeed = 9000 + index * 97 + depthIndex * 211;
+            int enemySeed = ComputeArenaSeed(runSeed, 9000 + index * 97 + depthIndex * 211);
             ApplyLoadoutToAssembler(assembler, GetRandomLoadout(catalog, enemySeed, depthIndex, totalArenaCount));
             enemy.Initialize(config, playerTarget);
 

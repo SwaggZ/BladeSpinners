@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Void Reaper_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.SpinDrainAbility
   abilityName: 'Spin Drain [Void Reaper_FaceBolt]'
-  description: Steals spin from all nearby enemies.
-  manaCost: 80
-  rarity: 2
+  description: 'Steals spin from all nearby enemies. [Behavior 7E7CC88F]'
+  manaCost: 106.435844
+  rarity: 1
   icon: {fileID: 0}
-  drainRadius: 6
-  spinStolen: 20
+  drainRadius: 6.1792736
+  spinStolen: 17.723177

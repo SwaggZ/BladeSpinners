@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Ruinbringer_Tip
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Ruinbringer_Tip
+  partType: 0
+  occupiesSlots: 00000000
+  rarity: 3
+  tags: 
+  partID: ruinbringer_tip_790323577
+  description: A Epic Tip from the Ruinbringer set.
+  icon: {fileID: 0}
+  meshSeed: 2115695722
+  primaryColor: {r: 0.39905813, g: 0.08704831, b: 0.1560985, a: 1}
+  secondaryColor: {r: 0.7709183, g: 0.6519788, b: 0.67830104, a: 1}
+  tipBehavior: 18
+  behaviorBasedStaminaDrainModifier: 1.4561696
+  uphillResistanceMultiplier: 1.6446904
+  slopeMultiplier: 2.2817507
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

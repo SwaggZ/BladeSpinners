@@ -9,16 +9,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 62a022de98fcf42499b502bb0b490e9e, type: 3}
+  m_Script: {fileID: 11500000, guid: c2f3d96332c9c6f4aa3468bb8fdee12f, type: 3}
   m_Name: Inferno_FaceBolt
-  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.FireBoltAbility
-  abilityName: Inferno_FaceBolt
-  description: Launches a homing bolt of flame that burns the target on impact.
-  manaCost: 55
-  rarity: 1
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.SolarFlareAbility
+  abilityName: 'Solar Flare [Inferno_FaceBolt]'
+  description: 'Detonates a brilliant explosion of solar energy, dealing heavy damage
+    and knocking enemies back. [Behavior 39C99826]'
+  manaCost: 106.87989
+  rarity: 3
   icon: {fileID: 0}
-  projectileSpeed: 22
-  directHitDamage: 20
-  burnDamagePerSecond: 5
-  burnDuration: 3
-  homingStrength: 4
+  explosionRadius: 7.794026
+  centerDamage: 45.032555
+  knockbackImpulse: 14.902553
+  blindDuration: 2.3303313

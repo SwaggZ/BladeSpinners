@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ef0d1c402a15544bbe97df775a7b373, type: 3}
+  m_Name: Scarlet Fang_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.ThornsAbility
+  abilityName: 'Thorns [Scarlet Fang_FaceBolt]'
+  description: 'Envelop the bey in rotating spikes. Any enemy that clashes with you
+    takes reflected spin damage. [Behavior 4F6230C7]'
+  manaCost: 41.359814
+  rarity: 2
+  icon: {fileID: 0}
+  reflectRatio: 1.0573835
+  bonusDamage: 16.260279
+  duration: 5.001095

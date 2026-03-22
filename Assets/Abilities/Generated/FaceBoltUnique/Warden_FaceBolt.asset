@@ -13,9 +13,10 @@ MonoBehaviour:
   m_Name: Warden_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.ShieldAbility
   abilityName: 'Shield [Warden_FaceBolt]'
-  description: Temporarily increases weight, reducing spin damage taken.
-  manaCost: 50
+  description: 'Temporarily increases weight, reducing spin damage taken. [Behavior
+    10B6817D]'
+  manaCost: 42.58001
   rarity: 1
   icon: {fileID: 0}
-  duration: 3
-  weightBoost: 30
+  duration: 4.3941665
+  weightBoost: 35.112514

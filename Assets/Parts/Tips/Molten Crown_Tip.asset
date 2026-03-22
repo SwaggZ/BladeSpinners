@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Molten Crown_Tip
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Molten Crown_Tip
+  partType: 0
+  occupiesSlots: 00000000
+  rarity: 3
+  tags: 
+  partID: molten crown_tip_1429014592
+  description: A Epic Tip from the Molten Crown set.
+  icon: {fileID: 0}
+  meshSeed: 980490855
+  primaryColor: {r: 0.98956996, g: 0.45380953, b: 0.08540775, a: 1}
+  secondaryColor: {r: 0.99679744, g: 0.83229023, b: 0.7191711, a: 1}
+  tipBehavior: 0
+  behaviorBasedStaminaDrainModifier: 1.8619423
+  uphillResistanceMultiplier: 1.6317906
+  slopeMultiplier: 2.2697856
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

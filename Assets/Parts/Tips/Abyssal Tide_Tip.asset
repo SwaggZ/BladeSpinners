@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Abyssal Tide_Tip
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Abyssal Tide_Tip
+  partType: 0
+  occupiesSlots: 00000000
+  rarity: 4
+  tags: 
+  partID: abyssal tide_tip_2147014869
+  description: A Legendary Tip from the Abyssal Tide set.
+  icon: {fileID: 0}
+  meshSeed: 1298638380
+  primaryColor: {r: 0.019318614, g: 0.057994805, b: 0.15783215, a: 1}
+  secondaryColor: {r: 0.382745, g: 0.40708837, b: 0.46992743, a: 1}
+  tipBehavior: 17
+  behaviorBasedStaminaDrainModifier: 0.9073419
+  uphillResistanceMultiplier: 1.4843239
+  slopeMultiplier: 1.9810085
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

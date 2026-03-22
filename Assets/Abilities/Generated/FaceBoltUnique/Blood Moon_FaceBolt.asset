@@ -12,11 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55788913076723647b9ddba14e3f0280, type: 3}
   m_Name: Blood Moon_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.VampireDrainAbility
-  abilityName: Blood Moon_FaceBolt
-  description: Siphons spin energy from surrounding enemies, restoring your own.
-  manaCost: 60
-  rarity: 2
+  abilityName: 'Vampire Drain [Blood Moon_FaceBolt]'
+  description: 'Siphons spin energy from surrounding enemies, restoring your own.
+    [Behavior 6CE4D7DF]'
+  manaCost: 62.215126
+  rarity: 3
   icon: {fileID: 0}
-  radius: 7
-  drainAmount: 25
-  healRatio: 0.7
+  radius: 6.5155554
+  drainAmount: 38.00052
+  healRatio: 0.9844853

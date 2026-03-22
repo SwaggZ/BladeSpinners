@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Windcutter_FusionWheel
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Windcutter_FusionWheel
+  partType: 2
+  occupiesSlots: 02000000
+  rarity: 1
+  tags: 
+  partID: windcutter_fusionwheel_154007802
+  description: A Uncommon FusionWheel from the Windcutter set.
+  icon: {fileID: 0}
+  meshSeed: 637267204
+  primaryColor: {r: 0.7173953, g: 0.8856981, b: 0.7954035, a: 1}
+  secondaryColor: {r: 0.8661687, g: 0.94587076, b: 0.9031105, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 20.449743
+  massBasedStaminaDrainRate: 1.450586
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

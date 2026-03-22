@@ -12,6 +12,33 @@ namespace BladeSpinners.World
     /// </summary>
     public static class ProceduralArenaGenerator
     {
+        // Shared zero-friction physics material for all arena colliders.
+        // Prevents beys from catching on polygon edges at steep angles.
+        private static PhysicsMaterial _arenaPhysicsMaterial;
+        private static PhysicsMaterial ArenaPhysicsMaterial
+        {
+            get
+            {
+                if (_arenaPhysicsMaterial == null)
+                {
+                    _arenaPhysicsMaterial = new PhysicsMaterial("ArenaZeroFriction");
+                    _arenaPhysicsMaterial.dynamicFriction = 0f;
+                    _arenaPhysicsMaterial.staticFriction = 0f;
+                    _arenaPhysicsMaterial.bounciness = 0f;
+                    _arenaPhysicsMaterial.frictionCombine = PhysicsMaterialCombine.Minimum;
+                    _arenaPhysicsMaterial.bounceCombine = PhysicsMaterialCombine.Minimum;
+                }
+                return _arenaPhysicsMaterial;
+            }
+        }
+
+        /// <summary>Applies the shared zero-friction material to a MeshCollider.</summary>
+        private static void ApplyArenaPhysicsMaterial(MeshCollider mc)
+        {
+            if (mc != null)
+                mc.sharedMaterial = ArenaPhysicsMaterial;
+        }
+
         // ================================================================
         // PUBLIC API
         // ================================================================
@@ -283,6 +310,7 @@ namespace BladeSpinners.World
 
             MeshCollider mc = bowl.AddComponent<MeshCollider>();
             mc.sharedMesh = mesh;
+            ApplyArenaPhysicsMaterial(mc);
 
             // Perimeter lip around the outer rim
             GameObject outerLip = CreatePerimeterLip($"{s.Name}_OuterLip", outerRingPoints, s.LipHeight, s.LipThickness, false);
@@ -400,6 +428,7 @@ namespace BladeSpinners.World
             mrLip.sharedMaterial = CreateArenaMaterial(new Color(0.3f, 0.3f, 0.35f), 0.3f, 0.4f);
             MeshCollider mcLip = lip.AddComponent<MeshCollider>();
             mcLip.sharedMesh = torusMesh;
+            ApplyArenaPhysicsMaterial(mcLip);
 
             return lip;
         }
@@ -487,7 +516,9 @@ namespace BladeSpinners.World
                 wall.AddComponent<MeshFilter>().sharedMesh = wallMesh;
                 wall.AddComponent<MeshRenderer>().sharedMaterial =
                     CreateArenaMaterial(new Color(0.55f, 0.55f, 0.6f), 0.5f, 0.4f);
-                wall.AddComponent<MeshCollider>().sharedMesh = wallMesh;
+                MeshCollider wallMc = wall.AddComponent<MeshCollider>();
+                wallMc.sharedMesh = wallMesh;
+                ApplyArenaPhysicsMaterial(wallMc);
             }
 
             return root;
@@ -553,7 +584,9 @@ namespace BladeSpinners.World
             disc.AddComponent<MeshFilter>().sharedMesh = platMesh;
             disc.AddComponent<MeshRenderer>().sharedMaterial =
                 CreateArenaMaterial(color * 1.15f, 0.25f, 0.35f);
-            disc.AddComponent<MeshCollider>().sharedMesh = platMesh;
+            MeshCollider discMc = disc.AddComponent<MeshCollider>();
+            discMc.sharedMesh = platMesh;
+            ApplyArenaPhysicsMaterial(discMc);
 
             int bridgeCount = 4;
             float bridgeWidth = platformRadius * 0.55f;
@@ -636,7 +669,9 @@ namespace BladeSpinners.World
                 bridge.AddComponent<MeshFilter>().sharedMesh = bridgeMesh;
                 bridge.AddComponent<MeshRenderer>().sharedMaterial =
                     CreateArenaMaterial(color * 0.95f, 0.28f, 0.32f);
-                bridge.AddComponent<MeshCollider>().sharedMesh = bridgeMesh;
+                MeshCollider bridgeMc = bridge.AddComponent<MeshCollider>();
+                bridgeMc.sharedMesh = bridgeMesh;
+                ApplyArenaPhysicsMaterial(bridgeMc);
             }
 
             return root;
@@ -678,6 +713,9 @@ namespace BladeSpinners.World
             Renderer rend = wall.GetComponent<Renderer>();
             rend.sharedMaterial = CreateArenaMaterial(
                 new Color(0.5f, 0.45f, 0.4f), 0.3f, 0.2f);
+
+            Collider wallCol = wall.GetComponent<Collider>();
+            if (wallCol != null) wallCol.sharedMaterial = ArenaPhysicsMaterial;
 
             return wall;
         }
@@ -727,6 +765,7 @@ namespace BladeSpinners.World
 
             MeshCollider platformCollider = platform.AddComponent<MeshCollider>();
             platformCollider.convex = false;
+            ApplyArenaPhysicsMaterial(platformCollider);
 
             Renderer rend = platform.GetComponent<Renderer>();
             rend.sharedMaterial = CreateArenaMaterial(
@@ -860,7 +899,9 @@ namespace BladeSpinners.World
             ramp.AddComponent<MeshFilter>().sharedMesh = mesh;
             ramp.AddComponent<MeshRenderer>().sharedMaterial =
                 CreateArenaMaterial(new Color(0.55f, 0.50f, 0.45f), 0.35f, 0.25f);
-            ramp.AddComponent<MeshCollider>().sharedMesh = mesh;
+            MeshCollider rampMc = ramp.AddComponent<MeshCollider>();
+            rampMc.sharedMesh = mesh;
+            ApplyArenaPhysicsMaterial(rampMc);
 
             return ramp;
         }
@@ -935,9 +976,10 @@ namespace BladeSpinners.World
             bumper.AddComponent<MeshFilter>().sharedMesh = mesh;
             bumper.AddComponent<MeshRenderer>().sharedMaterial =
                 CreateArenaMaterial(new Color(0.7f, 0.25f, 0.25f), 0.5f, 0.5f); // red-ish
-            MeshCollider mc = bumper.AddComponent<MeshCollider>();
-            mc.sharedMesh = mesh;
-            mc.convex = true;
+            MeshCollider bumperMc = bumper.AddComponent<MeshCollider>();
+            bumperMc.sharedMesh = mesh;
+            bumperMc.convex = true;
+            ApplyArenaPhysicsMaterial(bumperMc);
 
             return bumper;
         }
@@ -973,6 +1015,9 @@ namespace BladeSpinners.World
             rend.sharedMaterial = CreateArenaMaterial(
                 new Color(0.4f, 0.4f, 0.5f), 0.6f, 0.4f); // grey-blue metallic
 
+            Collider pillarCol = pillar.GetComponent<Collider>();
+            if (pillarCol != null) pillarCol.sharedMaterial = ArenaPhysicsMaterial;
+
             return pillar;
         }
 
@@ -1006,6 +1051,9 @@ namespace BladeSpinners.World
             Renderer rend = spire.GetComponent<Renderer>();
             rend.sharedMaterial = CreateArenaMaterial(
                 new Color(0.35f, 0.35f, 0.45f), 0.7f, 0.5f); // dark metallic
+
+            Collider spireCol = spire.GetComponent<Collider>();
+            if (spireCol != null) spireCol.sharedMaterial = ArenaPhysicsMaterial;
 
             return spire;
         }

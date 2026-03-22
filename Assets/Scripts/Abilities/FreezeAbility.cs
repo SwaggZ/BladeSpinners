@@ -109,27 +109,100 @@ namespace BladeSpinners.Abilities
 
         private void SpawnIceVisual()
         {
-            GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            visual.name = "FreezeVisual";
-            visual.transform.SetParent(target.transform, false);
-            visual.transform.localPosition = Vector3.zero;
-            visual.transform.localScale = Vector3.one * 1.4f;
+            // --- Main ice shell (pulsing, frosted sphere) ---
+            GameObject shell = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            shell.name = "FreezeShell";
+            shell.transform.SetParent(target.transform, false);
+            shell.transform.localPosition = Vector3.zero;
+            shell.transform.localScale = Vector3.one * 1.5f;
+            DisableCollider(shell);
+            ApplyIceMaterial(shell, new Color(0.45f, 0.78f, 1f, 0.25f), new Color(0.4f, 1.2f, 2.5f));
+            shell.AddComponent<FreezeShellPulse>().Init(timer);
+            Destroy(shell, timer + 0.1f);
 
-            Collider col = visual.GetComponent<Collider>();
-            if (col != null)
-                col.enabled = false;
-
-            Renderer rend = visual.GetComponent<Renderer>();
-            if (rend != null)
+            // --- Ice crystal shards (4 rotated cubes orbiting) ---
+            for (int i = 0; i < 4; i++)
             {
-                Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Diffuse"));
-                mat.color = new Color(0.55f, 0.85f, 1f, 0.45f);
-                if (mat.HasProperty("_Surface"))
-                    mat.SetFloat("_Surface", 1f);   // Transparent
-                rend.material = mat;
+                GameObject shard = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                shard.name = "IceShard";
+                shard.transform.SetParent(target.transform, false);
+                float angle = i * 90f;
+                float rad = angle * Mathf.Deg2Rad;
+                shard.transform.localPosition = new Vector3(Mathf.Cos(rad) * 0.9f, 0.2f + (i % 2) * 0.4f, Mathf.Sin(rad) * 0.9f);
+                shard.transform.localScale = new Vector3(0.12f, 0.45f, 0.08f);
+                shard.transform.localRotation = Quaternion.Euler(15f + i * 10f, angle, 20f - i * 8f);
+                DisableCollider(shard);
+                ApplyIceMaterial(shard, new Color(0.65f, 0.9f, 1f, 0.3f), new Color(0.8f, 1.5f, 3f));
+                Destroy(shard, timer + 0.1f);
             }
 
-            Destroy(visual, timer + 0.1f);
+            // --- Ground frost ring ---
+            GameObject frostRing = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            frostRing.name = "FrostRing";
+            frostRing.transform.SetParent(target.transform, false);
+            frostRing.transform.localPosition = new Vector3(0f, -0.3f, 0f);
+            frostRing.transform.localScale = new Vector3(2.4f, 0.02f, 2.4f);
+            DisableCollider(frostRing);
+            ApplyIceMaterial(frostRing, new Color(0.5f, 0.82f, 1f, 0.25f), new Color(0.2f, 0.6f, 1.5f));
+            Destroy(frostRing, timer + 0.1f);
+
+            // --- Rising ice sparkles ---
+            for (int i = 0; i < 6; i++)
+            {
+                GameObject sparkle = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                sparkle.name = "IceSparkle";
+                sparkle.transform.SetParent(target.transform, false);
+                float r = Random.Range(0.3f, 1.0f);
+                float a = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+                sparkle.transform.localPosition = new Vector3(Mathf.Cos(a) * r, Random.Range(-0.2f, 0.4f), Mathf.Sin(a) * r);
+                sparkle.transform.localScale = Vector3.one * Random.Range(0.04f, 0.08f);
+                DisableCollider(sparkle);
+                ApplyIceMaterial(sparkle, new Color(0.8f, 0.95f, 1f, 0.35f), new Color(2f, 3f, 4f));
+                sparkle.AddComponent<IceSparkleRise>().Init(timer);
+                Destroy(sparkle, timer + 0.1f);
+            }
+        }
+
+        private static void DisableCollider(GameObject obj)
+        {
+            Collider col = obj.GetComponent<Collider>();
+            if (col != null) col.enabled = false;
+        }
+
+        private static void ApplyIceMaterial(GameObject obj, Color baseColor, Color emissionColor)
+        {
+            DBZAuraHelper.ApplyTransparentMat(obj, baseColor, emissionColor);
+        }
+    }
+
+    public class FreezeShellPulse : MonoBehaviour
+    {
+        private float baseScale;
+        private float timer;
+        private float elapsed;
+        public void Init(float duration) { baseScale = transform.localScale.x; timer = duration; }
+        private void Update()
+        {
+            elapsed += Time.deltaTime;
+            if (elapsed > timer) return;
+            float pulse = 1f + Mathf.Sin(elapsed * 8f) * 0.06f;
+            float fade = 1f - (elapsed / timer) * 0.3f;
+            transform.localScale = Vector3.one * baseScale * pulse * fade;
+        }
+    }
+
+    public class IceSparkleRise : MonoBehaviour
+    {
+        private float speed;
+        private float timer;
+        public void Init(float duration) { speed = Random.Range(0.3f, 0.7f); timer = duration; }
+        private void Update()
+        {
+            timer -= Time.deltaTime;
+            if (timer <= 0f) return;
+            transform.localPosition += Vector3.up * speed * Time.deltaTime;
+            float s = transform.localScale.x * (1f - Time.deltaTime * 0.8f);
+            transform.localScale = Vector3.one * Mathf.Max(s, 0.01f);
         }
     }
 }

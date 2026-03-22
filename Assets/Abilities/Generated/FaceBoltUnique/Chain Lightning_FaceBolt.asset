@@ -9,16 +9,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 261427cdf5326cf4b825b550fa12b6c7, type: 3}
+  m_Script: {fileID: 11500000, guid: 98f6b26b246a1f34c85eede5e6097b1b, type: 3}
   m_Name: Chain Lightning_FaceBolt
-  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.ChainLightningAbility
-  abilityName: Chain Lightning_FaceBolt
-  description: Releases a bolt that arcs between multiple nearby enemies, stunning and dealing spin damage.
-  manaCost: 70
-  rarity: 2
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.DashAbility
+  abilityName: 'Dash [Chain Lightning_FaceBolt]'
+  description: 'Instant burst of speed in your current direction. [Behavior 4E5F1EFA]'
+  manaCost: 22.863913
+  rarity: 0
   icon: {fileID: 0}
-  initialRadius: 8
-  chainRadius: 6
-  maxChains: 4
-  damagePerHit: 12
-  stunDuration: 0.8
+  dashForce: 58.437527

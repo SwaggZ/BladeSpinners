@@ -13,10 +13,11 @@ MonoBehaviour:
   m_Name: Plague Doctor_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.PoisonCloudAbility
   abilityName: 'Poison Cloud [Plague Doctor_FaceBolt]'
-  description: Creates a toxic cloud that continuously drains enemy spin.
-  manaCost: 65
-  rarity: 2
+  description: 'Creates a toxic cloud that continuously drains enemy spin. [Behavior
+    32426D5F]'
+  manaCost: 71.566635
+  rarity: 1
   icon: {fileID: 0}
-  radius: 5
-  duration: 4.5
-  damagePerSecond: 5
+  radius: 5.7890477
+  duration: 3.1240249
+  damagePerSecond: 5.4122443

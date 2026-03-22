@@ -74,29 +74,70 @@ namespace BladeSpinners.Abilities
 
         private void SpawnAura()
         {
-            GameObject aura = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            aura.name = "BerserkAura";
-            aura.transform.SetParent(transform, false);
-            aura.transform.localScale = Vector3.one * 1.6f;
-            aura.transform.localPosition = Vector3.zero;
+            DBZAuraHelper.Spawn(
+                transform, timer,
+                new Color(1f, 0.15f, 0f),   // fiery red-orange core
+                new Color(1f, 0.5f, 0f),    // orange outer glow
+                3.5f
+            );
+        }
 
-            Collider col = aura.GetComponent<Collider>();
+        private static void DisableCollider(GameObject obj)
+        {
+            Collider col = obj.GetComponent<Collider>();
             if (col != null) col.enabled = false;
+        }
 
-            Renderer rend = aura.GetComponent<Renderer>();
-            if (rend != null)
+        private static void ApplyBerserkMat(GameObject obj, Color baseColor, Color emissionColor)
+        {
+            Renderer rend = obj.GetComponent<Renderer>();
+            if (rend == null) return;
+            Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Diffuse"));
+            mat.color = baseColor;
+            if (mat.HasProperty("_Surface"))
+                mat.SetFloat("_Surface", 1f);
+            if (mat.HasProperty("_EmissionColor"))
             {
-                Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Diffuse"));
-                mat.color = new Color(1f, 0.12f, 0f, 0.35f);
-                if (mat.HasProperty("_EmissionColor"))
-                {
-                    mat.EnableKeyword("_EMISSION");
-                    mat.SetColor("_EmissionColor", new Color(2f, 0.2f, 0f));
-                }
-                rend.material = mat;
+                mat.EnableKeyword("_EMISSION");
+                mat.SetColor("_EmissionColor", emissionColor);
             }
+            rend.material = mat;
+        }
+    }
 
-            Destroy(aura, timer);
+    public class BerserkAuraPulse : MonoBehaviour
+    {
+        private float timer;
+        private float elapsed;
+        private float minScale;
+        private float maxScale;
+        public void Init(float duration, float min = 1.3f, float max = 1.7f) { timer = duration; minScale = min; maxScale = max; }
+        private void Update()
+        {
+            elapsed += Time.deltaTime;
+            if (elapsed > timer) return;
+            float pulse = Mathf.Lerp(minScale, maxScale, (Mathf.Sin(elapsed * 6f) + 1f) * 0.5f);
+            float y = transform.localScale.y;
+            transform.localScale = new Vector3(pulse, y < 0.1f ? y : pulse, pulse);
+        }
+    }
+
+    public class BerserkStreakRise : MonoBehaviour
+    {
+        private float speed;
+        private float timer;
+        public void Init(float duration) { speed = Random.Range(0.8f, 1.8f); timer = duration; }
+        private void Update()
+        {
+            timer -= Time.deltaTime;
+            if (timer <= 0f) return;
+            transform.localPosition += Vector3.up * speed * Time.deltaTime;
+            if (transform.localPosition.y > 1.5f)
+            {
+                Vector3 p = transform.localPosition;
+                p.y = -0.2f;
+                transform.localPosition = p;
+            }
         }
     }
 }

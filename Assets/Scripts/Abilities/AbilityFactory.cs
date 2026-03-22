@@ -30,7 +30,40 @@ namespace BladeSpinners.Abilities
                 ScriptableObject.CreateInstance<SerpentCoilAbility>(),
                 ScriptableObject.CreateInstance<MirageCloneAbility>(),
                 ScriptableObject.CreateInstance<RicochetShotAbility>(),
-                ScriptableObject.CreateInstance<LuckyStarAbility>()
+                ScriptableObject.CreateInstance<LuckyStarAbility>(),
+
+                // ── Expansion wave ──
+                ScriptableObject.CreateInstance<MeteorStrikeAbility>(),
+                ScriptableObject.CreateInstance<WhirlwindAbility>(),
+                ScriptableObject.CreateInstance<ShadowStrikeAbility>(),
+                ScriptableObject.CreateInstance<ThunderClapAbility>(),
+                ScriptableObject.CreateInstance<IceShardAbility>(),
+                ScriptableObject.CreateInstance<ArcaneNovaAbility>(),
+                ScriptableObject.CreateInstance<VoidPulseAbility>(),
+                ScriptableObject.CreateInstance<TornadoAbility>(),
+                ScriptableObject.CreateInstance<PhantomSlashAbility>(),
+                ScriptableObject.CreateInstance<IronFortressAbility>(),
+                ScriptableObject.CreateInstance<PhaseShiftAbility>(),
+                ScriptableObject.CreateInstance<TimeWarpAbility>(),
+                ScriptableObject.CreateInstance<EarthquakeAbility>(),
+                ScriptableObject.CreateInstance<AdrenalineRushAbility>(),
+                ScriptableObject.CreateInstance<RegenerationAbility>(),
+                ScriptableObject.CreateInstance<OverchargeAbility>(),
+                ScriptableObject.CreateInstance<WarCryAbility>(),
+                ScriptableObject.CreateInstance<MoltenRainAbility>(),
+                ScriptableObject.CreateInstance<MagneticFieldAbility>(),
+                ScriptableObject.CreateInstance<SoulLinkAbility>(),
+                ScriptableObject.CreateInstance<GravityWellAbility>(),
+                ScriptableObject.CreateInstance<NightfallAbility>(),
+                ScriptableObject.CreateInstance<CrystalBarrageAbility>(),
+                ScriptableObject.CreateInstance<InfernoAbility>(),
+                ScriptableObject.CreateInstance<StaticDischargeAbility>(),
+                ScriptableObject.CreateInstance<BlackHoleAbility>(),
+                ScriptableObject.CreateInstance<RazorWindAbility>(),
+                ScriptableObject.CreateInstance<AcidSprayAbility>(),
+                ScriptableObject.CreateInstance<SpectralChainsAbility>(),
+                ScriptableObject.CreateInstance<BloodPactAbility>(),
+                ScriptableObject.CreateInstance<ChronoRecallAbility>()
             };
         }
 

@@ -72,6 +72,7 @@ namespace BladeSpinners.Gameplay
         private TextMesh focusedArrowTextMesh;
         private Camera controlledCamera;
         private BeyMovementController playerMovementController;
+        private MatchManager activeMatchManager;
         private float fovVelocity;
         private Texture2D speedWedgeTexture;
         private readonly Dictionary<Renderer, OccluderState> occluderStates = new Dictionary<Renderer, OccluderState>();
@@ -122,6 +123,15 @@ namespace BladeSpinners.Gameplay
                 return;
 
             EnsureCameraReferences();
+
+            if (IsPlayerLostStateActive())
+            {
+                lockedToEnemy = false;
+                lockedEnemyTransform = null;
+                UpdateFocusedArrow();
+                FadeAllTrackedToOpaque();
+                return;
+            }
 
             ReadTargetSwitchInput();
 
@@ -208,6 +218,9 @@ namespace BladeSpinners.Gameplay
 
         private void ReadTargetSwitchInput()
         {
+            if (IsPlayerLostStateActive())
+                return;
+
             var mouse = Mouse.current;
             if (mouse == null)
                 return;
@@ -332,6 +345,9 @@ namespace BladeSpinners.Gameplay
 
         private void ReadCameraInput()
         {
+            if (IsPlayerLostStateActive())
+                return;
+
             var mouse = Mouse.current;
             if (mouse != null)
             {
@@ -495,6 +511,15 @@ namespace BladeSpinners.Gameplay
 
             if (playerMovementController == null && beyTransform != null)
                 playerMovementController = beyTransform.GetComponent<BeyMovementController>();
+
+            if (activeMatchManager == null)
+                activeMatchManager = FindFirstObjectByType<MatchManager>();
+        }
+
+        private bool IsPlayerLostStateActive()
+        {
+            return activeMatchManager != null
+                && activeMatchManager.CurrentState == MatchManager.MatchState.PlayerLost;
         }
 
         private void UpdateSpeedFeedback()

@@ -1,5 +1,7 @@
 # Part Set Generation Guide
 
+> Date baseline: all existing entries in this file are tagged as updated on 21/3/2026.
+
 This guide covers both generation tools:
 - **Generate Part Set** (single set)
 - **Generate Massive Part Sets** (bulk sets)

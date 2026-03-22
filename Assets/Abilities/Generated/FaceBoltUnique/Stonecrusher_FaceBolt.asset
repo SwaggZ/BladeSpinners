@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 62a022de98fcf42499b502bb0b490e9e, type: 3}
+  m_Name: Stonecrusher_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.FireBoltAbility
+  abilityName: 'Fire Bolt [Stonecrusher_FaceBolt]'
+  description: 'Launches a homing bolt of flame that burns the target on impact.
+    [Behavior 2DDDFE9A]'
+  manaCost: 49.59654
+  rarity: 2
+  icon: {fileID: 0}
+  projectileSpeed: 32.19386
+  directHitDamage: 21.240538
+  burnDamagePerSecond: 3.7067945
+  burnDuration: 5.82522
+  homingStrength: 4.6940346

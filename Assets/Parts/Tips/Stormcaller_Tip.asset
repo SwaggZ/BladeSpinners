@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Stormcaller_Tip
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Stormcaller_Tip
+  partType: 0
+  occupiesSlots: 00000000
+  rarity: 3
+  tags: 
+  partID: stormcaller_tip_913071228
+  description: A Epic Tip from the Stormcaller set.
+  icon: {fileID: 0}
+  meshSeed: 2085892486
+  primaryColor: {r: 0.2670386, g: 0.43906748, b: 0.7756466, a: 1}
+  secondaryColor: {r: 0.7262723, g: 0.7905172, b: 0.9162142, a: 1}
+  tipBehavior: 8
+  behaviorBasedStaminaDrainModifier: 1.3695984
+  uphillResistanceMultiplier: 1.5786117
+  slopeMultiplier: 0.74473405
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

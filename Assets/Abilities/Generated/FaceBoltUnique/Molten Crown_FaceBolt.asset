@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 845aec8794add124fbdb30f8344fde5e, type: 3}
+  m_Name: Molten Crown_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.GroundPoundAbility
+  abilityName: 'Ground Pound [Molten Crown_FaceBolt]'
+  description: 'Slam downward and shock nearby enemies with spin damage and knockback.
+    [Behavior 16C8BE39]'
+  manaCost: 43.020477
+  rarity: 2
+  icon: {fileID: 0}
+  slamForce: 34.13857
+  impactRadius: 3.3526
+  spinDamage: 14.704541
+  knockbackImpulse: 6.108723

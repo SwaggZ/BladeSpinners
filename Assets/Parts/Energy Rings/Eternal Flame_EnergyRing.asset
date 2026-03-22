@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Eternal Flame_EnergyRing
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Eternal Flame_EnergyRing
+  partType: 3
+  occupiesSlots: 03000000
+  rarity: 4
+  tags: 
+  partID: eternal flame_energyring_1923991061
+  description: A Legendary EnergyRing from the Eternal Flame set.
+  icon: {fileID: 0}
+  meshSeed: 1644565393
+  primaryColor: {r: 1, g: 0.5727484, b: 0.010349214, a: 1}
+  secondaryColor: {r: 1, g: 0.81435186, b: 0.5699797, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 146.72795
+  manaRegenRate: 34.69907
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

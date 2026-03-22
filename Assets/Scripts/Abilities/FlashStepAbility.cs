@@ -37,6 +37,9 @@ namespace BladeSpinners.Abilities
                 target = hit.point - direction * 0.75f;
             }
 
+            // Afterimage at origin
+            SpawnAfterimage(start, beyController.transform.localScale);
+
             beyController.transform.position = target;
             if (beyController.Rb != null)
             {
@@ -44,7 +47,67 @@ namespace BladeSpinners.Abilities
                 beyController.Rb.AddForce(direction * endImpulse, ForceMode.VelocityChange);
             }
 
+            // Arrival flash
+            SpawnArrivalFlash(target);
             Debug.Log("[Ability] Flash Step!");
+        }
+
+        private void SpawnAfterimage(Vector3 pos, Vector3 scale)
+        {
+            GameObject ghost = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            ghost.name = "FlashAfterimage";
+            ghost.transform.position = pos;
+            ghost.transform.localScale = scale * 1.1f;
+            Collider col = ghost.GetComponent<Collider>();
+            if (col != null) col.enabled = false;
+            Renderer rend = ghost.GetComponent<Renderer>();
+            if (rend != null)
+            {
+                Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Diffuse"));
+                mat.color = new Color(0.4f, 0.6f, 1f, 0.35f);
+                if (mat.HasProperty("_EmissionColor")) { mat.EnableKeyword("_EMISSION"); mat.SetColor("_EmissionColor", new Color(0.3f, 0.5f, 1.5f)); }
+                rend.material = mat;
+            }
+            ghost.AddComponent<FlashAfterimgFade>();
+            Object.Destroy(ghost, 0.4f);
+        }
+
+        private void SpawnArrivalFlash(Vector3 pos)
+        {
+            GameObject flash = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            flash.name = "FlashArrival";
+            flash.transform.position = pos;
+            flash.transform.localScale = Vector3.one * 0.3f;
+            Collider col = flash.GetComponent<Collider>();
+            if (col != null) col.enabled = false;
+            Renderer rend = flash.GetComponent<Renderer>();
+            if (rend != null)
+            {
+                Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Diffuse"));
+                mat.color = new Color(0.7f, 0.85f, 1f, 0.7f);
+                if (mat.HasProperty("_EmissionColor")) { mat.EnableKeyword("_EMISSION"); mat.SetColor("_EmissionColor", new Color(2f, 2.5f, 4f)); }
+                rend.material = mat;
+            }
+            flash.AddComponent<FlashArrivalExpand>();
+            Object.Destroy(flash, 0.25f);
+        }
+    }
+
+    public class FlashAfterimgFade : MonoBehaviour
+    {
+        private void Update()
+        {
+            float s = transform.localScale.x * (1f - Time.deltaTime * 3f);
+            transform.localScale = Vector3.one * Mathf.Max(s, 0.05f);
+        }
+    }
+
+    public class FlashArrivalExpand : MonoBehaviour
+    {
+        private void Update()
+        {
+            float s = transform.localScale.x + Time.deltaTime * 8f;
+            transform.localScale = Vector3.one * s;
         }
     }
 }

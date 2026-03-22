@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Thornback_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.ThornsAbility
   abilityName: 'Thorns [Thornback_FaceBolt]'
-  description: Envelop the bey in rotating spikes. Any enemy that clashes with you
-    takes reflected spin damage.
-  manaCost: 45
-  rarity: 1
+  description: 'Envelop the bey in rotating spikes. Any enemy that clashes with you
+    takes reflected spin damage. [Behavior B0351E5]'
+  manaCost: 42.55243
+  rarity: 0
   icon: {fileID: 0}
-  reflectRatio: 0.6
-  bonusDamage: 8
-  duration: 4
+  reflectRatio: 0.7706722
+  bonusDamage: 7.6450787
+  duration: 3.1453211

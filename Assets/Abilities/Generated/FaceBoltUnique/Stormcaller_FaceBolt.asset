@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c19a6c5c9c23b5846b425641e76c4516, type: 3}
+  m_Name: Stormcaller_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.PoisonCloudAbility
+  abilityName: 'Poison Cloud [Stormcaller_FaceBolt]'
+  description: 'Creates a toxic cloud that continuously drains enemy spin. [Behavior
+    48EFE7EF]'
+  manaCost: 66.2166
+  rarity: 1
+  icon: {fileID: 0}
+  radius: 4.4123774
+  duration: 3.6493638
+  damagePerSecond: 3.737746

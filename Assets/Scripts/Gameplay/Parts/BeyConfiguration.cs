@@ -154,42 +154,42 @@ namespace BladeSpinners.Gameplay.Parts
         {
             cachedStats = new BeyStatBlock();
 
-            // Collect all unique equipment
-            HashSet<BeyPart> uniqueParts = new HashSet<BeyPart>();
-            foreach (var part in equippedParts.Values)
+            BeyPart tipPart = GetEquippedPart(PartType.Tip);
+            if (tipPart != null)
             {
-                if (part != null)
-                    uniqueParts.Add(part);
+                cachedStats.TipBehavior = tipPart.TipBehavior;
+                cachedStats.BehaviorBasedStaminaDrainModifier = tipPart.BehaviorBasedStaminaDrainModifier;
+                cachedStats.UphillResistanceMultiplier = tipPart.UphillResistanceMultiplier;
+                cachedStats.SlopeMultiplier = tipPart.SlopeMultiplier;
+                cachedStats.SpinThreshold = tipPart.SpinThreshold;
+                cachedStats.AltTipBehavior = tipPart.AltTipBehavior;
             }
 
-            // Aggregate stats from all parts
-            foreach (BeyPart part in uniqueParts)
+            BeyPart trackPart = GetEquippedPart(PartType.Track);
+            if (trackPart != null)
             {
-                // Tip stats
-                cachedStats.TipBehavior = part.TipBehavior;
-                cachedStats.BehaviorBasedStaminaDrainModifier = part.BehaviorBasedStaminaDrainModifier;
-                cachedStats.UphillResistanceMultiplier = part.UphillResistanceMultiplier;
-                cachedStats.SlopeMultiplier = part.SlopeMultiplier;
-                cachedStats.SpinThreshold = part.SpinThreshold;
-                cachedStats.AltTipBehavior = part.AltTipBehavior;
+                cachedStats.TrackHeight = trackPart.TrackHeight;
+                cachedStats.JumpArcModifier = trackPart.JumpArcModifier;
+            }
 
-                // Track stats
-                cachedStats.TrackHeight = part.TrackHeight;
-                cachedStats.JumpArcModifier = part.JumpArcModifier;
+            BeyPart wheelPart = GetEquippedPart(PartType.FusionWheel);
+            if (wheelPart != null)
+            {
+                cachedStats.Weight = wheelPart.Weight;
+                cachedStats.MassBasedStaminaDrainRate = wheelPart.MassBasedStaminaDrainRate;
+            }
 
-                // Fusion Wheel stats
-                cachedStats.Weight = part.Weight;
-                cachedStats.MassBasedStaminaDrainRate = part.MassBasedStaminaDrainRate;
+            BeyPart ringPart = GetEquippedPart(PartType.EnergyRing);
+            if (ringPart != null)
+            {
+                cachedStats.ManaPoolSize = ringPart.ManaPoolSize;
+                cachedStats.ManaRegenRate = ringPart.ManaRegenRate;
+            }
 
-                // Energy Ring stats
-                cachedStats.ManaPoolSize = part.ManaPoolSize;
-                cachedStats.ManaRegenRate = part.ManaRegenRate;
-
-                // Face Bolt stats
-                if (part.PartType == PartType.FaceBolt)
-                {
-                    cachedStats.EquippedAbility = FaceBoltAbilityResolver.Resolve(part);
-                }
+            BeyPart faceBoltPart = GetEquippedPart(PartType.FaceBolt);
+            if (faceBoltPart != null)
+            {
+                cachedStats.EquippedAbility = FaceBoltAbilityResolver.Resolve(faceBoltPart);
             }
 
             // Calculate total stamina drain as Fusion Wheel mass drain + Tip behavior drain modifier

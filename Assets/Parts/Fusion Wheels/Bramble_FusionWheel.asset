@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Bramble_FusionWheel
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Bramble_FusionWheel
+  partType: 2
+  occupiesSlots: 02000000
+  rarity: 0
+  tags: 
+  partID: bramble_fusionwheel_521902419
+  description: A Common FusionWheel from the Bramble set.
+  icon: {fileID: 0}
+  meshSeed: 226587542
+  primaryColor: {r: 0.28491157, g: 0.43921146, b: 0.23773707, a: 1}
+  secondaryColor: {r: 0.5157939, g: 0.6202746, b: 0.48385075, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 19.064497
+  massBasedStaminaDrainRate: 0.31976882
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 0}
+  faceBoltEmblem: {fileID: 0}

@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Rampager_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.BerserkAbility
   abilityName: 'Berserk [Rampager_FaceBolt]'
-  description: Enter a frenzied state, dramatically increasing speed at the cost
-    of stability.
-  manaCost: 50
+  description: 'Enter a frenzied state, dramatically increasing speed at the cost
+    of stability. [Behavior 45631939]'
+  manaCost: 66.58741
   rarity: 1
   icon: {fileID: 0}
-  speedMultiplier: 2.2
-  massDelta: -0.4
-  duration: 5
+  speedMultiplier: 3.4299407
+  massDelta: -0.39202973
+  duration: 5.0333385

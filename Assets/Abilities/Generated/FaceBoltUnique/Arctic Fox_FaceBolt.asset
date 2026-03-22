@@ -12,11 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b503df5f0330e1419c9f5d1f0770e3d, type: 3}
   m_Name: Arctic Fox_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.FreezeAbility
-  abilityName: Arctic Fox_FaceBolt
-  description: Encases nearby enemies in ice, halting their movement and shattering their spin.
-  manaCost: 65
-  rarity: 2
+  abilityName: 'Freeze [Arctic Fox_FaceBolt]'
+  description: 'Encases nearby enemies in ice, halting their movement and shattering
+    their spin. [Behavior 1DFBADC9]'
+  manaCost: 58.740852
+  rarity: 1
   icon: {fileID: 0}
-  radius: 6
-  freezeDuration: 2.5
-  spinDamage: 18
+  radius: 7.66174
+  freezeDuration: 3.3852284
+  spinDamage: 14.049866

@@ -13,11 +13,12 @@ MonoBehaviour:
   m_Name: Iron Claw_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.GroundPoundAbility
   abilityName: 'Ground Pound [Iron Claw_FaceBolt]'
-  description: Slam downward and shock nearby enemies with spin damage and knockback.
-  manaCost: 45
+  description: 'Slam downward and shock nearby enemies with spin damage and knockback.
+    [Behavior 7D84A337]'
+  manaCost: 40.725246
   rarity: 1
   icon: {fileID: 0}
-  slamForce: 26
-  impactRadius: 6
-  spinDamage: 16
-  knockbackImpulse: 10
+  slamForce: 40.9249
+  impactRadius: 9.090202
+  spinDamage: 21.988716
+  knockbackImpulse: 11.749006

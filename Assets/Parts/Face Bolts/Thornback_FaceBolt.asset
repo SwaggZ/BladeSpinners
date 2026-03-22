@@ -36,4 +36,4 @@ MonoBehaviour:
   manaPoolSize: 100
   manaRegenRate: 20
   equippedAbility: {fileID: 11400000, guid: e9d95012add054e43b3a06729b1f8c97, type: 2}
-  faceBoltEmblem: {fileID: 21300000, guid: 1b705de5d9acd214ba259a6621063bb7, type: 3}
+  faceBoltEmblem: {fileID: 21300000, guid: 90cfd140b036bf1448ca3578bc159f10, type: 3}

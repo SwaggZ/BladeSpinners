@@ -23,7 +23,38 @@ namespace BladeSpinners.Core
         RubberFlat,  // High grip, tight arcs, highest behavior drain
         Ball,        // Balanced grip, slight tilt toward movement, good uphill
         Spike,       // Nearly stationary, maximum stamina drain resistance
-        Orbit        // Controls orbit radius, circles around central axis, high skill ceiling
+        Orbit,       // Controls orbit radius, circles around central axis, high skill ceiling
+
+        // Metal Fight-inspired tip catalog (code suffix preserved)
+        WideDefense_WD,
+        Quake_Q,
+        EternalSharp_ES,
+        WideDefense2_W2D,
+        MetalSharp_MS,
+        EternalDefenseSharp_EDS,
+        SemiFlat_SF,
+        MetalBall_MB,
+        BearingSpike_BS,
+        SemiDefense_SD,
+        HoleFlat_HF,
+        DefenseSharp_DS,
+        Sharp_S,
+        FlatSharp_FS,
+        Ball_B,
+        RubberSharp_RS,
+        Flat_F,
+        Defense_D,
+        Rubber2Flat_R2F,
+        EternalWideDefense_EWD,
+        DeltaDrive_D_D, // D:D
+        CoatSharp_CS,
+        BearingDrive_B_D, // B:D
+
+        // Curated aliases/variants used by current visual catalog
+        WideFlat_WF,
+        RubberBall_RB,
+        HoleFlatSharp_HF_S, // HF/S
+        Fusion_F
     }
 
     /// <summary>

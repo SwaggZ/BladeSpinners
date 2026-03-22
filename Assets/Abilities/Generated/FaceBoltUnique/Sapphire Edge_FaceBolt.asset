@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Sapphire Edge_FaceBolt
   m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.FreezeAbility
   abilityName: 'Freeze [Sapphire Edge_FaceBolt]'
-  description: Encases nearby enemies in ice, halting their movement and shattering
-    their spin.
-  manaCost: 65
-  rarity: 2
+  description: 'Encases nearby enemies in ice, halting their movement and shattering
+    their spin. [Behavior 127F7860]'
+  manaCost: 71.30986
+  rarity: 3
   icon: {fileID: 0}
-  radius: 6
-  freezeDuration: 2.5
-  spinDamage: 18
+  radius: 4.4635224
+  freezeDuration: 1.9151632
+  spinDamage: 15.182381

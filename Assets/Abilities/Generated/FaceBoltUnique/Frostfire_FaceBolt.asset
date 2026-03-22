@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af3f20051758360489abb01c769725fd, type: 3}
+  m_Name: Frostfire_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.MirageCloneAbility
+  abilityName: 'Mirage Clone [Frostfire_FaceBolt]'
+  description: 'Spawns phantom copies that orbit and confuse enemies. When destroyed,
+    each clone explodes. [Behavior 4C98CD33]'
+  manaCost: 68.277306
+  rarity: 1
+  icon: {fileID: 0}
+  cloneCount: 3
+  spawnRadius: 1.4651253
+  cloneDuration: 7.606125
+  cloneExplosionDamage: 9.727382

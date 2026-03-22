@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 510bc85201df35c43b3e98cb5b661335, type: 3}
+  m_Name: Worldender_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Gameplay.Parts.BeyPart
+  partName: Worldender_FaceBolt
+  partType: 4
+  occupiesSlots: 04000000
+  rarity: 4
+  tags: 
+  partID: worldender_facebolt_1472130680
+  description: A Legendary FaceBolt from the Worldender set.
+  icon: {fileID: 0}
+  meshSeed: 686039079
+  primaryColor: {r: 0.37035915, g: 0.0200111, b: 0.12978053, a: 1}
+  secondaryColor: {r: 0.7561861, g: 0.62052196, b: 0.66302764, a: 1}
+  tipBehavior: 4
+  behaviorBasedStaminaDrainModifier: 1
+  uphillResistanceMultiplier: 1
+  slopeMultiplier: 1
+  spinThreshold: -1
+  altTipBehavior: 4
+  trackHeight: 1
+  jumpArcModifier: 1
+  weight: 25
+  massBasedStaminaDrainRate: 0.5
+  manaPoolSize: 100
+  manaRegenRate: 20
+  equippedAbility: {fileID: 11400000, guid: 8042cfdceebb9814fb825dd92f11137c, type: 2}
+  faceBoltEmblem: {fileID: 21300000, guid: 0b0e618a780b6fa4d812d5812802418f, type: 3}

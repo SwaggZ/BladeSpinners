@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c19a6c5c9c23b5846b425641e76c4516, type: 3}
+  m_Name: Hellbound_FaceBolt
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Abilities.PoisonCloudAbility
+  abilityName: 'Poison Cloud [Hellbound_FaceBolt]'
+  description: 'Creates a toxic cloud that continuously drains enemy spin. [Behavior
+    7B8EC7E8]'
+  manaCost: 65.61529
+  rarity: 3
+  icon: {fileID: 0}
+  radius: 7.591648
+  duration: 3.553527
+  damagePerSecond: 4.2364297

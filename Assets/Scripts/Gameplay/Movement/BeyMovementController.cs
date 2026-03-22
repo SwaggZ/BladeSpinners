@@ -96,6 +96,17 @@ namespace BladeSpinners.Gameplay.Movement
         private float knockbackStunTimer = 0f;
         private const float KNOCKBACK_STUN_DURATION = 0.25f; // seconds
 
+        // === Slope anti-stuck / anti-bounce ===
+        // Tracks previous-frame velocity to detect sudden edge-catch kills.
+        private Vector3 prevFrameVelocity;
+        private float stuckTimer = 0f;
+        private const float STUCK_DETECT_THRESHOLD = 0.6f; // speed ratio drop per frame to count as stuck
+        private const float STUCK_RECOVERY_DELAY = 0.12f;  // seconds before recovery nudge fires
+        private const float STUCK_NUDGE_FORCE = 6f;        // upward + forward nudge strength
+        private const float STEEP_SLOPE_THRESHOLD = 0.5f;  // normal.y below this = steep surface
+        // Cached surface normal for slope-aware grounding force
+        private Vector3 lastGroundNormal = Vector3.up;
+
         /// <summary>
         /// Sets the desired forward/right directions for AI-driven beys.
         /// Pass null to revert to camera-based direction (player mode).
@@ -179,22 +190,44 @@ namespace BladeSpinners.Gameplay.Movement
 
             // Check contact normals — if any contact points upward (within ~60° of vertical),
             // we're on a walkable surface. This works on flat ground, slopes, and bowl walls.
+            // Also average the surface normal for slope-aware grounding force.
+            Vector3 bestNormal = Vector3.zero;
+            float bestY = -1f;
             foreach (ContactPoint contact in collision.contacts)
             {
-                if (contact.normal.y > 0.5f) // ~60° from horizontal or flatter
+                if (contact.normal.y > bestY)
                 {
-                    isGrounded = true;
+                    bestY = contact.normal.y;
+                    bestNormal = contact.normal;
+                }
+            }
 
-                    if (rb != null && rb.linearVelocity.y > 1.2f)
-                    {
-                        Vector3 velocity = rb.linearVelocity;
-                        velocity.y = 1.2f;
-                        rb.linearVelocity = velocity;
-                    }
+            if (bestY > 0.3f) // ~72° from horizontal — slightly more permissive for curved bowls
+            {
+                isGrounded = true;
+                lastGroundNormal = bestNormal;
 
-                    if (debugMovement)
-                        Debug.Log($"[BeyMovement] GROUNDED via collision: {collision.gameObject.name}, normal: {contact.normal}");
-                    return;
+                if (rb != null && rb.linearVelocity.y > 1.2f)
+                {
+                    Vector3 velocity = rb.linearVelocity;
+                    velocity.y = 1.2f;
+                    rb.linearVelocity = velocity;
+                }
+
+                if (debugMovement)
+                    Debug.Log($"[BeyMovement] GROUNDED via collision: {collision.gameObject.name}, normal: {bestNormal}");
+            }
+            // On very steep surfaces (below grounding threshold), project velocity along
+            // the surface to prevent wedging into polygon edges.
+            else if (bestY > 0.05f && rb != null)
+            {
+                Vector3 vel = rb.linearVelocity;
+                // Remove velocity component going INTO the surface
+                float intoSurface = Vector3.Dot(vel, bestNormal);
+                if (intoSurface < -0.5f)
+                {
+                    vel -= bestNormal * intoSurface;
+                    rb.linearVelocity = vel;
                 }
             }
         }
@@ -231,13 +264,26 @@ namespace BladeSpinners.Gameplay.Movement
             if (knockbackStunTimer > 0f)
                 knockbackStunTimer -= Time.fixedDeltaTime;
 
-            // Keep Bey grounded with strong downward force (like a spinning top)
+            // Keep Bey grounded with strong downward force (like a spinning top).
+            // On steep slopes, push along the surface normal instead of straight down
+            // so the bey doesn't wedge into polygon edges.
             if (isGrounded)
             {
-                // Apply continuous downward pressure to keep Bey on ground
-                rb.AddForce(Vector3.down * 50f, ForceMode.Acceleration);
-                // Tilt is handled by BeyTiltController in LateUpdate (on TiltPivot transform)
+                float slopeAngle = 1f - lastGroundNormal.y; // 0 = flat, ~1 = vertical
+                if (slopeAngle > 0.35f)
+                {
+                    // Steep slope: push INTO the surface (along -normal) instead of straight down.
+                    // Reduced force prevents wedging while keeping contact.
+                    rb.AddForce(-lastGroundNormal * 30f, ForceMode.Acceleration);
+                }
+                else
+                {
+                    rb.AddForce(Vector3.down * 50f, ForceMode.Acceleration);
+                }
             }
+
+            // --- Stuck / edge-catch detection and recovery ---
+            DetectAndRecoverFromStuck();
 
             // Skip movement forces during knockback stun — let the impulse carry the bey
             if (knockbackStunTimer > 0f)
@@ -655,6 +701,59 @@ namespace BladeSpinners.Gameplay.Movement
                 burstEffect = gameObject.AddComponent<Effects.BeyBurstEffect>();
 
             burstEffect.TriggerBurst();
+        }
+
+        /// <summary>
+        /// Detects sudden velocity loss from polygon edge catches and applies
+        /// a small recovery nudge to unstick the bey.
+        /// </summary>
+        private void DetectAndRecoverFromStuck()
+        {
+            Vector3 currentVel = rb.linearVelocity;
+            float prevSpeed = new Vector3(prevFrameVelocity.x, 0f, prevFrameVelocity.z).magnitude;
+            float currSpeed = new Vector3(currentVel.x, 0f, currentVel.z).magnitude;
+
+            // Detect: had meaningful speed, then suddenly lost most of it (edge catch)
+            bool suddenStop = prevSpeed > 2f && currSpeed < prevSpeed * STUCK_DETECT_THRESHOLD;
+            // Detect: velocity Y spiked wildly (bounce off polygon edge)
+            bool bouncedWild = Mathf.Abs(currentVel.y) > 4f && Mathf.Abs(prevFrameVelocity.y) < 1.5f && isGrounded;
+
+            if (suddenStop || bouncedWild)
+            {
+                stuckTimer += Time.fixedDeltaTime;
+                if (stuckTimer >= STUCK_RECOVERY_DELAY)
+                {
+                    // Nudge: small upward + last-known-good direction push
+                    Vector3 nudgeDir = prevFrameVelocity.normalized;
+                    nudgeDir.y = 0f;
+                    if (nudgeDir.sqrMagnitude < 0.01f)
+                        nudgeDir = transform.forward;
+                    nudgeDir = nudgeDir.normalized;
+
+                    rb.linearVelocity = new Vector3(
+                        nudgeDir.x * prevSpeed * 0.5f,
+                        Mathf.Max(currentVel.y, 0.8f), // slight lift off surface
+                        nudgeDir.z * prevSpeed * 0.5f);
+                    rb.AddForce((Vector3.up + nudgeDir) * STUCK_NUDGE_FORCE, ForceMode.VelocityChange);
+
+                    stuckTimer = 0f;
+                    if (debugMovement)
+                        Debug.Log($"[BeyMovement] STUCK RECOVERY — nudged. prevSpeed={prevSpeed:F1} currSpeed={currSpeed:F1}");
+                }
+            }
+            else
+            {
+                stuckTimer = 0f;
+            }
+
+            // Clamp wild vertical bounces while grounded
+            if (isGrounded && currentVel.y > 3f)
+            {
+                currentVel.y = Mathf.Min(currentVel.y, 1.5f);
+                rb.linearVelocity = currentVel;
+            }
+
+            prevFrameVelocity = rb.linearVelocity;
         }
 
         public Rigidbody Rb => rb;
