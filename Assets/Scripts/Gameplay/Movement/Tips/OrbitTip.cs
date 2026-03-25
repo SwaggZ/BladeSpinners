@@ -19,6 +19,10 @@ namespace BladeSpinners.Gameplay.Movement
 
         public void ApplyMovement(BeyMovementController controller, float forwardInput)
         {
+            // (23/3/2026): Set orbit center to Bey's current position for self-orbit
+            // Previously defaulted to world (0,0,0) causing orbital flight to map center
+            orbitCenter = controller.transform.position;
+            
             // Orbit tip moves in a circle around a point
             // Forward input controls orbital speed, turning adjusts orbit radius
             // This is delegated to BeyMovementController to re-interpret as orbital movement

@@ -139,6 +139,9 @@ namespace BladeSpinners.Gameplay
 
         private void TryActivateAbility()
         {
+            if (beyMovementController != null && (beyMovementController.IsFrozen || beyMovementController.IsStunned))
+                return;
+
             BeyStatBlock stats = beyConfiguration.GetStatBlock();
 
             if (stats.EquippedAbility == null)

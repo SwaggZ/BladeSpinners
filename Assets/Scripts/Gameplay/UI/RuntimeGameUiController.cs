@@ -88,6 +88,8 @@ namespace BladeSpinners.Gameplay.UI
         private RarityTier    lootMaxRarityTier;
         private bool          lootTransferInitialized;
         private Vector2       lootScroll;
+        private Vector2       deathSalvageCardScroll;
+        private Vector2       deathEquippedCardScroll;
 
         // ── GUI styles ───────────────────────────────────────────────────────────
         private GUIStyle titleBarStyle;
@@ -593,6 +595,8 @@ namespace BladeSpinners.Gameplay.UI
             lootEligibleParts.Sort((a, b) => ((int)b.Rarity).CompareTo((int)a.Rarity));
             lootSelectedFlags = new List<bool>(new bool[lootEligibleParts.Count]);
             lootScroll        = Vector2.zero;
+            deathSalvageCardScroll = Vector2.zero;
+            deathEquippedCardScroll = Vector2.zero;
         }
 
         private static void GetLootTransferRules(int depthIndex, int totalArenas,
@@ -633,7 +637,7 @@ namespace BladeSpinners.Gameplay.UI
             GUIStyle rowLabel = new GUIStyle(bodyLabelStyle) { alignment = TextAnchor.MiddleLeft };
             GUILayout.BeginHorizontal(GUILayout.Height(scrollH));
 
-            float detailWidth = Mathf.Clamp(280f * uiScale, 260f, 420f);
+            float detailWidth = Mathf.Clamp(560f * uiScale, 420f, 760f);
             GUILayout.BeginVertical(GUILayout.ExpandWidth(true), GUILayout.Height(scrollH));
             lootScroll = GUILayout.BeginScrollView(lootScroll, GUILayout.Height(scrollH));
             for (int i = 0; i < lootEligibleParts.Count; i++)
@@ -662,10 +666,101 @@ namespace BladeSpinners.Gameplay.UI
 
             GUILayout.EndVertical();
             GUILayout.Space(Mathf.Clamp(10f * uiScale, 10f, 18f));
-            GUILayout.BeginVertical(GUILayout.Width(detailWidth), GUILayout.Height(scrollH));
-            DrawSelectedPartCard(selectedLootPart, "SALVAGE PART", true);
-            GUILayout.EndVertical();
+            Rect comparisonRect = GUILayoutUtility.GetRect(detailWidth, scrollH, GUILayout.Width(detailWidth), GUILayout.Height(scrollH));
+            DrawLootPartComparison(comparisonRect, selectedLootPart, uiScale);
             GUILayout.EndHorizontal();
+        }
+
+        private void DrawLootPartComparison(Rect area, BeyPart lootPart, float uiScale)
+        {
+            if (lootPart == null)
+            {
+                GUI.Label(area, "SELECT A PART TO VIEW COMPARISON.", bodyLabelStyle);
+                return;
+            }
+
+            BeyPart equippedPart = GetEquippedPartForType(lootPart.PartType);
+
+            float cardGap = Mathf.Clamp(10f * uiScale, 8f, 16f);
+            float cardWidth = Mathf.Max(180f, (area.width - cardGap) * 0.5f);
+            float cardHeight = Mathf.Max(180f, area.height);
+            float contentWidthHint = Mathf.Max(150f, cardWidth - 20f);
+
+            Rect leftRect = new Rect(area.x, area.y, cardWidth, cardHeight);
+            Rect rightRect = new Rect(leftRect.xMax + cardGap, area.y, cardWidth, cardHeight);
+
+            DrawSelectedPartCardInRect(leftRect, lootPart, "SALVAGE PART", contentWidthHint, false);
+            DrawSelectedPartCardInRect(rightRect, equippedPart, "EQUIPPED PART", contentWidthHint, true);
+        }
+
+        private void DrawSelectedPartCardInRect(Rect cardRect, BeyPart part, string header, float widthHint, bool isEquippedCard)
+        {
+            DrawRect(cardRect, new Color(0f, 0f, 0f, 0.26f));
+            DrawRect(new Rect(cardRect.x, cardRect.y, cardRect.width, 3f), ACCENT_YEL);
+
+            GUIStyle headerStyle = FitLabelStyle(sectionLabelStyle, header, widthHint, 10);
+            GUIStyle detailStyle = FitLabelStyle(bodyLabelStyle, "ABILITY RARITY  LEGENDARY", widthHint, 10);
+            GUIStyle statStyle = FitLabelStyle(statRowStyle, "MANA REGEN  100.0", widthHint, 10);
+
+            float contentPadX = 10f;
+            float contentPadY = 8f;
+            Rect contentRect = new Rect(cardRect.x + contentPadX, cardRect.y + contentPadY, cardRect.width - contentPadX * 2f, cardRect.height - contentPadY * 2f);
+            float headerHeight = Mathf.Clamp(26f * GetUiScale(), 22f, 40f);
+
+            Rect headerRect = new Rect(contentRect.x, contentRect.y, contentRect.width, headerHeight);
+            GUI.Label(headerRect, header, headerStyle);
+
+            Rect scrollRect = new Rect(contentRect.x, headerRect.yMax + 2f, contentRect.width, Mathf.Max(24f, contentRect.yMax - (headerRect.yMax + 2f)));
+            GUILayout.BeginArea(scrollRect);
+
+            Vector2 scroll = isEquippedCard ? deathEquippedCardScroll : deathSalvageCardScroll;
+            scroll = GUILayout.BeginScrollView(scroll, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
+
+            if (part == null)
+            {
+                GUILayout.Label("NO PART EQUIPPED IN THIS SLOT.", bodyLabelStyle);
+                GUILayout.EndScrollView();
+                GUILayout.EndArea();
+                if (isEquippedCard) deathEquippedCardScroll = scroll; else deathSalvageCardScroll = scroll;
+                return;
+            }
+
+            GUILayout.Label(PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant(), statStyle);
+            GUILayout.Label($"TYPE      {part.PartType.ToString().ToUpper()}", statStyle);
+            GUILayout.Label($"RARITY    {part.Rarity.ToString().ToUpper()}", statStyle);
+
+            List<string> partLines = BuildPartDetailLines(part);
+            for (int i = 0; i < partLines.Count; i++)
+                GUILayout.Label(partLines[i], statStyle);
+
+            BeyAbility ability = ResolveAbilityForPart(part);
+            GUILayout.Space(6f);
+            GUILayout.Label("ABILITY", headerStyle);
+            if (ability == null)
+            {
+                GUILayout.Label("NONE", detailStyle);
+            }
+            else
+            {
+                GUILayout.Label(ability.AbilityName.ToUpperInvariant(), statStyle);
+                GUILayout.Label($"ABILITY RARITY  {ability.Rarity.ToString().ToUpper()}", statStyle);
+                GUILayout.Label($"MANA COST       {ability.ManaCost:0.#}", statStyle);
+                if (!string.IsNullOrWhiteSpace(ability.Description))
+                    GUILayout.Label(ability.Description.ToUpperInvariant(), detailStyle);
+            }
+
+            GUILayout.EndScrollView();
+            if (isEquippedCard) deathEquippedCardScroll = scroll; else deathSalvageCardScroll = scroll;
+            GUILayout.EndArea();
+        }
+
+        private BeyPart GetEquippedPartForType(PartType type)
+        {
+            if (runContext.Player != null && runContext.Player.BeyConfiguration != null)
+                return runContext.Player.BeyConfiguration.GetEquippedPart(type);
+
+            selectedMainMenuLoadout.TryGetValue(type, out BeyPart part);
+            return part;
         }
 
         private void CommitTransferLootAndReturnToMenu()
@@ -1037,25 +1132,44 @@ namespace BladeSpinners.Gameplay.UI
             return (mainInventoryOpen || runInventoryOpen) ? selectedInventoryPart : null;
         }
 
-        private void DrawSelectedPartCard(BeyPart part, string header, bool drawBackground)
+        private void DrawSelectedPartCard(BeyPart part, string header, bool drawBackground, float widthHint = 420f, float minHeight = 0f)
         {
             if (part == null)
             {
-                GUILayout.Label("SELECT A PART TO VIEW ITS STATS AND ABILITY.", bodyLabelStyle);
+                if (drawBackground)
+                {
+                    Rect emptyBg = minHeight > 0f
+                        ? GUILayoutUtility.GetRect(10f, minHeight, GUILayout.ExpandWidth(true), GUILayout.Height(minHeight))
+                        : GUILayoutUtility.GetRect(10f, 10f, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
+                    DrawRect(emptyBg, new Color(0f, 0f, 0f, 0.26f));
+                    DrawRect(new Rect(emptyBg.x, emptyBg.y, emptyBg.width, 3f), ACCENT_YEL);
+                    GUILayout.BeginArea(new Rect(emptyBg.x + 10f, emptyBg.y + 8f, emptyBg.width - 20f, emptyBg.height - 16f));
+                    GUIStyle headerStyleEmpty = FitLabelStyle(sectionLabelStyle, header, widthHint, 10);
+                    GUILayout.Label(header, headerStyleEmpty);
+                    GUILayout.Space(4f);
+                    GUILayout.Label("NO PART EQUIPPED IN THIS SLOT.", bodyLabelStyle);
+                    GUILayout.EndArea();
+                }
+                else
+                {
+                    GUILayout.Label("SELECT A PART TO VIEW ITS STATS AND ABILITY.", bodyLabelStyle);
+                }
                 return;
             }
 
             if (drawBackground)
             {
-                Rect bg = GUILayoutUtility.GetRect(10f, 10f, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
+                Rect bg = minHeight > 0f
+                    ? GUILayoutUtility.GetRect(10f, minHeight, GUILayout.ExpandWidth(true), GUILayout.Height(minHeight))
+                    : GUILayoutUtility.GetRect(10f, 10f, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
                 DrawRect(bg, new Color(0f, 0f, 0f, 0.26f));
                 DrawRect(new Rect(bg.x, bg.y, bg.width, 3f), ACCENT_YEL);
                 GUILayout.BeginArea(new Rect(bg.x + 10f, bg.y + 8f, bg.width - 20f, bg.height - 16f));
             }
 
-            GUIStyle headerStyle = FitLabelStyle(sectionLabelStyle, header, 420f, 10);
-            GUIStyle detailStyle = FitLabelStyle(bodyLabelStyle, "ABILITY RARITY  LEGENDARY", 420f, 10);
-            GUIStyle statStyle = FitLabelStyle(statRowStyle, "MANA REGEN  100.0", 420f, 10);
+            GUIStyle headerStyle = FitLabelStyle(sectionLabelStyle, header, widthHint, 10);
+            GUIStyle detailStyle = FitLabelStyle(bodyLabelStyle, "ABILITY RARITY  LEGENDARY", widthHint, 10);
+            GUIStyle statStyle = FitLabelStyle(statRowStyle, "MANA REGEN  100.0", widthHint, 10);
 
             GUILayout.Label(header, headerStyle);
             GUILayout.Space(4f);

@@ -12,7 +12,7 @@ namespace BladeSpinners.Abilities
         [Header("Vampire Drain")]
         [SerializeField] private float radius = 7f;
         [SerializeField] private float drainAmount = 25f;
-        [SerializeField] private float healRatio = 0.7f;   // how much of drained spin is returned to caster
+        [SerializeField] private float healRatio = 0.07f;  // how much of drained spin is returned to caster
 
         private void OnEnable()
         {

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using BladeSpinners.Core;
 using BladeSpinners.Gameplay.Movement;
 
 namespace BladeSpinners.Gameplay
@@ -55,7 +56,13 @@ namespace BladeSpinners.Gameplay
         [SerializeField] private bool showFocusedEnemyArrow = true;
         [SerializeField] private float focusedArrowHeight = 1.1f;
         [SerializeField] private float focusedArrowTextSize = 0.2f;
+        [SerializeField] private float focusedArrowScaleMultiplier = 2f;
         [SerializeField] private Color focusedArrowColor = new Color(1f, 0.9f, 0.2f, 1f);
+        [SerializeField] private Color focusedArrowHighSpinColor = new Color(0.16f, 1f, 0.24f, 1f);
+        [SerializeField] private Color focusedArrowLowSpinColor = new Color(1f, 0.18f, 0.12f, 1f);
+        [SerializeField, Range(0f, 1f)] private float focusedArrowShakeThreshold = 0.3f;
+        [SerializeField] private float focusedArrowMaxShake = 0.035f;
+        [SerializeField] private float focusedArrowShakeFrequency = 26f;
 
         private float currentYaw = 0f;
         private float currentPitch = 25f;
@@ -69,7 +76,16 @@ namespace BladeSpinners.Gameplay
         private bool lockedToEnemy = false;
         private Transform lockedEnemyTransform;
         private Transform focusedArrowTransform;
-        private TextMesh focusedArrowTextMesh;
+        private Transform focusedArrowOutlineTransform;
+        private Transform focusedArrowFillTransform;
+        private MeshFilter focusedArrowOutlineMeshFilter;
+        private MeshFilter focusedArrowFillMeshFilter;
+        private MeshRenderer focusedArrowOutlineRenderer;
+        private MeshRenderer focusedArrowFillRenderer;
+        private Mesh focusedArrowOutlineMesh;
+        private Mesh focusedArrowFillMesh;
+        private Material focusedArrowOutlineMaterial;
+        private Material focusedArrowFillMaterial;
         private Camera controlledCamera;
         private BeyMovementController playerMovementController;
         private MatchManager activeMatchManager;
@@ -480,24 +496,136 @@ namespace BladeSpinners.Gameplay
             GameObject arrowObject = new GameObject("FocusedEnemyArrow");
             arrowObject.hideFlags = HideFlags.DontSave;
 
-            TextMesh textMesh = arrowObject.AddComponent<TextMesh>();
-            textMesh.text = "▼";
-            textMesh.anchor = TextAnchor.MiddleCenter;
-            textMesh.alignment = TextAlignment.Center;
-            textMesh.fontSize = 64;
-            textMesh.characterSize = Mathf.Max(0.01f, focusedArrowTextSize);
-            textMesh.color = focusedArrowColor;
+            focusedArrowTransform = arrowObject.transform;
+            focusedArrowOutlineTransform = CreateFocusedArrowLayer("Outline", focusedArrowTransform, out focusedArrowOutlineMeshFilter, out focusedArrowOutlineRenderer, 0f);
+            focusedArrowFillTransform = CreateFocusedArrowLayer("Fill", focusedArrowTransform, out focusedArrowFillMeshFilter, out focusedArrowFillRenderer, -0.002f);
 
-            MeshRenderer renderer = arrowObject.GetComponent<MeshRenderer>();
-            if (renderer != null)
+            focusedArrowOutlineMaterial = CreateFocusedArrowMaterial("FocusedEnemyArrowOutline", focusedArrowColor, 3100);
+            focusedArrowFillMaterial = CreateFocusedArrowMaterial("FocusedEnemyArrowFill", focusedArrowColor, 3101);
+
+            if (focusedArrowOutlineRenderer != null)
+                focusedArrowOutlineRenderer.sharedMaterial = focusedArrowOutlineMaterial;
+            if (focusedArrowFillRenderer != null)
+                focusedArrowFillRenderer.sharedMaterial = focusedArrowFillMaterial;
+
+            focusedArrowOutlineMesh = BuildTriangleMesh("FocusedEnemyTriangleOutline", 0.78f, 0.62f, 1f);
+            focusedArrowFillMesh = BuildTriangleMesh("FocusedEnemyTriangleFill", 0.58f, 0.44f, 1f);
+
+            if (focusedArrowOutlineMeshFilter != null)
+                focusedArrowOutlineMeshFilter.sharedMesh = focusedArrowOutlineMesh;
+            if (focusedArrowFillMeshFilter != null)
+                focusedArrowFillMeshFilter.sharedMesh = focusedArrowFillMesh;
+
+            focusedArrowTransform.localScale = Vector3.one * Mathf.Max(0.01f, focusedArrowTextSize * Mathf.Max(0.1f, focusedArrowScaleMultiplier));
+            focusedArrowTransform.gameObject.SetActive(false);
+        }
+
+        private static Transform CreateFocusedArrowLayer(string name, Transform parent, out MeshFilter meshFilter, out MeshRenderer meshRenderer, float localZ)
+        {
+            GameObject layer = new GameObject(name);
+            layer.hideFlags = HideFlags.DontSave;
+            layer.transform.SetParent(parent, false);
+            layer.transform.localPosition = new Vector3(0f, 0f, localZ);
+            layer.transform.localRotation = Quaternion.identity;
+            layer.transform.localScale = Vector3.one;
+
+            meshFilter = layer.AddComponent<MeshFilter>();
+            meshRenderer = layer.AddComponent<MeshRenderer>();
+            meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            meshRenderer.receiveShadows = false;
+            meshRenderer.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+            meshRenderer.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+            meshRenderer.sortingLayerName = "Default";
+            meshRenderer.sortingOrder = 5000;
+            return layer.transform;
+        }
+
+        private static Material CreateFocusedArrowMaterial(string name, Color color, int renderQueue)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit")
+                ?? Shader.Find("Unlit/Color")
+                ?? Shader.Find("Sprites/Default");
+            if (shader == null)
+                return null;
+
+            Material material = new Material(shader);
+            material.name = name;
+            if (material.HasProperty("_BaseColor"))
+                material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_Color"))
+                material.SetColor("_Color", color);
+
+            // Render as a camera-facing overlay indicator.
+            if (material.HasProperty("_Cull"))
+                material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Off);
+            if (material.HasProperty("_Surface"))
+                material.SetFloat("_Surface", 1f);
+            if (material.HasProperty("_ZWrite"))
+                material.SetFloat("_ZWrite", 0f);
+            if (material.HasProperty("_SrcBlend"))
+                material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            if (material.HasProperty("_DstBlend"))
+                material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+
+            material.renderQueue = renderQueue;
+            return material;
+        }
+
+        private static Mesh BuildTriangleMesh(string meshName, float halfWidth, float halfHeight, float fillFraction)
+        {
+            Mesh mesh = new Mesh();
+            mesh.name = meshName;
+            UpdateTriangleMesh(mesh, halfWidth, halfHeight, fillFraction);
+            return mesh;
+        }
+
+        private static void UpdateTriangleMesh(Mesh mesh, float halfWidth, float halfHeight, float fillFraction)
+        {
+            if (mesh == null)
+                return;
+
+            float fraction = Mathf.Clamp01(fillFraction);
+
+            if (fraction <= 0.001f)
             {
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
+                mesh.vertices = new[]
+                {
+                    new Vector3(-halfWidth, halfHeight, 0f),
+                    new Vector3( halfWidth, halfHeight, 0f),
+                    new Vector3( halfWidth, halfHeight, 0f),
+                    new Vector3(-halfWidth, halfHeight, 0f)
+                };
+                mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+                mesh.RecalculateBounds();
+                mesh.RecalculateNormals();
+                return;
             }
 
-            focusedArrowTransform = arrowObject.transform;
-            focusedArrowTextMesh = textMesh;
-            focusedArrowTransform.gameObject.SetActive(false);
+            float topY = halfHeight;
+            float bottomY = Mathf.Lerp(halfHeight, -halfHeight, fraction);
+            float t = Mathf.InverseLerp(-halfHeight, halfHeight, bottomY);
+            float bottomHalfWidth = Mathf.Lerp(0f, halfWidth, t);
+
+            Vector3 topLeft = new Vector3(-halfWidth, topY, 0f);
+            Vector3 topRight = new Vector3(halfWidth, topY, 0f);
+            Vector3 bottomRight = new Vector3(bottomHalfWidth, bottomY, 0f);
+            Vector3 bottomLeft = new Vector3(-bottomHalfWidth, bottomY, 0f);
+
+            mesh.vertices = new[] { topLeft, topRight, bottomRight, bottomLeft };
+            mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            mesh.RecalculateBounds();
+            mesh.RecalculateNormals();
+        }
+
+        private static void SetMaterialColor(Material material, Color color)
+        {
+            if (material == null)
+                return;
+
+            if (material.HasProperty("_BaseColor"))
+                material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_Color"))
+                material.SetColor("_Color", color);
         }
 
         private void EnsureCameraReferences()
@@ -912,14 +1040,35 @@ namespace BladeSpinners.Gameplay
                 focusedArrowTransform.gameObject.SetActive(true);
             }
 
-            Vector3 worldPosition = lockedEnemyTransform.position + Vector3.up * focusedArrowHeight;
-            focusedArrowTransform.position = worldPosition;
+            BeyMovementController enemyMovement = lockedEnemyTransform.GetComponent<BeyMovementController>();
+            float spinFraction = 1f;
+            if (enemyMovement != null && enemyMovement.BeyConfiguration != null)
+                spinFraction = Mathf.Clamp01(enemyMovement.BeyConfiguration.CurrentSpin / GameConstants.MAX_SPIN);
 
-            if (focusedArrowTextMesh != null)
+            Color spinColor = Color.Lerp(focusedArrowLowSpinColor, focusedArrowHighSpinColor, spinFraction);
+            float shakeStrength = spinFraction < focusedArrowShakeThreshold
+                ? Mathf.InverseLerp(focusedArrowShakeThreshold, 0f, spinFraction) * focusedArrowMaxShake
+                : 0f;
+            Vector3 shakeOffset = Vector3.zero;
+            if (shakeStrength > 0.0001f)
             {
-                focusedArrowTextMesh.characterSize = Mathf.Max(0.01f, focusedArrowTextSize);
-                focusedArrowTextMesh.color = focusedArrowColor;
+                float time = Time.unscaledTime * focusedArrowShakeFrequency;
+                shakeOffset = new Vector3(
+                    Mathf.Sin(time) * shakeStrength,
+                    Mathf.Cos(time * 1.31f) * shakeStrength * 0.55f,
+                    0f);
             }
+
+            Vector3 worldPosition = lockedEnemyTransform.position + Vector3.up * focusedArrowHeight + shakeOffset;
+            focusedArrowTransform.position = worldPosition;
+            focusedArrowTransform.localScale = Vector3.one * Mathf.Max(0.01f, focusedArrowTextSize * Mathf.Max(0.1f, focusedArrowScaleMultiplier));
+
+            Color fillColor = new Color(spinColor.r * 0.55f, spinColor.g * 0.55f, spinColor.b * 0.55f, 0.95f);
+            SetMaterialColor(focusedArrowOutlineMaterial, spinColor);
+            SetMaterialColor(focusedArrowFillMaterial, fillColor);
+
+            // (24/3/2026) Visual mapping fix: drain direction should decrease with spin.
+            UpdateTriangleMesh(focusedArrowFillMesh, 0.58f, 0.44f, 1f - spinFraction);
 
             Vector3 toCamera = transform.position - focusedArrowTransform.position;
             if (toCamera.sqrMagnitude > 0.0001f)
@@ -933,6 +1082,26 @@ namespace BladeSpinners.Gameplay
             if (focusedArrowTransform != null)
             {
                 Destroy(focusedArrowTransform.gameObject);
+            }
+
+            if (focusedArrowOutlineMaterial != null)
+            {
+                Destroy(focusedArrowOutlineMaterial);
+            }
+
+            if (focusedArrowFillMaterial != null)
+            {
+                Destroy(focusedArrowFillMaterial);
+            }
+
+            if (focusedArrowOutlineMesh != null)
+            {
+                Destroy(focusedArrowOutlineMesh);
+            }
+
+            if (focusedArrowFillMesh != null)
+            {
+                Destroy(focusedArrowFillMesh);
             }
 
             if (speedWedgeTexture != null)

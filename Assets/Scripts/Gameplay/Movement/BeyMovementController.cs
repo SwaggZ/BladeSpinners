@@ -22,6 +22,10 @@ namespace BladeSpinners.Gameplay.Movement
         [SerializeField]
         private bool debugMovement = false;
 
+        [Header("Behavior Safety")]
+        [SerializeField]
+        private bool allowOrbitTipBehavior = false;
+
         private Rigidbody rb;
         private ITipBehavior activeTipBehavior;
         private float boost = 1f;
@@ -90,6 +94,9 @@ namespace BladeSpinners.Gameplay.Movement
         // True if this bey belongs to an enemy (auto-detected in Start)
         private bool isEnemy = false;
 
+        public bool IsFrozen => GetComponent<BladeSpinners.Abilities.FreezeRuntime>() != null;
+        public bool IsStunned => knockbackStunTimer > 0f || GetComponent<BladeSpinners.Abilities.StunRuntime>() != null;
+
         // === Knockback hitstun ===
         // Brief window after being knocked back where movement forces are suppressed,
         // so the impulse can actually push the bey instead of being instantly counteracted.
@@ -129,17 +136,18 @@ namespace BladeSpinners.Gameplay.Movement
                 rb.interpolation = RigidbodyInterpolation.Interpolate;
             }
             
-            // Add bouncy physics material for realistic Beyblade landing
+            // Add zero-bounce physics material to prevent seam bouncing from mesh colliders
+            // (23/3/2026): Changed from 0.02 to 0 to eliminate mesh seam bounces
             SphereCollider sphereCol = GetComponent<SphereCollider>();
             if (sphereCol != null && !sphereCol.isTrigger && sphereCol.sharedMaterial == null)
             {
-                PhysicsMaterial bouncyMat = new PhysicsMaterial("BeyBounce");
-                bouncyMat.bounciness = 0.02f;
-                bouncyMat.dynamicFriction = 0f; // Zero friction to reduce collision sticking
-                bouncyMat.staticFriction = 0f;
-                bouncyMat.frictionCombine = PhysicsMaterialCombine.Minimum;
-                bouncyMat.bounceCombine = PhysicsMaterialCombine.Minimum;
-                sphereCol.material = bouncyMat;
+                PhysicsMaterial beyMat = new PhysicsMaterial("BeyZeroBounce");
+                beyMat.bounciness = 0f;  // Zero bounce: mesh seams won't trigger bounces
+                beyMat.dynamicFriction = 0f; // Zero friction to reduce collision sticking
+                beyMat.staticFriction = 0f;
+                beyMat.frictionCombine = PhysicsMaterialCombine.Minimum;
+                beyMat.bounceCombine = PhysicsMaterialCombine.Minimum;
+                sphereCol.material = beyMat;
             }
             
             if (debugMovement)
@@ -207,11 +215,12 @@ namespace BladeSpinners.Gameplay.Movement
                 isGrounded = true;
                 lastGroundNormal = bestNormal;
 
-                if (rb != null && rb.linearVelocity.y > 1.2f)
+                // (23/3/2026): More aggressive upward velocity suppression to prevent seam bounces
+                Vector3 vel = rb.linearVelocity;
+                if (vel.y > 0.8f)  // Clamp upward velocity more aggressively
                 {
-                    Vector3 velocity = rb.linearVelocity;
-                    velocity.y = 1.2f;
-                    rb.linearVelocity = velocity;
+                    vel.y = Mathf.Max(vel.y * 0.3f, 0f);  // Kill 70% of upward bounce
+                    rb.linearVelocity = vel;
                 }
 
                 if (debugMovement)
@@ -229,6 +238,10 @@ namespace BladeSpinners.Gameplay.Movement
                     vel -= bestNormal * intoSurface;
                     rb.linearVelocity = vel;
                 }
+                // (23/3/2026): Kill any upward bounce on steep surfaces too
+                if (vel.y > 0.5f)
+                    vel.y *= 0.2f;
+                rb.linearVelocity = vel;
             }
         }
 
@@ -249,6 +262,8 @@ namespace BladeSpinners.Gameplay.Movement
             if (beyConfiguration == null || activeTipBehavior == null)
                 return;
 
+            bool isFrozen = IsFrozen;
+
             // Update Rigidbody mass from weight stat for realistic inertia
             BeyStatBlock currentStats = beyConfiguration.GetStatBlock();
             currentWeight = currentStats.Weight;
@@ -263,6 +278,21 @@ namespace BladeSpinners.Gameplay.Movement
             // Tick down knockback stun timer
             if (knockbackStunTimer > 0f)
                 knockbackStunTimer -= Time.fixedDeltaTime;
+
+            if (isFrozen)
+            {
+                StopBoost();
+                cachedForwardInput = 0f;
+                cachedSteeringInput = 0f;
+                momentumStrength = 0f;
+
+                beyConfiguration.DrainSpin(Time.fixedDeltaTime, 1f);
+                beyConfiguration.RegenMana(Time.fixedDeltaTime);
+
+                if (beyConfiguration.IsBurst)
+                    OnBurst();
+                return;
+            }
 
             // Keep Bey grounded with strong downward force (like a spinning top).
             // On steep slopes, push along the surface normal instead of straight down
@@ -507,6 +537,12 @@ namespace BladeSpinners.Gameplay.Movement
 
         public void StartBoost()
         {
+            if (IsFrozen)
+            {
+                StopBoost();
+                return;
+            }
+
             if (beyConfiguration == null || beyConfiguration.CurrentMana <= GameConstants.MIN_MANA)
             {
                 StopBoost();
@@ -686,6 +722,13 @@ namespace BladeSpinners.Gameplay.Movement
                 return;
 
             TipBehaviorType activeBehaviorType = beyConfiguration.GetActiveTipBehavior();
+            // (23/3/2026): Safety fallback for legacy/random-generated parts that still have Orbit.
+            if (!allowOrbitTipBehavior && activeBehaviorType == TipBehaviorType.Orbit)
+            {
+                if (debugMovement)
+                    Debug.LogWarning("[BeyMovement] Orbit tip behavior blocked by safety fallback; using Ball instead.");
+                activeBehaviorType = TipBehaviorType.Ball;
+            }
             activeTipBehavior = TipBehaviorFactory.CreateTipBehavior(activeBehaviorType);
         }
 
@@ -714,14 +757,17 @@ namespace BladeSpinners.Gameplay.Movement
             float currSpeed = new Vector3(currentVel.x, 0f, currentVel.z).magnitude;
 
             // Detect: had meaningful speed, then suddenly lost most of it (edge catch)
-            bool suddenStop = prevSpeed > 2f && currSpeed < prevSpeed * STUCK_DETECT_THRESHOLD;
+            // (23/3/2026): Lowered threshold from 0.6 to 0.5 for faster stuck detection
+            bool suddenStop = prevSpeed > 2f && currSpeed < prevSpeed * 0.5f;
             // Detect: velocity Y spiked wildly (bounce off polygon edge)
-            bool bouncedWild = Mathf.Abs(currentVel.y) > 4f && Mathf.Abs(prevFrameVelocity.y) < 1.5f && isGrounded;
+            // (23/3/2026): Lowered spike threshold from 4.0 to 2.5 to catch seam bounces earlier
+            bool bouncedWild = Mathf.Abs(currentVel.y) > 2.5f && Mathf.Abs(prevFrameVelocity.y) < 1.5f && isGrounded;
 
             if (suddenStop || bouncedWild)
             {
                 stuckTimer += Time.fixedDeltaTime;
-                if (stuckTimer >= STUCK_RECOVERY_DELAY)
+                // (23/3/2026): Reduced recovery delay from 0.12 to 0.08 seconds
+                if (stuckTimer >= 0.08f)
                 {
                     // Nudge: small upward + last-known-good direction push
                     Vector3 nudgeDir = prevFrameVelocity.normalized;
@@ -730,11 +776,12 @@ namespace BladeSpinners.Gameplay.Movement
                         nudgeDir = transform.forward;
                     nudgeDir = nudgeDir.normalized;
 
+                    // (23/3/2026): Restore more speed (0.7 instead of 0.5) + minimum 3 m/s to escape seams faster
                     rb.linearVelocity = new Vector3(
-                        nudgeDir.x * prevSpeed * 0.5f,
-                        Mathf.Max(currentVel.y, 0.8f), // slight lift off surface
-                        nudgeDir.z * prevSpeed * 0.5f);
-                    rb.AddForce((Vector3.up + nudgeDir) * STUCK_NUDGE_FORCE, ForceMode.VelocityChange);
+                        nudgeDir.x * Mathf.Max(prevSpeed * 0.7f, 3f),
+                        Mathf.Max(currentVel.y, 0.5f),
+                        nudgeDir.z * Mathf.Max(prevSpeed * 0.7f, 3f));
+                    rb.AddForce((Vector3.up * 0.3f + nudgeDir) * STUCK_NUDGE_FORCE, ForceMode.VelocityChange);
 
                     stuckTimer = 0f;
                     if (debugMovement)
@@ -746,10 +793,10 @@ namespace BladeSpinners.Gameplay.Movement
                 stuckTimer = 0f;
             }
 
-            // Clamp wild vertical bounces while grounded
-            if (isGrounded && currentVel.y > 3f)
+            // (23/3/2026): Even more aggressive bounce suppression
+            if (isGrounded && currentVel.y > 1.2f)
             {
-                currentVel.y = Mathf.Min(currentVel.y, 1.5f);
+                currentVel.y = 0f;  // Kill all upward velocity when firmly grounded
                 rb.linearVelocity = currentVel;
             }
 

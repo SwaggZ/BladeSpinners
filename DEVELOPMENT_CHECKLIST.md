@@ -26,14 +26,27 @@
 - [x] Slope-aware grounding force (22/3/2026): steep surfaces use surface-normal push instead of straight-down force; prevents wedging into polygon edges
 - [x] Edge-catch stuck/bounce recovery (22/3/2026): detects sudden velocity loss from polygon catches and wild vertical bounces; applies recovery nudge after 0.12 s delay
 - [x] Physics solver tuning (22/3/2026): solver iterations 6→10, velocity iterations 1→3, contact offset 0.01→0.04, max depenetration velocity 10→20
+- [x] Mesh seam bounce elimination (23/3/2026): Bey physics material bounciness changed from 0.02→0; improved OnCollisionStay velocity filtering for bounce suppression (70% upward-velocity kill); lowered stuck-detection thresholds (speed drop 0.6→0.5, Y-spike 4.0→2.5); reduced recovery delay 0.12→0.08 seconds; increased recovery speed restoration 0.5→0.7 with minimum 3 m/s guarantee; final aggressive bounce clamp (kill all upward velocity when grounded)
+- [x] Orbit tip bug fix (23/3/2026): Fixed random-part tip generation allowing OrbitTip assignment to run-drops causing floating; OrbitTip now properly centers orbits on Bey position instead of world (0,0,0); prevented unintended Orbit behavior on drop-generated tips
+- [x] Spinning-flyer hardening pass (23/3/2026): editor PartSetGenerator now excludes Orbit from random tipBehavior/altTipBehavior rolls (Orbit remains curated-only); BeyMovementController now has runtime Orbit safety fallback (default off via allowOrbitTipBehavior=false) that downgrades unintended Orbit to Ball for legacy/generated parts
+- [x] Freeze combat loop fix (24/3/2026): frozen beys now stop movement/boost cleanly without draining mana through boost upkeep; mana regeneration and ability usage continue while frozen for both player and enemies
+- [x] Fire Bolt balance nerf (24/3/2026): reduced direct-hit damage, burn DPS/duration, projectile speed, and homing strength to tone down high burst from Fire Bolt face-bolt variants (including Ashen Wolf)
+- [x] Vampire Drain (life spin steal) nerf (24/3/2026): heal ratio reduced from 70% to 7% of drained spin to prevent near-instant spin recovery in multi-target scenarios
+- [x] Ability freeze/stun lockout (24/3/2026): both player and AI can no longer activate abilities while frozen (FreezeRuntime) or stunned (knockback hitstun or StunRuntime); BeyMovementController now exposes public IsFrozen and IsStunned properties used by PlayerInputHandler and AIInputHandler
 
 ## Player & Camera
 - [x] Player input handler (movement, boost, brake, jump, ability input)
 - [x] Third-person camera orbiting Bey
 - [x] Focus indicator arrow above currently focused enemy (hidden when no focus)
+- [x] Focus indicator upgraded to spin arrow (24/3/2026): current target marker keeps the same world position but now uses a runtime inverted triangle with green→red spin-based fill, matching colored outline, and subtle low-spin shake near burst
+- [x] Focus indicator style correction (24/3/2026): reworked fill shape to match FIFA-inspired sketch (outlined inverted triangle with darker inner fill draining upward from the bottom tip)
+- [x] Focus indicator drain-direction correction (24/3/2026): corrected fill mapping so the inner triangle visually drains in combat instead of appearing to fill as target spin drops
 - [x] Main player Bey prefab coordination (PlayerManager - ready for GameObject setup)
 - [x] Camera speed-line effect updated to animated triangle/wedge streaks with off-screen bases
 - [x] Camera occluders between player and camera fade to configurable partial opacity and restore correctly
+- [x] Death-screen comparison rendering fix (24/3/2026): migrated salvage/equipped stat cards to explicit Rect-based drawing to prevent blank/collapsed card panels in constrained overlay layouts
+- [x] Death-screen comparison text layout fix (24/3/2026): added per-card scrollable content areas and stabilized header/content rect spacing to keep text positioned correctly and prevent bottom clipping
+- [x] Ability emblem hologram opacity pass (24/3/2026): emblem now starts at 50% opacity instead of 35% while preserving existing fade-out behavior
 
 ## Inventory & Part Management
 - [x] PartInventory (run-temporary parts)

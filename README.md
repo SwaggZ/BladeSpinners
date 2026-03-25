@@ -18,6 +18,8 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **Slope-aware grounding** — Grounding force pushes along the surface normal on steep slopes instead of straight down, preventing beys from wedging into polygon edges
 - **Stuck & bounce recovery** — Detects sudden velocity drops and wild vertical bounces caused by polygon-edge catches; auto-nudges beys back into motion after a brief delay
 - **Tuned physics solver** — Increased solver iterations (10), velocity iterations (3), contact offset (0.04), and max depenetration velocity (20) for smoother collision resolution
+- **Freeze passthrough** — Frozen beys stop movement cleanly without burning mana through boost upkeep; mana regeneration and ability usage remain active while frozen for both player and AI
+- **Ability lockout during incapacitation** — Abilities cannot be activated while frozen or stunned (knockback hitstun or chain-lightning stun); applies to both player and AI
 - **Live stat rings** — Player-only world-space rings around the Bey show Speed/Acceleration (magenta), Mana (cyan), and Spin/Stamina (yellow)
 - **Front-most stat labels** — Ring labels and black toon text outlines render in front of curve layers for readability
 
@@ -45,7 +47,7 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **Xenoverse-style lock-on** — Middle-click locks camera behind player facing the target enemy
 - **Auto-target switching** — When a locked enemy bursts, camera instantly switches to the next closest enemy
 - **Scroll cycling** — Scroll wheel to cycle between enemy targets
-- **Focused enemy arrow** — Small arrow appears above the currently focused enemy and hides when no enemy is focused
+- **Focus spin indicator** — FIFA-style inverted triangle above the locked-on enemy; inner fill drains green→red as target spin drops, with a subtle low-spin shake near burst; hides when no enemy is focused
 - **Speed wedges** — High-speed motion uses animated off-screen triangle streaks instead of flat line strips
 - **Occluder fade** — Walls and arena pieces between the camera and player fade to a configurable partial opacity instead of fully disappearing
 
@@ -61,7 +63,7 @@ A Beyblade-inspired roguelike built in Unity (URP). Build custom spinning tops f
 - **Match lifecycle** — Countdown → In Progress → Win/Loss with auto-restart
 - **Burst effects** — Dead beys stop, parts detach and fall to the ground, fading out over 7 seconds
 - **Collision hit placeholder VFX** — Temporary particle burst spawns on Bey-to-Bey impacts (ready to be replaced by final hit effect)
-- **Ability emblem hologram burst** — On ability cast, a one-shot hologram of the caster's Face Bolt emblem launches above the Bey like a firework (non-following)
+- **Ability emblem hologram burst** — On ability cast, a one-shot hologram of the caster's Face Bolt emblem launches above the Bey like a firework (non-following); emblem renders at 50% opacity
 - **Enemy part drops** — On enemy burst: roll for any drop, roll one equipped part (equal chance), then rarity gate roll (higher rarity drops less)
 - **Dropped-part visuals** — Drop pickups now render as the actual procedural mesh of the dropped part
 - **Larger pickup radius + clear reward** — Part pickups use a larger trigger radius and are auto-collected when all enemies are destroyed
