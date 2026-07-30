@@ -52,7 +52,14 @@ namespace BladeSpinners.Gameplay.UI
             switch (type)
             {
                 case PartType.Tip:
-                    SetField(part, "tipBehavior", (TipBehaviorType)rng.Next(0, Enum.GetValues(typeof(TipBehaviorType)).Length));
+                    // (23/3/2026): Only assign basic tip types to random parts, never Orbit
+                    // Orbit is a high-skill-ceiling behavior meant for curated parts only
+                    TipBehaviorType[] randomTipTypes = new TipBehaviorType[]
+                    {
+                        TipBehaviorType.Flat, TipBehaviorType.Sharp, TipBehaviorType.Round,
+                        TipBehaviorType.RubberFlat, TipBehaviorType.Ball, TipBehaviorType.Spike
+                    };
+                    SetField(part, "tipBehavior", randomTipTypes[rng.Next(randomTipTypes.Length)]);
                     SetField(part, "behaviorBasedStaminaDrainModifier", 0.6f + (float)rng.NextDouble() * 1.4f);
                     SetField(part, "uphillResistanceMultiplier", 0.5f + (float)rng.NextDouble() * 1.2f);
                     SetField(part, "slopeMultiplier", 0.7f + (float)rng.NextDouble() * 1.1f);

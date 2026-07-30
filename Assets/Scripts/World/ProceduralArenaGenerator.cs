@@ -21,12 +21,13 @@ namespace BladeSpinners.World
             {
                 if (_arenaPhysicsMaterial == null)
                 {
+                    // (23/3/2026): Reinforced zero-bounce material to prevent seam bounces
                     _arenaPhysicsMaterial = new PhysicsMaterial("ArenaZeroFriction");
                     _arenaPhysicsMaterial.dynamicFriction = 0f;
                     _arenaPhysicsMaterial.staticFriction = 0f;
-                    _arenaPhysicsMaterial.bounciness = 0f;
+                    _arenaPhysicsMaterial.bounciness = 0f;  // Absolute zero bounce
                     _arenaPhysicsMaterial.frictionCombine = PhysicsMaterialCombine.Minimum;
-                    _arenaPhysicsMaterial.bounceCombine = PhysicsMaterialCombine.Minimum;
+                    _arenaPhysicsMaterial.bounceCombine = PhysicsMaterialCombine.Minimum;  // Force no bounce even on seams
                 }
                 return _arenaPhysicsMaterial;
             }

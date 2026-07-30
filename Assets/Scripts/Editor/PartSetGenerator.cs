@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEditor;
+using System.Collections.Generic;
 using BladeSpinners.Core;
 using BladeSpinners.Gameplay.Parts;
 
@@ -192,8 +193,8 @@ namespace BladeSpinners.Editor
         {
             float m = 1f + boost; // rarity multiplier
 
-            // Random tip behavior
-            TipBehaviorType[] tipTypes = (TipBehaviorType[])System.Enum.GetValues(typeof(TipBehaviorType));
+            // Random tip behavior (exclude Orbit from random generation; reserved for curated parts)
+            TipBehaviorType[] tipTypes = GetRandomizableTipTypes();
             TipBehaviorType tipBehavior = tipTypes[rng.Next(tipTypes.Length)];
             part.GetType().GetField("tipBehavior", flags)?.SetValue(part, tipBehavior);
 
@@ -221,6 +222,24 @@ namespace BladeSpinners.Editor
             {
                 part.GetType().GetField("spinThreshold", flags)?.SetValue(part, -1f);
             }
+        }
+
+        private static TipBehaviorType[] GetRandomizableTipTypes()
+        {
+            TipBehaviorType[] all = (TipBehaviorType[])System.Enum.GetValues(typeof(TipBehaviorType));
+            List<TipBehaviorType> filtered = new List<TipBehaviorType>(all.Length);
+            for (int i = 0; i < all.Length; i++)
+            {
+                TipBehaviorType t = all[i];
+                if (t == TipBehaviorType.Orbit)
+                    continue;
+                filtered.Add(t);
+            }
+
+            if (filtered.Count == 0)
+                filtered.Add(TipBehaviorType.Ball);
+
+            return filtered.ToArray();
         }
 
         private static void RandomizeTrackStats(BeyPart part, System.Random rng, System.Reflection.BindingFlags flags, float boost)

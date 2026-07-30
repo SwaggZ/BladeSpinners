@@ -9,11 +9,12 @@ namespace BladeSpinners.Abilities
     public class FireBoltAbility : BeyAbility
     {
         [Header("Fire Bolt")]
-        [SerializeField] private float projectileSpeed = 22f;
-        [SerializeField] private float directHitDamage = 20f;
-        [SerializeField] private float burnDamagePerSecond = 5f;
-        [SerializeField] private float burnDuration = 3f;
-        [SerializeField] private float homingStrength = 4f;
+        // (24/3/2026) Balance pass: reduced burst damage and tracking so Fire Bolt is strong but not oppressive.
+        [SerializeField] private float projectileSpeed = 20f;
+        [SerializeField] private float directHitDamage = 12f;
+        [SerializeField] private float burnDamagePerSecond = 3f;
+        [SerializeField] private float burnDuration = 2.5f;
+        [SerializeField] private float homingStrength = 2.6f;
 
         private void OnEnable()
         {

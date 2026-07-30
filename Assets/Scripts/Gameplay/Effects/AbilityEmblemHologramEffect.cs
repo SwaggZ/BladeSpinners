@@ -23,7 +23,7 @@ namespace BladeSpinners.Gameplay.Effects
             SpriteRenderer spriteRenderer = root.AddComponent<SpriteRenderer>();
             spriteRenderer.sprite = faceBolt.FaceBoltEmblem;
             spriteRenderer.sortingOrder = 300;
-            spriteRenderer.color = new Color(0.45f, 0.95f, 1f, 0.35f);
+            spriteRenderer.color = new Color(0.45f, 0.95f, 1f, 0.5f);
 
             Material material = new Material(ShaderProvider.URPUnlit);
             if (material.HasProperty("_BaseColor"))
@@ -76,7 +76,7 @@ namespace BladeSpinners.Gameplay.Effects
             if (spriteRenderer != null)
             {
                 Color color = spriteRenderer.color;
-                color.a = Mathf.Lerp(0.35f, 0f, t);
+                color.a = Mathf.Lerp(0.5f, 0f, t);
                 spriteRenderer.color = color;
                 if (spriteRenderer.material != null && spriteRenderer.material.HasProperty("_BaseColor"))
                     spriteRenderer.material.SetColor("_BaseColor", color);
