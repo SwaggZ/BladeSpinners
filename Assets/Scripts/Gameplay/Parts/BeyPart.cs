@@ -155,6 +155,13 @@ namespace BladeSpinners.Gameplay.Parts
         [SerializeField]
         protected float manaRegenRate = 20f;
 
+        /// <summary>
+        /// Optional authored passive override. When empty, the runtime resolver assigns
+        /// a stable passive from this Energy Ring's ID.
+        /// </summary>
+        [SerializeField]
+        protected BeyPassive equippedPassive;
+
         // Face Bolt Stats (ability reference)
         /// <summary>
         /// Reference to the ability this Face Bolt provides.
@@ -201,6 +208,7 @@ namespace BladeSpinners.Gameplay.Parts
         // Energy Ring
         public float ManaPoolSize => manaPoolSize;
         public float ManaRegenRate => manaRegenRate;
+        public BeyPassive EquippedPassive => equippedPassive;
 
         // Face Bolt
         public Abilities.BeyAbility EquippedAbility => equippedAbility;

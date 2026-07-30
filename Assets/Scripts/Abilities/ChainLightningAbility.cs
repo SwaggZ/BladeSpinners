@@ -29,17 +29,8 @@ namespace BladeSpinners.Abilities
             if (beyController == null || beyController.BeyConfiguration == null)
                 return;
 
-            BeyConfiguration ownerConfig = beyController.BeyConfiguration;
-            BeyMovementController[] allBeys = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
-
-            // Build enemy list
-            List<BeyMovementController> enemies = new List<BeyMovementController>();
-            foreach (BeyMovementController bey in allBeys)
-            {
-                if (bey == null || bey.BeyConfiguration == null || bey.BeyConfiguration == ownerConfig) continue;
-                if (bey.BeyConfiguration.IsEnemy == ownerConfig.IsEnemy) continue;
-                enemies.Add(bey);
-            }
+            List<BeyMovementController> enemies =
+                AbilityTargetQuery.FindAll(beyController, AbilityTargetRelation.Enemy);
 
             // Chain from owner's position
             Vector3 lastPos = beyController.transform.position;

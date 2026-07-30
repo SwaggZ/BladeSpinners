@@ -26,21 +26,17 @@ namespace BladeSpinners.Abilities
             if (beyController == null || beyController.BeyConfiguration == null)
                 return;
 
-            EnemyBeyController[] enemies = Object.FindObjectsByType<EnemyBeyController>(FindObjectsSortMode.None);
-            List<EnemyBeyController> candidates = new List<EnemyBeyController>();
+            List<BeyMovementController> candidates =
+                AbilityTargetQuery.FindUniqueBeysInRadius(
+                    beyController,
+                    beyController.transform.position,
+                    searchRadius,
+                    AbilityTargetRelation.Enemy);
 
-            foreach (EnemyBeyController enemy in enemies)
+            for (int i = candidates.Count - 1; i >= 0; i--)
             {
-                if (enemy == null || enemy.BeyConfiguration == null)
-                    continue;
-
-                Rigidbody enemyRb = enemy.GetComponent<Rigidbody>();
-                if (enemyRb == null)
-                    continue;
-
-                float dist = Vector3.Distance(beyController.transform.position, enemy.transform.position);
-                if (dist <= searchRadius)
-                    candidates.Add(enemy);
+                if (candidates[i].Rb == null)
+                    candidates.RemoveAt(i);
             }
 
             if (candidates.Count < 2)
@@ -49,8 +45,8 @@ namespace BladeSpinners.Abilities
                 return;
             }
 
-            EnemyBeyController first = null;
-            EnemyBeyController second = null;
+            BeyMovementController first = null;
+            BeyMovementController second = null;
             float bestDist = float.MaxValue;
             for (int i = 0; i < candidates.Count; i++)
             {
@@ -73,8 +69,8 @@ namespace BladeSpinners.Abilities
             Vector3 firstDir = (midpoint - first.transform.position).normalized;
             Vector3 secondDir = (midpoint - second.transform.position).normalized;
 
-            Rigidbody firstRb = first.GetComponent<Rigidbody>();
-            Rigidbody secondRb = second.GetComponent<Rigidbody>();
+            Rigidbody firstRb = first.Rb;
+            Rigidbody secondRb = second.Rb;
             if (firstRb == null || secondRb == null)
                 return;
 

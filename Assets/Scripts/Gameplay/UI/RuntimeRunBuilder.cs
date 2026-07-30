@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using BladeSpinners.Audio;
 using BladeSpinners.Core;
 using BladeSpinners.Gameplay.Combat;
 using BladeSpinners.Gameplay.Movement;
@@ -87,8 +88,7 @@ namespace BladeSpinners.Gameplay.UI
             int arenaSeed = ComputeArenaSeed(activeProgression.RunSeed, depthIndex);
             int depthScaledEnemyCount = Mathf.Clamp(enemyCount + depthIndex / 2, 2, GameConstants.ENEMY_MAX_PER_COMBAT_ROOM);
 
-            GameObject gmObj = new GameObject("GameManager");
-            gmObj.AddComponent<GameManager>();
+            EnsureGameManager();
 
             int spinPickupCount = Mathf.Max(depthScaledEnemyCount + 1, 3);
             int staminaPickupCount = Mathf.Max(1, depthScaledEnemyCount / 2);
@@ -126,6 +126,8 @@ namespace BladeSpinners.Gameplay.UI
                 match.RegisterEnemy(enemyCtrl);
                 enemyTransforms.Add(enemy.transform);
             }
+
+            ConfigureBeyCollisionPairs();
 
             // Hole-aware spawn: if arena has a center hole, move all beys to a ring
             System.Random shapeRng = new System.Random(arenaSeed);
@@ -189,11 +191,41 @@ namespace BladeSpinners.Gameplay.UI
                 if (ui != null)
                     continue;
 
+                // Audio services are run-independent. Preserve them so crossfades and
+                // now-playing subscriptions survive arena and menu transitions.
+                if (go.GetComponent<SoundManager>() != null
+                    || go.GetComponent<MusicNowPlayingBanner>() != null)
+                {
+                    continue;
+                }
+
+                // Game balance is run-level state. Reusing it avoids the deferred-destroy
+                // singleton race when the next arena is built in the same frame.
+                if (go.GetComponent<GameManager>() != null)
+                    continue;
+
                 if (go.name.StartsWith("__Preview", StringComparison.Ordinal))
                     continue;
 
+                // Destroy is deferred until end-of-frame. Deactivate immediately so old
+                // cameras, listeners, physics bodies, and target queries cannot overlap
+                // with the newly constructed arena.
+                go.SetActive(false);
                 UnityEngine.Object.Destroy(go);
             }
+        }
+
+        private static GameManager EnsureGameManager()
+        {
+            if (GameManager.Instance != null)
+                return GameManager.Instance;
+
+            GameManager existing = UnityEngine.Object.FindFirstObjectByType<GameManager>();
+            if (existing != null)
+                return existing;
+
+            GameObject managerObject = new GameObject("GameManager");
+            return managerObject.AddComponent<GameManager>();
         }
 
         private static GameObject CreatePlayerBey(Dictionary<PartType, BeyPart> selectedLoadout)
@@ -260,6 +292,7 @@ namespace BladeSpinners.Gameplay.UI
             // because PlayerManager.Awake() (triggered by AddComponent) captured an
             // empty BeyConfiguration before our external config was injected.
             manager.RewireStatRings();
+            SetLayerRecursive(root, GetRequiredLayer("Bey"));
 
             return root;
         }
@@ -329,8 +362,69 @@ namespace BladeSpinners.Gameplay.UI
             int enemySeed = ComputeArenaSeed(runSeed, 9000 + index * 97 + depthIndex * 211);
             ApplyLoadoutToAssembler(assembler, GetRandomLoadout(catalog, enemySeed, depthIndex, totalArenaCount));
             enemy.Initialize(config, playerTarget);
+            SetLayerRecursive(root, GetRequiredLayer("Bey"));
 
             return root;
+        }
+
+        private static int GetRequiredLayer(string layerName)
+        {
+            int layer = LayerMask.NameToLayer(layerName);
+            if (layer < 0)
+                throw new InvalidOperationException($"Required Unity layer '{layerName}' is not configured.");
+            return layer;
+        }
+
+        private static void SetLayerRecursive(GameObject root, int layer)
+        {
+            if (root == null)
+                return;
+
+            root.layer = layer;
+            for (int i = 0; i < root.transform.childCount; i++)
+                SetLayerRecursive(root.transform.GetChild(i).gameObject, layer);
+        }
+
+        private static void ConfigureBeyCollisionPairs()
+        {
+            BeyCollisionDetector[] detectors =
+                UnityEngine.Object.FindObjectsByType<BeyCollisionDetector>(FindObjectsSortMode.None);
+
+            for (int leftIndex = 0; leftIndex < detectors.Length; leftIndex++)
+            {
+                BeyCollisionDetector left = detectors[leftIndex];
+                if (left == null)
+                    continue;
+
+                Collider[] leftColliders = left.GetComponentsInChildren<Collider>(true);
+                for (int rightIndex = leftIndex + 1; rightIndex < detectors.Length; rightIndex++)
+                {
+                    BeyCollisionDetector right = detectors[rightIndex];
+                    if (right == null)
+                        continue;
+
+                    Collider[] rightColliders = right.GetComponentsInChildren<Collider>(true);
+                    for (int i = 0; i < leftColliders.Length; i++)
+                    {
+                        Collider leftCollider = leftColliders[i];
+                        if (leftCollider == null)
+                            continue;
+
+                        for (int j = 0; j < rightColliders.Length; j++)
+                        {
+                            Collider rightCollider = rightColliders[j];
+                            if (rightCollider == null)
+                                continue;
+
+                            // Leave only trigger-to-trigger interaction enabled. This
+                            // preserves one spin-exchange contact while preventing the
+                            // generated part meshes from physically shoving each other.
+                            bool bothTriggers = leftCollider.isTrigger && rightCollider.isTrigger;
+                            Physics.IgnoreCollision(leftCollider, rightCollider, !bothTriggers);
+                        }
+                    }
+                }
+            }
         }
 
         private static ThirdPersonCameraController CreateCamera(GameObject playerRoot)

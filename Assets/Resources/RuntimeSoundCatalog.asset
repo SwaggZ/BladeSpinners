@@ -1,0 +1,522 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b06127a269945a1aa8771e0ed287ab8, type: 3}
+  m_Name: RuntimeSoundCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::BladeSpinners.Audio.RuntimeSoundCatalog
+  folders:
+  - key: Abilities
+    clips: []
+  - key: Abilities/Acid Spray
+    clips:
+    - {fileID: 8300000, guid: d8846f59e82227b4fbd5fd72915d12f2, type: 3}
+    - {fileID: 8300000, guid: 68f208f64bbe0da45bc84c527b050dd1, type: 3}
+  - key: Abilities/Adrenaline Rush
+    clips:
+    - {fileID: 8300000, guid: 3964123a900a9b64db0d8c2496508e58, type: 3}
+    - {fileID: 8300000, guid: e2e03c36ac4f6db48a69fc749a8e608a, type: 3}
+  - key: Abilities/Arcane Nova
+    clips:
+    - {fileID: 8300000, guid: daaf301d1bfbfb34392e99e28247c434, type: 3}
+    - {fileID: 8300000, guid: f04df5d7587c0e74a8c9fa31590659bc, type: 3}
+  - key: Abilities/Berserk
+    clips:
+    - {fileID: 8300000, guid: 51b105f13207a2f4287742cbe34e483b, type: 3}
+    - {fileID: 8300000, guid: 0797f7e76955e874f82282a4b2eba4d9, type: 3}
+  - key: Abilities/Black Hole
+    clips:
+    - {fileID: 8300000, guid: 5778ba977df45724c8654acc53953d81, type: 3}
+    - {fileID: 8300000, guid: c507c7661125fa542bb1890a5911be57, type: 3}
+  - key: Abilities/Blood Pact
+    clips:
+    - {fileID: 8300000, guid: 43d7d8a455866ad4a94e299f930534ad, type: 3}
+    - {fileID: 8300000, guid: 6d2fe25dc60733941a528e1583e66f57, type: 3}
+  - key: Abilities/Chain Lightning
+    clips:
+    - {fileID: 8300000, guid: eba4598db5196c24ea0ce49ec3f10c31, type: 3}
+    - {fileID: 8300000, guid: 863b56e3b5bdc9e4a99547155eb8e64c, type: 3}
+  - key: Abilities/Chrono Recall
+    clips:
+    - {fileID: 8300000, guid: 769052275d280ab4b94e3654167b9ecf, type: 3}
+    - {fileID: 8300000, guid: 7f1630c8af038214ebdec2fb7afedaff, type: 3}
+  - key: Abilities/Crystal Barrage
+    clips:
+    - {fileID: 8300000, guid: 9ec88dfff76696942a75078d0a874108, type: 3}
+    - {fileID: 8300000, guid: 4ed37dfeb6dde0f47b02445e1ae38ea1, type: 3}
+  - key: Abilities/Dash
+    clips:
+    - {fileID: 8300000, guid: 31ad5e2d0d03ba24dbd80aa409a7c475, type: 3}
+    - {fileID: 8300000, guid: 0956f5f5c9828ed4f959a7d59f466212, type: 3}
+  - key: Abilities/Dragon Burst
+    clips:
+    - {fileID: 8300000, guid: ef64f16f347b64a4cbedab7edaf91557, type: 3}
+    - {fileID: 8300000, guid: 3b1c8c40d353f774eac457f502b14f0b, type: 3}
+  - key: Abilities/Earthquake
+    clips:
+    - {fileID: 8300000, guid: 09063d1b005c0fc4a98e69c0d5c7aa06, type: 3}
+    - {fileID: 8300000, guid: aac1793087fb3d24eab0d72e16c292da, type: 3}
+  - key: Abilities/Fire Bolt
+    clips:
+    - {fileID: 8300000, guid: 67d5d5b1000ccb64bac5099cda56d535, type: 3}
+    - {fileID: 8300000, guid: fdd120dffab62ec45a2c04c4e096d59e, type: 3}
+  - key: Abilities/Flash Step
+    clips:
+    - {fileID: 8300000, guid: f86ccd098ed770c4fb31b4fcf6fb2e59, type: 3}
+    - {fileID: 8300000, guid: 01ebff28a5ad41d43b83ec64f5d87aec, type: 3}
+  - key: Abilities/Freeze
+    clips:
+    - {fileID: 8300000, guid: 25dfc5b87db50d84a9576bec0939c58e, type: 3}
+    - {fileID: 8300000, guid: ba92ea82aae7a7e4f824f907e4502057, type: 3}
+  - key: Abilities/Gravity Clash
+    clips:
+    - {fileID: 8300000, guid: a8b0a3be32d69f44ba5732a2bf366104, type: 3}
+    - {fileID: 8300000, guid: be68fb1e583b49a4abf3191d3554f39e, type: 3}
+  - key: Abilities/Gravity Well
+    clips:
+    - {fileID: 8300000, guid: 4165e61be9e575c4297de876ff72b6a7, type: 3}
+    - {fileID: 8300000, guid: ee85f363730fa0d4b953e490bf4a2349, type: 3}
+  - key: Abilities/Ground Pound
+    clips:
+    - {fileID: 8300000, guid: f3df9ebc1ba6beb4a9eab60206d91f61, type: 3}
+    - {fileID: 8300000, guid: b5b3026eb4efce64eacf756d3e8b6903, type: 3}
+  - key: Abilities/Ice Shard
+    clips:
+    - {fileID: 8300000, guid: 2ec4413c093857b41bd55105277bb346, type: 3}
+    - {fileID: 8300000, guid: 28c379ab7d84b3349a41d61de07c5422, type: 3}
+  - key: Abilities/Inferno
+    clips:
+    - {fileID: 8300000, guid: 2e9fe01fca7a6c84595e53918c446603, type: 3}
+    - {fileID: 8300000, guid: cb2af227eea0011439988a6550031668, type: 3}
+  - key: Abilities/Iron Fortress
+    clips:
+    - {fileID: 8300000, guid: d70d7b1a57e0a3a4790a9c30f5d07232, type: 3}
+    - {fileID: 8300000, guid: c5dde7d2bab322a4a9bcfb5491648b6b, type: 3}
+  - key: Abilities/Lucky Star
+    clips:
+    - {fileID: 8300000, guid: 7cc1d005bdbcbff4c9f3e4f09388b854, type: 3}
+    - {fileID: 8300000, guid: 35d0ca2f4b5871f44bf899c2faf01eb0, type: 3}
+  - key: Abilities/Magnetic Field
+    clips:
+    - {fileID: 8300000, guid: d02526734e6e39449ac2c1e8bcc938ce, type: 3}
+    - {fileID: 8300000, guid: 078f923699a7daf4f8abb5871345dd30, type: 3}
+  - key: Abilities/Meteor Strike
+    clips:
+    - {fileID: 8300000, guid: e28dceb529c77fe44a8b567e963fadb9, type: 3}
+    - {fileID: 8300000, guid: 843a16fe2d1e5a049911910901256479, type: 3}
+  - key: Abilities/Mirage Clone
+    clips:
+    - {fileID: 8300000, guid: a56086a4d0385c740853744ec7bdf0d3, type: 3}
+    - {fileID: 8300000, guid: f8e403791ba227447b57b35d76156388, type: 3}
+  - key: Abilities/Molten Rain
+    clips:
+    - {fileID: 8300000, guid: 80f706fe987742e46919cabcf2c74da8, type: 3}
+    - {fileID: 8300000, guid: 8ad9b1b5184d9ee45bc08ecbed2901af, type: 3}
+  - key: Abilities/Nightfall
+    clips:
+    - {fileID: 8300000, guid: b8d0f6f73df412f4ab1fbac46118131c, type: 3}
+    - {fileID: 8300000, guid: b5f8f9d4db0bda542844f0d896070605, type: 3}
+  - key: Abilities/Overcharge
+    clips:
+    - {fileID: 8300000, guid: 8bebc242bfca43a4d9cdafc16a37b3cb, type: 3}
+    - {fileID: 8300000, guid: 893a37e5cde8ede46a257a250822baf2, type: 3}
+  - key: Abilities/Phantom Slash
+    clips:
+    - {fileID: 8300000, guid: 60834f304485f0d42a46756f5ab0606d, type: 3}
+    - {fileID: 8300000, guid: 5da0522ccfed86a4793d7a78dfffa252, type: 3}
+  - key: Abilities/Phase Shift
+    clips:
+    - {fileID: 8300000, guid: f90af523e82e06d488f428896b3094e7, type: 3}
+    - {fileID: 8300000, guid: 080f27e14150ecf44b5b58d4cafad792, type: 3}
+  - key: Abilities/Poison Cloud
+    clips:
+    - {fileID: 8300000, guid: 06d2bbaddae315d4fa19b521c8aba189, type: 3}
+    - {fileID: 8300000, guid: bb5d52fc3cfd5634088855e2b8097779, type: 3}
+  - key: Abilities/Razor Wind
+    clips:
+    - {fileID: 8300000, guid: 6f2b989cb8cd4ca45a012eef9cf16400, type: 3}
+    - {fileID: 8300000, guid: 48e3cae2e57ca244189f98cbdd29c474, type: 3}
+  - key: Abilities/Regeneration
+    clips:
+    - {fileID: 8300000, guid: 3d730be9a8514d54cb58155c36d03128, type: 3}
+    - {fileID: 8300000, guid: 216401e56fa50db47958d48852442e99, type: 3}
+  - key: Abilities/Ricochet Shot
+    clips:
+    - {fileID: 8300000, guid: a036d46c2c00ad24aa2b4bbe00a2a717, type: 3}
+    - {fileID: 8300000, guid: 75df177a06e2f9646806dcd7100ad023, type: 3}
+  - key: Abilities/Serpent Coil
+    clips:
+    - {fileID: 8300000, guid: 9c3e17ef8c84bd74890baaf78f485ae4, type: 3}
+    - {fileID: 8300000, guid: b19d87e56d54e9849ba0ea38a2b65c63, type: 3}
+  - key: Abilities/Shadow Strike
+    clips:
+    - {fileID: 8300000, guid: 7a3b96fef1e13a04b95dd6daeba60260, type: 3}
+    - {fileID: 8300000, guid: 0dc29edaef4850b468d77ba950cb7be6, type: 3}
+  - key: Abilities/Shield
+    clips:
+    - {fileID: 8300000, guid: b98858b46d94a3d4a9208921fd6507c5, type: 3}
+    - {fileID: 8300000, guid: 7d9a8e6c4e3758f47b3a40a5543777ba, type: 3}
+  - key: Abilities/Solar Flare
+    clips:
+    - {fileID: 8300000, guid: 0a5bfc056557946418d033212a449d0b, type: 3}
+    - {fileID: 8300000, guid: 00c2c00fcc608d34eab28c206c7d9cb1, type: 3}
+  - key: Abilities/Soul Link
+    clips:
+    - {fileID: 8300000, guid: 29a38d339863b7b43b62d3b9f3f2d5a9, type: 3}
+    - {fileID: 8300000, guid: c8e16d4be774b9b42bef22bdcbfa96d7, type: 3}
+  - key: Abilities/Spectral Chains
+    clips:
+    - {fileID: 8300000, guid: 12e840018d771c3469da52f19f036dbd, type: 3}
+    - {fileID: 8300000, guid: 426b53e5b90a511489ac7be9d7f60b4b, type: 3}
+  - key: Abilities/Spin Drain
+    clips:
+    - {fileID: 8300000, guid: 5389752842feec64f9acd9928d3019c5, type: 3}
+    - {fileID: 8300000, guid: 7e9027de01f907e4496cc7793c9c5385, type: 3}
+  - key: Abilities/Static Discharge
+    clips:
+    - {fileID: 8300000, guid: 11c3137e685e5d549bc631e01c6c7801, type: 3}
+    - {fileID: 8300000, guid: ebb5c2db14b91e04b94abdb16c84750a, type: 3}
+  - key: Abilities/Thorns
+    clips:
+    - {fileID: 8300000, guid: 2a446a417b29bb44b8f68d6866a2e1e8, type: 3}
+    - {fileID: 8300000, guid: 180f956c232891e4bb0e1ac8576e0492, type: 3}
+  - key: Abilities/Thunder Clap
+    clips:
+    - {fileID: 8300000, guid: c32a81da07b60ea4584a572953749dde, type: 3}
+    - {fileID: 8300000, guid: e3190ef9f98623f4c9dea76b38598be9, type: 3}
+  - key: Abilities/Tidal Wave
+    clips:
+    - {fileID: 8300000, guid: a1c89738f470a3145be32d93be5c0ea2, type: 3}
+    - {fileID: 8300000, guid: 6e45e10d3d29afb4c84eeb2fe665b6bb, type: 3}
+  - key: Abilities/Time Warp
+    clips:
+    - {fileID: 8300000, guid: 4d5f4d0d2768e9a4aa21a75a70b7709a, type: 3}
+    - {fileID: 8300000, guid: 012c36c5337bfff47b3d09c0f5e9d6eb, type: 3}
+  - key: Abilities/Tornado
+    clips:
+    - {fileID: 8300000, guid: 3c05ca60602d62e468ccf4abc5437fb1, type: 3}
+    - {fileID: 8300000, guid: 7fb4edded0092c64aba22317a6fc7fac, type: 3}
+  - key: Abilities/Vampire Drain
+    clips:
+    - {fileID: 8300000, guid: 08c9aad47c85f3c43abfc0461c4d9d86, type: 3}
+    - {fileID: 8300000, guid: 2e180e311a98b2a42a9193a45f72e427, type: 3}
+  - key: Abilities/Void Pulse
+    clips:
+    - {fileID: 8300000, guid: c704427ffd86ec241847bc0d28e0b265, type: 3}
+    - {fileID: 8300000, guid: 71f673eb0b466d942b266cb7fd9d5557, type: 3}
+  - key: Abilities/War Cry
+    clips:
+    - {fileID: 8300000, guid: ce656959546a4fc46a8645790ac9db06, type: 3}
+    - {fileID: 8300000, guid: 836f739bb5dc2b74586933d51243fbe2, type: 3}
+  - key: Abilities/Whirlwind
+    clips:
+    - {fileID: 8300000, guid: bab5bbe62b142974693d8b50292350db, type: 3}
+    - {fileID: 8300000, guid: 0346e161060e1894e951bc5f3b40e474, type: 3}
+  - key: GUI
+    clips: []
+  - key: GUI/Button
+    clips: []
+  - key: GUI/Equip Part
+    clips: []
+  - key: GUI/Game Lose
+    clips: []
+  - key: GUI/Game Start
+    clips: []
+  - key: GUI/Game Win
+    clips: []
+  - key: GUI/Start Screen Transition
+    clips: []
+  - key: Hits
+    clips: []
+  - key: Hits/BayXBay
+    clips:
+    - {fileID: 8300000, guid: d2182d5674e819d48aeaf0690e47b4fc, type: 3}
+    - {fileID: 8300000, guid: b488b437fac0bfd4aabc10d3723b79b3, type: 3}
+    - {fileID: 8300000, guid: f2a0e5f2ab1580c4b9f94fb1147e6de7, type: 3}
+    - {fileID: 8300000, guid: 2b123346a088c2c419a0aa7f18e79378, type: 3}
+    - {fileID: 8300000, guid: 90e33ac7b1bdf61448fc74a6084afd00, type: 3}
+    - {fileID: 8300000, guid: f522650e6ab2c554eaedb30c8b025868, type: 3}
+    - {fileID: 8300000, guid: c79bba81ca1ebb74783b403a9eea7f04, type: 3}
+    - {fileID: 8300000, guid: cfc7b95268e05a34b9eb9c78fa8a99b6, type: 3}
+    - {fileID: 8300000, guid: 7ad543262cc5d5b4e9fe165056f938f2, type: 3}
+    - {fileID: 8300000, guid: 96be7dc2dafd6ef4b9c531a44e5806c2, type: 3}
+    - {fileID: 8300000, guid: d35074c657f6e2a4c865e9fdf9083f66, type: 3}
+    - {fileID: 8300000, guid: 254131bd3c7453b448d17e6efd68e77c, type: 3}
+    - {fileID: 8300000, guid: 5672f6ae65c8a8d47bfb348c02cf0186, type: 3}
+  - key: Hits/BayXWall
+    clips:
+    - {fileID: 8300000, guid: 15444bd2ebdbd6b49b060b89e17d52f9, type: 3}
+    - {fileID: 8300000, guid: b536bb1a08e139a43bcd30f8c73bb8c1, type: 3}
+  - key: Music
+    clips: []
+  - key: Music/Background
+    clips:
+    - {fileID: 8300000, guid: 0d7c51a061167ad4b91111a102bca03c, type: 3}
+    - {fileID: 8300000, guid: dff6ecb12528e0e4eafd1e5b993e1fad, type: 3}
+    - {fileID: 8300000, guid: f019a76378a75b74fabf06cc71332b97, type: 3}
+    - {fileID: 8300000, guid: 1927da49c5864214992529972b9d3440, type: 3}
+    - {fileID: 8300000, guid: e0c7fab4cb8cf2c4a8f3dc1a164931b7, type: 3}
+    - {fileID: 8300000, guid: e7cc9b4e9d6841b48a6f874521a40d84, type: 3}
+    - {fileID: 8300000, guid: aa2a58d08f9193f4b81af86f6ffa4247, type: 3}
+    - {fileID: 8300000, guid: 001e1d3de79946e46a0e71fcc38c97d1, type: 3}
+    - {fileID: 8300000, guid: d7258253fbad59046974a0dd6c342484, type: 3}
+    - {fileID: 8300000, guid: a846d08600150b147890e127eed3af6c, type: 3}
+    - {fileID: 8300000, guid: e0611afe798f4694f85953abde3464d2, type: 3}
+    - {fileID: 8300000, guid: 5171b5b9213f9f140b339acbcdcddfbe, type: 3}
+    - {fileID: 8300000, guid: efc6b878bc5dcfd4183bf1ae355fbc26, type: 3}
+    - {fileID: 8300000, guid: 687d8be3eb57e0745b86d3ea250319da, type: 3}
+    - {fileID: 8300000, guid: 490a68fd18933a3439b63f690000e191, type: 3}
+    - {fileID: 8300000, guid: 7c83a5d8301031d40a6384203a67a720, type: 3}
+    - {fileID: 8300000, guid: 1401ca05d6cf56a47a58653eac6f4b87, type: 3}
+    - {fileID: 8300000, guid: 11f44df6549d36946935ff28baf1b91c, type: 3}
+    - {fileID: 8300000, guid: 3c2b435bc3424d04eaeb4ece66bcaa39, type: 3}
+    - {fileID: 8300000, guid: 9214ef3479931974c941fbe954620b3b, type: 3}
+    - {fileID: 8300000, guid: 41731ca3bb26f084c810c4e5e06561d3, type: 3}
+    - {fileID: 8300000, guid: 240faec32d8df7d46aa4bf645c089ba3, type: 3}
+    - {fileID: 8300000, guid: 639b5f6078d99484dab84fce494528b9, type: 3}
+    - {fileID: 8300000, guid: d331b8bb98474cc43905aea6a2db51c2, type: 3}
+    - {fileID: 8300000, guid: 3fa9b0f011e4b5a4186d9543d8696eca, type: 3}
+    - {fileID: 8300000, guid: edf2b947df5eee44bb6a1a7c67e1a802, type: 3}
+    - {fileID: 8300000, guid: 1fba3771c40a4b34c866ab11f2168d4a, type: 3}
+    - {fileID: 8300000, guid: cccbb23782d7d444b997adfde51b085d, type: 3}
+    - {fileID: 8300000, guid: 73b81cff4b6af2f45802d3b61b4c9d1f, type: 3}
+    - {fileID: 8300000, guid: b1746fa3ed5b44d468dff723f48bdeb4, type: 3}
+    - {fileID: 8300000, guid: aee9825ea05490840885e17f94d9a02f, type: 3}
+    - {fileID: 8300000, guid: a428ebca972be174b8c99dee02155c98, type: 3}
+    - {fileID: 8300000, guid: 9d55a49f956f1c64797613d3ef34ba30, type: 3}
+    - {fileID: 8300000, guid: a04e5cb24eddc8b4fbc5bcaf3d29daa6, type: 3}
+    - {fileID: 8300000, guid: 8cbe1f57226e1ef4a9bafd622ffa9157, type: 3}
+    - {fileID: 8300000, guid: fc3cb3b611765d94ca2de3069a2808a8, type: 3}
+    - {fileID: 8300000, guid: 7b8202fd81ecdec4b85b64602ec26399, type: 3}
+  - key: Music/Background/Logos
+    clips: []
+  musicTracks:
+  - clip: {fileID: 8300000, guid: e0c7fab4cb8cf2c4a8f3dc1a164931b7, type: 3}
+    logo: {fileID: 2800000, guid: 28c614eb516ec3741afdd82170db0550, type: 3}
+    sourceFile: Crimson Select.mp3
+    title: Crimson Select
+    author: DJ Dambel
+    situation: 0
+  - clip: {fileID: 8300000, guid: 5171b5b9213f9f140b339acbcdcddfbe, type: 3}
+    logo: {fileID: 2800000, guid: d502404c077f8c44d8904f50e5bf82cc, type: 3}
+    sourceFile: Iron Spin Arena.mp3
+    title: Iron Spin Arena
+    author: DJ Dambel
+    situation: 0
+  - clip: {fileID: 8300000, guid: 11f44df6549d36946935ff28baf1b91c, type: 3}
+    logo: {fileID: 2800000, guid: 61a430d9ac291eb42b26ec70af600303, type: 3}
+    sourceFile: Metal Scraps.mp3
+    title: Metal Scraps
+    author: DJ Dambel
+    situation: 0
+  - clip: {fileID: 8300000, guid: 8cbe1f57226e1ef4a9bafd622ffa9157, type: 3}
+    logo: {fileID: 2800000, guid: 2f3815b1302ccaa4c89ca7c9edca7613, type: 3}
+    sourceFile: Thunder Drum Duel.mp3
+    title: Thunder Drum Duel
+    author: DJ Dambel
+    situation: 0
+  - clip: {fileID: 8300000, guid: 0d7c51a061167ad4b91111a102bca03c, type: 3}
+    logo: {fileID: 2800000, guid: 227f1b4e309f7344f9edea03081b5980, type: 3}
+    sourceFile: Arcade Overdrive.mp3
+    title: Arcade Overdrive
+    author: DJ Dambel
+    situation: 1
+  - clip: {fileID: 8300000, guid: 1fba3771c40a4b34c866ab11f2168d4a, type: 3}
+    logo: {fileID: 2800000, guid: 271774eec180dbf45a94b9d51709a1ff, type: 3}
+    sourceFile: Spin2Win.mp3
+    title: Spin2Win
+    author: DJ Dambel
+    situation: 1
+  - clip: {fileID: 8300000, guid: aee9825ea05490840885e17f94d9a02f, type: 3}
+    logo: {fileID: 2800000, guid: 3b7e06a284c1ece4eb1d5278c046f42d, type: 3}
+    sourceFile: Spinning Top Forge.mp3
+    title: Spinning Top Forge
+    author: DJ Dambel
+    situation: 1
+  - clip: {fileID: 8300000, guid: f019a76378a75b74fabf06cc71332b97, type: 3}
+    logo: {fileID: 2800000, guid: 2681f4466d7b5a0479959490cafe3ba5, type: 3}
+    sourceFile: Blade Run Anthem.mp3
+    title: Blade Run Anthem
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: 1927da49c5864214992529972b9d3440, type: 3}
+    logo: {fileID: 2800000, guid: 9e0f08ae908d0174fa5bb56c9db50c49, type: 3}
+    sourceFile: Blazing Arena.mp3
+    title: Blazing Arena
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: aa2a58d08f9193f4b81af86f6ffa4247, type: 3}
+    logo: {fileID: 2800000, guid: 96dc62a05661c874abfab72753e3e763, type: 3}
+    sourceFile: Final Bell Vanguard.mp3
+    title: Final Bell Vanguard
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: a846d08600150b147890e127eed3af6c, type: 3}
+    logo: {fileID: 2800000, guid: 85c131d32c57c9741aa42df004f16bcb, type: 3}
+    sourceFile: Iron Oath Clash.mp3
+    title: Iron Oath Clash
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: efc6b878bc5dcfd4183bf1ae355fbc26, type: 3}
+    logo: {fileID: 2800000, guid: f1404a4977aa08f488c0a42d0737d3d5, type: 3}
+    sourceFile: Iron Storm.mp3
+    title: Iron Storm
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: 687d8be3eb57e0745b86d3ea250319da, type: 3}
+    logo: {fileID: 2800000, guid: a99cbe619891fc542aa3a595886559fa, type: 3}
+    sourceFile: Iron Top Clash.mp3
+    title: Iron Top Clash
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: 490a68fd18933a3439b63f690000e191, type: 3}
+    logo: {fileID: 2800000, guid: 86685671f9deb9441befe5f21db46a8d, type: 3}
+    sourceFile: Last Second Ascend.mp3
+    title: Last Second Ascend
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: 7c83a5d8301031d40a6384203a67a720, type: 3}
+    logo: {fileID: 2800000, guid: e08b771518db4ae4bac36446a03b1130, type: 3}
+    sourceFile: Last Stand Blade.mp3
+    title: Last Stand Blade
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: 1401ca05d6cf56a47a58653eac6f4b87, type: 3}
+    logo: {fileID: 2800000, guid: 75e94fe8b9a7d8d4d9a79a2bf6f76e64, type: 3}
+    sourceFile: Light Trails.mp3
+    title: Light Trails
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: 3c2b435bc3424d04eaeb4ece66bcaa39, type: 3}
+    logo: {fileID: 2800000, guid: 941356da2d937b243ad1235588844793, type: 3}
+    sourceFile: Neon Arena Rush.mp3
+    title: Neon Arena Rush
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: 9214ef3479931974c941fbe954620b3b, type: 3}
+    logo: {fileID: 2800000, guid: 4db88a2ee434c524083f6ac3e0287c9a, type: 3}
+    sourceFile: Ninja Glide.mp3
+    title: Ninja Glide
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: 240faec32d8df7d46aa4bf645c089ba3, type: 3}
+    logo: {fileID: 2800000, guid: 6aa68fd0613f5b742b7130685a495029, type: 3}
+    sourceFile: Rusted Arena.mp3
+    title: Rusted Arena
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: edf2b947df5eee44bb6a1a7c67e1a802, type: 3}
+    logo: {fileID: 2800000, guid: f4b4a279f03f9934381057f21c1ffd19, type: 3}
+    sourceFile: Spin Protocol.mp3
+    title: Spin Protocol
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: cccbb23782d7d444b997adfde51b085d, type: 3}
+    logo: {fileID: 2800000, guid: fb0e8afe4adb93f4faf9d9a60b942dff, type: 3}
+    sourceFile: Spinning Top Arena.mp3
+    title: Spinning Top Arena
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: 73b81cff4b6af2f45802d3b61b4c9d1f, type: 3}
+    logo: {fileID: 2800000, guid: c324b26d95c9fcf45887d9485a824db6, type: 3}
+    sourceFile: Spinning Top Clash.mp3
+    title: Spinning Top Clash
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: a428ebca972be174b8c99dee02155c98, type: 3}
+    logo: {fileID: 2800000, guid: 379a8ef3d02bafd4f8607b3cb508abcf, type: 3}
+    sourceFile: Spinning Top Madness.mp3
+    title: Spinning Top Madness
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: 9d55a49f956f1c64797613d3ef34ba30, type: 3}
+    logo: {fileID: 2800000, guid: d59531f3de6100943a26f121e7c011af, type: 3}
+    sourceFile: Spinning Top Riot.mp3
+    title: Spinning Top Riot
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: a04e5cb24eddc8b4fbc5bcaf3d29daa6, type: 3}
+    logo: {fileID: 2800000, guid: d796a24410374984c85c385e2bc951aa, type: 3}
+    sourceFile: Spiral Clash.mp3
+    title: Spiral Clash
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: fc3cb3b611765d94ca2de3069a2808a8, type: 3}
+    logo: {fileID: 2800000, guid: 99e500eda38a8ab4c93dc23a1841f7bc, type: 3}
+    sourceFile: Twin Blade Clash.mp3
+    title: Twin Blade Clash
+    author: DJ Dambel
+    situation: 2
+  - clip: {fileID: 8300000, guid: dff6ecb12528e0e4eafd1e5b993e1fad, type: 3}
+    logo: {fileID: 2800000, guid: dcd777c2fb0975346abb843c4fc3044f, type: 3}
+    sourceFile: Arena of Steel.mp3
+    title: Arena of Steel
+    author: DJ Dambel
+    situation: 3
+  - clip: {fileID: 8300000, guid: e7cc9b4e9d6841b48a6f874521a40d84, type: 3}
+    logo: {fileID: 2800000, guid: e7d123cd1f36d294b883691a174aaaf3, type: 3}
+    sourceFile: Failing Circuit.mp3
+    title: Failing Circuit
+    author: DJ Dambel
+    situation: 3
+  - clip: {fileID: 8300000, guid: d7258253fbad59046974a0dd6c342484, type: 3}
+    logo: {fileID: 2800000, guid: f3a9d05737bf9a64eaa44c94576916f7, type: 3}
+    sourceFile: Iron Crown Protocol.mp3
+    title: Iron Crown Protocol
+    author: DJ Dambel
+    situation: 3
+  - clip: {fileID: 8300000, guid: 41731ca3bb26f084c810c4e5e06561d3, type: 3}
+    logo: {fileID: 2800000, guid: 7bcfb493923eaec4288c29dc79a3e800, type: 3}
+    sourceFile: Oni Gatefall.mp3
+    title: Oni Gatefall
+    author: DJ Dambel
+    situation: 3
+  - clip: {fileID: 8300000, guid: b1746fa3ed5b44d468dff723f48bdeb4, type: 3}
+    logo: {fileID: 2800000, guid: 81c6670ad6afb114a9ec36d17da4c6e0, type: 3}
+    sourceFile: Spinning Top Duel.mp3
+    title: Spinning Top Duel
+    author: DJ Dambel
+    situation: 3
+  - clip: {fileID: 8300000, guid: 001e1d3de79946e46a0e71fcc38c97d1, type: 3}
+    logo: {fileID: 2800000, guid: a3c4dc6e4bdf0b34381fa558a68cbd3c, type: 3}
+    sourceFile: Fuego de Arena.mp3
+    title: Fuego de Arena
+    author: DJ Dambel
+    situation: 4
+  - clip: {fileID: 8300000, guid: d331b8bb98474cc43905aea6a2db51c2, type: 3}
+    logo: {fileID: 2800000, guid: d3378b497cbbd8b409b8a1e59f443b48, type: 3}
+    sourceFile: Skybound Rivalry.mp3
+    title: Skybound Rivalry
+    author: DJ Dambel
+    situation: 4
+  - clip: {fileID: 8300000, guid: 3fa9b0f011e4b5a4186d9543d8696eca, type: 3}
+    logo: {fileID: 2800000, guid: 393f727e1df2d8d449933f21d8b471a3, type: 3}
+    sourceFile: Spin Boost.mp3
+    title: Spin Boost
+    author: DJ Dambel
+    situation: 4
+  - clip: {fileID: 8300000, guid: 7b8202fd81ecdec4b85b64602ec26399, type: 3}
+    logo: {fileID: 2800000, guid: 52368f01e0c06a642b35a3dd23eeb67f, type: 3}
+    sourceFile: Victory Burst.mp3
+    title: Victory Burst
+    author: DJ Dambel
+    situation: 4
+  - clip: {fileID: 8300000, guid: e0611afe798f4694f85953abde3464d2, type: 3}
+    logo: {fileID: 2800000, guid: 80f2dc659f700d94b94db3743e634906, type: 3}
+    sourceFile: Iron Shrine Descent.mp3
+    title: Iron Shrine Descent
+    author: DJ Dambel
+    situation: 5
+  - clip: {fileID: 8300000, guid: 639b5f6078d99484dab84fce494528b9, type: 3}
+    logo: {fileID: 2800000, guid: a1f7076b5c5d7a64a90e93b4256fc8dc, type: 3}
+    sourceFile: Second Round Blues.mp3
+    title: Second Round Blues
+    author: DJ Dambel
+    situation: 5

@@ -360,23 +360,44 @@ namespace BladeSpinners.Gameplay.UI
             if (listProp == null || !listProp.isArray)
                 return false;
 
-            bool changed = false;
             string[] guids = AssetDatabase.FindAssets("t:BeyPart");
+            Array.Sort(guids, (left, right) =>
+                string.CompareOrdinal(AssetDatabase.GUIDToAssetPath(left), AssetDatabase.GUIDToAssetPath(right)));
+
+            List<BeyPart> authoredParts = new List<BeyPart>(guids.Length);
             for (int i = 0; i < guids.Length; i++)
             {
                 string path = AssetDatabase.GUIDToAssetPath(guids[i]);
                 BeyPart part = AssetDatabase.LoadAssetAtPath<BeyPart>(path);
-                if (part == null || ListContainsPart(listProp, part))
-                    continue;
-
-                int idx = listProp.arraySize;
-                listProp.InsertArrayElementAtIndex(idx);
-                SerializedProperty elem = listProp.GetArrayElementAtIndex(idx);
-                elem.objectReferenceValue = part;
-                changed = true;
+                if (part != null && !authoredParts.Contains(part))
+                    authoredParts.Add(part);
             }
 
-            return changed;
+            bool alreadySynchronized = listProp.arraySize == authoredParts.Count;
+            if (alreadySynchronized)
+            {
+                for (int i = 0; i < authoredParts.Count; i++)
+                {
+                    if (listProp.GetArrayElementAtIndex(i).objectReferenceValue != authoredParts[i])
+                    {
+                        alreadySynchronized = false;
+                        break;
+                    }
+                }
+            }
+
+            if (alreadySynchronized)
+                return false;
+
+            listProp.ClearArray();
+            for (int i = 0; i < authoredParts.Count; i++)
+            {
+                int index = listProp.arraySize;
+                listProp.InsertArrayElementAtIndex(index);
+                listProp.GetArrayElementAtIndex(index).objectReferenceValue = authoredParts[i];
+            }
+
+            return true;
         }
         private static bool ListContainsPart(SerializedProperty listProp, BeyPart part)
         {

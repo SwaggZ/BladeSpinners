@@ -18,7 +18,7 @@ MonoBehaviour:
   rarity: 1
   tags: 
   partID: galeforce_facebolt_1416567860
-  description: A Uncommon FaceBolt from the Galeforce set.
+  description: An Uncommon FaceBolt from the Galeforce set.
   icon: {fileID: 0}
   meshSeed: 1104569506
   primaryColor: {r: 0.84557736, g: 0.89108205, b: 0.9621676, a: 1}
@@ -35,5 +35,5 @@ MonoBehaviour:
   massBasedStaminaDrainRate: 0.5
   manaPoolSize: 100
   manaRegenRate: 20
-  equippedAbility: {fileID: 11400000, guid: d77e6ad29e300d5469f010ce8a1a1d88, type: 2}
+  equippedAbility: {fileID: 0}
   faceBoltEmblem: {fileID: 21300000, guid: bdf6faf842a004b41a28d939308d31b0, type: 3}

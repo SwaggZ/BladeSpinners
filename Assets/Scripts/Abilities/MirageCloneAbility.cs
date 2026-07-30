@@ -100,10 +100,11 @@ namespace BladeSpinners.Abilities
 
         private void OnTriggerEnter(Collider other)
         {
-            BeyMovementController bey = other.GetComponentInParent<BeyMovementController>();
-            if (bey == null || owner == null || bey == owner) return;
-            if (bey.BeyConfiguration == null || owner.BeyConfiguration == null) return;
-            if (bey.BeyConfiguration.IsEnemy == owner.BeyConfiguration.IsEnemy) return;
+            if (!AbilityTargetQuery.TryResolveCollider(
+                    owner, other, AbilityTargetRelation.Enemy, out BeyMovementController bey))
+            {
+                return;
+            }
 
             Explode(bey);
         }

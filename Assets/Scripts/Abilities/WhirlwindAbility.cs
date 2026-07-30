@@ -31,7 +31,7 @@ namespace BladeSpinners.Abilities
 
     public class WhirlwindRuntime : MonoBehaviour
     {
-        private BeyConfiguration ownerConfig;
+        private BeyMovementController owner;
         private float radius, pull, dps, timer;
         private float tickTimer;
         private GameObject[] visualRings;
@@ -41,7 +41,7 @@ namespace BladeSpinners.Abilities
             GameObject vortex = new GameObject("Whirlwind");
             vortex.transform.position = ctrl.transform.position;
             WhirlwindRuntime w = vortex.AddComponent<WhirlwindRuntime>();
-            w.ownerConfig = ctrl.BeyConfiguration;
+            w.owner = ctrl;
             w.radius = r; w.pull = p; w.dps = d; w.timer = dur;
             w.CreateVisuals(dur);
             Object.Destroy(vortex, dur + 0.2f);
@@ -107,13 +107,14 @@ namespace BladeSpinners.Abilities
             if (tickTimer > 0f) return;
             tickTimer = 0.2f;
 
-            BeyMovementController[] beys = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
-            foreach (BeyMovementController bey in beys)
+            foreach (BeyMovementController bey in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         owner,
+                         transform.position,
+                         radius,
+                         AbilityTargetRelation.Enemy))
             {
-                if (bey == null || bey.BeyConfiguration == null || bey.BeyConfiguration == ownerConfig) continue;
-                if (bey.BeyConfiguration.IsEnemy == ownerConfig.IsEnemy) continue;
                 float dist = Vector3.Distance(transform.position, bey.transform.position);
-                if (dist > radius) continue;
                 float falloff = 1f - (dist / radius);
                 bey.BeyConfiguration.SetSpin(bey.BeyConfiguration.CurrentSpin - dps * 0.2f * falloff);
                 Rigidbody rb = bey.GetComponent<Rigidbody>();

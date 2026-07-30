@@ -32,12 +32,10 @@ namespace BladeSpinners.Abilities
             dir.Normalize();
 
             // Line damage check
-            Collider[] hits = Physics.OverlapSphere(pos, range);
-            foreach (Collider col in hits)
+            foreach (BeyMovementController enemy in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         beyController, pos, range, AbilityTargetRelation.Enemy))
             {
-                if (col.gameObject == beyController.gameObject) continue;
-                BeyMovementController enemy = col.GetComponentInParent<BeyMovementController>();
-                if (enemy == null || enemy == beyController) continue;
                 Vector3 toEnemy = enemy.transform.position - pos;
                 float forward = Vector3.Dot(toEnemy, dir);
                 if (forward < 0f || forward > range) continue;

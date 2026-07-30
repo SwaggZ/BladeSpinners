@@ -1,0 +1,226 @@
+{
+    "tracks": [
+        {
+            "file": "Arcade Overdrive.mp3",
+            "title": "Arcade Overdrive",
+            "author": "DJ Dambel",
+            "situation": "Inventory"
+        },
+        {
+            "file": "Arena of Steel.mp3",
+            "title": "Arena of Steel",
+            "author": "DJ Dambel",
+            "situation": "BossBattle"
+        },
+        {
+            "file": "Blade Run Anthem.mp3",
+            "title": "Blade Run Anthem",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Blazing Arena.mp3",
+            "title": "Blazing Arena",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Crimson Select.mp3",
+            "title": "Crimson Select",
+            "author": "DJ Dambel",
+            "situation": "MainMenu"
+        },
+        {
+            "file": "Failing Circuit.mp3",
+            "title": "Failing Circuit",
+            "author": "DJ Dambel",
+            "situation": "BossBattle"
+        },
+        {
+            "file": "Final Bell Vanguard.mp3",
+            "title": "Final Bell Vanguard",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Fuego de Arena.mp3",
+            "title": "Fuego de Arena",
+            "author": "DJ Dambel",
+            "situation": "Victory"
+        },
+        {
+            "file": "Iron Crown Protocol.mp3",
+            "title": "Iron Crown Protocol",
+            "author": "DJ Dambel",
+            "situation": "BossBattle"
+        },
+        {
+            "file": "Iron Oath Clash.mp3",
+            "title": "Iron Oath Clash",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Iron Shrine Descent.mp3",
+            "title": "Iron Shrine Descent",
+            "author": "DJ Dambel",
+            "situation": "Lose"
+        },
+        {
+            "file": "Iron Spin Arena.mp3",
+            "title": "Iron Spin Arena",
+            "author": "DJ Dambel",
+            "situation": "MainMenu"
+        },
+        {
+            "file": "Iron Storm.mp3",
+            "title": "Iron Storm",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Iron Top Clash.mp3",
+            "title": "Iron Top Clash",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Last Second Ascend.mp3",
+            "title": "Last Second Ascend",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Last Stand Blade.mp3",
+            "title": "Last Stand Blade",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Light Trails.mp3",
+            "title": "Light Trails",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Metal Scraps.mp3",
+            "title": "Metal Scraps",
+            "author": "DJ Dambel",
+            "situation": "MainMenu"
+        },
+        {
+            "file": "Neon Arena Rush.mp3",
+            "title": "Neon Arena Rush",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Ninja Glide.mp3",
+            "title": "Ninja Glide",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Oni Gatefall.mp3",
+            "title": "Oni Gatefall",
+            "author": "DJ Dambel",
+            "situation": "BossBattle"
+        },
+        {
+            "file": "Rusted Arena.mp3",
+            "title": "Rusted Arena",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Second Round Blues.mp3",
+            "title": "Second Round Blues",
+            "author": "DJ Dambel",
+            "situation": "Lose"
+        },
+        {
+            "file": "Skybound Rivalry.mp3",
+            "title": "Skybound Rivalry",
+            "author": "DJ Dambel",
+            "situation": "Victory"
+        },
+        {
+            "file": "Spin Boost.mp3",
+            "title": "Spin Boost",
+            "author": "DJ Dambel",
+            "situation": "Victory"
+        },
+        {
+            "file": "Spin Protocol.mp3",
+            "title": "Spin Protocol",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Spin2Win.mp3",
+            "title": "Spin2Win",
+            "author": "DJ Dambel",
+            "situation": "Inventory"
+        },
+        {
+            "file": "Spinning Top Arena.mp3",
+            "title": "Spinning Top Arena",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Spinning Top Clash.mp3",
+            "title": "Spinning Top Clash",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Spinning Top Duel.mp3",
+            "title": "Spinning Top Duel",
+            "author": "DJ Dambel",
+            "situation": "BossBattle"
+        },
+        {
+            "file": "Spinning Top Forge.mp3",
+            "title": "Spinning Top Forge",
+            "author": "DJ Dambel",
+            "situation": "Inventory"
+        },
+        {
+            "file": "Spinning Top Madness.mp3",
+            "title": "Spinning Top Madness",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Spinning Top Riot.mp3",
+            "title": "Spinning Top Riot",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Spiral Clash.mp3",
+            "title": "Spiral Clash",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Thunder Drum Duel.mp3",
+            "title": "Thunder Drum Duel",
+            "author": "DJ Dambel",
+            "situation": "MainMenu"
+        },
+        {
+            "file": "Twin Blade Clash.mp3",
+            "title": "Twin Blade Clash",
+            "author": "DJ Dambel",
+            "situation": "Battle"
+        },
+        {
+            "file": "Victory Burst.mp3",
+            "title": "Victory Burst",
+            "author": "DJ Dambel",
+            "situation": "Victory"
+        }
+    ]
+}

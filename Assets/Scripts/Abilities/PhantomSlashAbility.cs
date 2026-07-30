@@ -36,12 +36,10 @@ namespace BladeSpinners.Abilities
             Vector3 end = start + forward * dashDistance;
 
             // Damage all enemies in the line
-            BeyConfiguration ownerConfig = beyController.BeyConfiguration;
-            BeyMovementController[] beys = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
-            foreach (BeyMovementController bey in beys)
+            foreach (BeyMovementController bey in
+                     AbilityTargetQuery.FindAll(
+                         beyController, AbilityTargetRelation.Enemy))
             {
-                if (bey == null || bey.BeyConfiguration == null || bey.BeyConfiguration == ownerConfig) continue;
-                if (bey.BeyConfiguration.IsEnemy == ownerConfig.IsEnemy) continue;
                 Vector3 toEnemy = bey.transform.position - start;
                 float dot = Vector3.Dot(toEnemy, forward);
                 if (dot < 0f || dot > dashDistance) continue;

@@ -4,6 +4,7 @@ using BladeSpinners.Core;
 using BladeSpinners.Gameplay.Parts;
 using BladeSpinners.Gameplay.Movement;
 using BladeSpinners.World;
+using BladeSpinners.Audio;
 
 namespace BladeSpinners.Gameplay
 {
@@ -87,8 +88,10 @@ namespace BladeSpinners.Gameplay
         {
             if (playerManager != null && playerManager.BeyConfiguration != null)
             {
-                playerManager.BeyConfiguration.SetSpinDrainPaused(false);
+                playerManager.BeyConfiguration.ResetResourcesForMatch();
             }
+            for (int i = 0; i < enemies.Count; i++)
+                enemies[i]?.BeyConfiguration?.ResetResourcesForMatch();
 
             ResetDefeatTracking();
             SetCombatControllersEnabled(false);
@@ -515,6 +518,20 @@ namespace BladeSpinners.Gameplay
         {
             if (currentState == newState) return;
             currentState = newState;
+
+            switch (newState)
+            {
+                case MatchState.InProgress:
+                    SoundManager.PlayUi(SoundPaths.GuiGameStart);
+                    break;
+                case MatchState.PlayerWon:
+                    SoundManager.PlayUi(SoundPaths.GuiGameWin);
+                    break;
+                case MatchState.PlayerLost:
+                    SoundManager.PlayUi(SoundPaths.GuiGameLose);
+                    break;
+            }
+
             OnMatchStateChanged?.Invoke(newState);
             Debug.Log($"[MatchManager] State → {newState}");
         }
@@ -527,9 +544,7 @@ namespace BladeSpinners.Gameplay
                 BeyMovementController movement = playerManager.MovementController;
                 if (movement != null) movement.enabled = true;
 
-                playerManager.BeyConfiguration?.SetSpin(GameConstants.DEFAULT_STARTING_SPIN);
-                playerManager.BeyConfiguration?.SetMana(GameConstants.DEFAULT_MANA_POOL);
-                playerManager.BeyConfiguration?.SetSpinDrainPaused(false);
+                playerManager.BeyConfiguration?.ResetResourcesForMatch();
 
                 playerManager.transform.position = playerSpawnPosition;
                 Rigidbody rb = playerManager.GetComponent<Rigidbody>();

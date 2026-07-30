@@ -25,7 +25,7 @@ MonoBehaviour:
   secondaryColor: {r: 0.9272499, g: 0.8479263, b: 0.62755275, a: 1}
   tipBehavior: 18
   behaviorBasedStaminaDrainModifier: 1.9578911
-  uphillResistanceMultiplier: 2.1024284
+  uphillResistanceMultiplier: 2
   slopeMultiplier: 0.9986425
   spinThreshold: -1
   altTipBehavior: 4

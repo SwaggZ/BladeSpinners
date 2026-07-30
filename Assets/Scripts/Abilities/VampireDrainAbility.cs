@@ -28,16 +28,16 @@ namespace BladeSpinners.Abilities
                 return;
 
             BeyConfiguration ownerConfig = beyController.BeyConfiguration;
-            BeyMovementController[] beys = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
 
             float totalDrained = 0f;
-            foreach (BeyMovementController bey in beys)
+            foreach (BeyMovementController bey in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         beyController,
+                         beyController.transform.position,
+                         radius,
+                         AbilityTargetRelation.Enemy))
             {
-                if (bey == null || bey.BeyConfiguration == null || bey.BeyConfiguration == ownerConfig) continue;
-                if (bey.BeyConfiguration.IsEnemy == ownerConfig.IsEnemy) continue;
-
                 float dist = Vector3.Distance(beyController.transform.position, bey.transform.position);
-                if (dist > radius) continue;
 
                 float falloff = 1f - (dist / radius);
                 float drained = drainAmount * falloff;
@@ -51,9 +51,14 @@ namespace BladeSpinners.Abilities
 
             if (totalDrained > 0f)
             {
-                float healAmount = totalDrained * healRatio;
+                float effectiveRatio =
+                    ownerConfig.ConsumeLifeStealRatio(healRatio);
+                float healAmount = totalDrained * effectiveRatio;
                 ownerConfig.SetSpin(ownerConfig.CurrentSpin + healAmount);
                 SpawnDrainVisual(beyController.transform.position, radius);
+                Debug.Log(
+                    $"[Ability] Vampire Drain restored {healAmount:F1} spin " +
+                    $"at {effectiveRatio:P0} efficiency.");
             }
 
             Debug.Log($"[Ability] Vampire Drain! Drained {totalDrained:F1} spin.");

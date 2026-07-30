@@ -23,7 +23,7 @@ namespace BladeSpinners.Core
         RubberFlat,  // High grip, tight arcs, highest behavior drain
         Ball,        // Balanced grip, slight tilt toward movement, good uphill
         Spike,       // Nearly stationary, maximum stamina drain resistance
-        Orbit,       // Controls orbit radius, circles around central axis, high skill ceiling
+        Orbit,       // Small local orbit around a forward-moving anchor
 
         // Metal Fight-inspired tip catalog (code suffix preserved)
         WideDefense_WD,
@@ -92,7 +92,7 @@ namespace BladeSpinners.Core
         SpinSmall,        // Restores small spin amount
         SpinMedium,       // Restores medium spin amount
         SpinLarge,        // Restores large spin amount
-        StaminaTemporary  // Temporarily reduces drain rate
+        Mana              // Restores mana
     }
 
     /// <summary>

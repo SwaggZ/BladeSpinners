@@ -28,7 +28,11 @@ namespace BladeSpinners.Abilities
             if (beyController == null || beyController.BeyConfiguration == null)
                 return;
 
-            BeyMovementController target = FindNearestEnemy(beyController);
+            BeyMovementController target = AbilityTargetQuery.FindNearest(
+                beyController,
+                beyController.transform.position,
+                float.PositiveInfinity,
+                AbilityTargetRelation.Enemy);
 
             GameObject bolt = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             bolt.name = "FireBolt";
@@ -59,30 +63,22 @@ namespace BladeSpinners.Abilities
             }
 
             FireBoltProjectile proj = bolt.AddComponent<FireBoltProjectile>();
-            proj.Initialize(beyController.BeyConfiguration, target, projectileSpeed, directHitDamage, burnDamagePerSecond, burnDuration, homingStrength);
+            proj.Initialize(
+                beyController,
+                target,
+                projectileSpeed,
+                directHitDamage,
+                burnDamagePerSecond,
+                burnDuration,
+                homingStrength);
 
             Debug.Log("[Ability] Fire Bolt launched!");
-        }
-
-        private BeyMovementController FindNearestEnemy(BeyMovementController owner)
-        {
-            BeyMovementController[] all = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
-            BeyMovementController nearest = null;
-            float best = float.MaxValue;
-            foreach (BeyMovementController bey in all)
-            {
-                if (bey == null || bey == owner || bey.BeyConfiguration == null) continue;
-                if (bey.BeyConfiguration.IsEnemy == owner.BeyConfiguration.IsEnemy) continue;
-                float d = Vector3.Distance(owner.transform.position, bey.transform.position);
-                if (d < best) { best = d; nearest = bey; }
-            }
-            return nearest;
         }
     }
 
     public class FireBoltProjectile : MonoBehaviour
     {
-        private BeyConfiguration ownerConfig;
+        private BeyMovementController owner;
         private BeyMovementController target;
         private Rigidbody rb;
         private float speed;
@@ -92,9 +88,16 @@ namespace BladeSpinners.Abilities
         private float homing;
         private float lifetime = 5f;
 
-        public void Initialize(BeyConfiguration owner, BeyMovementController tgt, float spd, float dmg, float bdps, float bdur, float homingStr)
+        public void Initialize(
+            BeyMovementController ownerController,
+            BeyMovementController tgt,
+            float spd,
+            float dmg,
+            float bdps,
+            float bdur,
+            float homingStr)
         {
-            ownerConfig = owner;
+            owner = ownerController;
             target = tgt;
             speed = spd;
             directDamage = dmg;
@@ -124,10 +127,11 @@ namespace BladeSpinners.Abilities
 
         private void OnTriggerEnter(Collider other)
         {
-            BeyMovementController hit = other.GetComponentInParent<BeyMovementController>();
-            if (hit == null) return;
-            if (hit.BeyConfiguration == null || hit.BeyConfiguration == ownerConfig) return;
-            if (ownerConfig != null && hit.BeyConfiguration.IsEnemy == ownerConfig.IsEnemy) return;
+            if (!AbilityTargetQuery.TryResolveCollider(
+                    owner, other, AbilityTargetRelation.Enemy, out BeyMovementController hit))
+            {
+                return;
+            }
 
             hit.BeyConfiguration.SetSpin(hit.BeyConfiguration.CurrentSpin - directDamage);
             BurnRuntime.Apply(hit, burnDps, burnDur);

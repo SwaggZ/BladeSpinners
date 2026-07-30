@@ -79,13 +79,14 @@ namespace BladeSpinners.Abilities
 
         private void TriggerExplosion(BeyMovementController ctrl)
         {
-            BeyMovementController[] all = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
-            foreach (BeyMovementController bey in all)
+            foreach (BeyMovementController bey in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         ctrl,
+                         ctrl.transform.position,
+                         8f,
+                         AbilityTargetRelation.Enemy))
             {
-                if (bey == null || bey.BeyConfiguration == null || bey.BeyConfiguration == ctrl.BeyConfiguration) continue;
-                if (bey.BeyConfiguration.IsEnemy == ctrl.BeyConfiguration.IsEnemy) continue;
                 float dist = Vector3.Distance(ctrl.transform.position, bey.transform.position);
-                if (dist > 8f) continue;
                 float falloff = 1f - (dist / 8f);
                 bey.BeyConfiguration.SetSpin(bey.BeyConfiguration.CurrentSpin - 22f * falloff);
                 Rigidbody enemyRb = bey.GetComponent<Rigidbody>();
@@ -101,13 +102,13 @@ namespace BladeSpinners.Abilities
 
         private void TriggerMultiFreeze(BeyMovementController ctrl)
         {
-            BeyMovementController[] all = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
-            foreach (BeyMovementController bey in all)
+            foreach (BeyMovementController bey in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         ctrl,
+                         ctrl.transform.position,
+                         10f,
+                         AbilityTargetRelation.Enemy))
             {
-                if (bey == null || bey.BeyConfiguration == null || bey.BeyConfiguration == ctrl.BeyConfiguration) continue;
-                if (bey.BeyConfiguration.IsEnemy == ctrl.BeyConfiguration.IsEnemy) continue;
-                float dist = Vector3.Distance(ctrl.transform.position, bey.transform.position);
-                if (dist > 10f) continue;
                 FreezeRuntime.Apply(bey, 2f);
             }
             Debug.Log("[Lucky] Multi Freeze!");

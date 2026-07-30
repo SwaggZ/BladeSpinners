@@ -12,6 +12,14 @@ namespace BladeSpinners.Abilities
         private readonly float shadowDuration = 8f;
         private readonly float replayDelay = 3f;
 
+        private void OnEnable()
+        {
+            abilityName = "Chrono Recall";
+            description = "Create a delayed temporal shadow, then recast to rewind to its position with partial momentum.";
+            manaCost = 80f;
+            rarity = Core.AbilityRarity.Legendary;
+        }
+
         public override void Activate(BeyMovementController beyController)
         {
             // Recast: teleport back to shadow

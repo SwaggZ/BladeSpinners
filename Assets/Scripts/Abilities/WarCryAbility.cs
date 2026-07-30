@@ -31,12 +31,10 @@ namespace BladeSpinners.Abilities
                 beyController.Rb.linearVelocity *= selfSpeedBoost;
 
             // Debuff enemies
-            Collider[] hits = Physics.OverlapSphere(pos, radius);
-            foreach (Collider col in hits)
+            foreach (BeyMovementController enemy in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         beyController, pos, radius, AbilityTargetRelation.Enemy))
             {
-                if (col.gameObject == beyController.gameObject) continue;
-                BeyMovementController enemy = col.GetComponentInParent<BeyMovementController>();
-                if (enemy == null || enemy == beyController) continue;
                 if (enemy.BeyConfiguration != null)
                     enemy.BeyConfiguration.SetSpin(enemy.BeyConfiguration.CurrentSpin - damage);
                 if (enemy.Rb != null)

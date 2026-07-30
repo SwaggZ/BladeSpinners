@@ -28,7 +28,11 @@ namespace BladeSpinners.Abilities
             if (beyController == null || beyController.BeyConfiguration == null)
                 return;
 
-            BeyMovementController firstTarget = FindNearestEnemy(beyController, null);
+            BeyMovementController firstTarget = AbilityTargetQuery.FindNearest(
+                beyController,
+                beyController.transform.position,
+                float.PositiveInfinity,
+                AbilityTargetRelation.Enemy);
             if (firstTarget == null)
             {
                 Debug.Log("[Ability] Ricochet: no target.");
@@ -62,30 +66,21 @@ namespace BladeSpinners.Abilities
             }
 
             RicochetProjectileRuntime runtime = proj.AddComponent<RicochetProjectileRuntime>();
-            runtime.Initialize(beyController.BeyConfiguration, firstTarget, projectileSpeed, damagePerBounce, maxBounces, bounceRadius);
+            runtime.Initialize(
+                beyController,
+                firstTarget,
+                projectileSpeed,
+                damagePerBounce,
+                maxBounces,
+                bounceRadius);
 
             Debug.Log("[Ability] Ricochet Shot!");
-        }
-
-        private BeyMovementController FindNearestEnemy(BeyMovementController owner, BeyMovementController exclude)
-        {
-            BeyMovementController[] all = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
-            BeyMovementController nearest = null;
-            float best = float.MaxValue;
-            foreach (BeyMovementController bey in all)
-            {
-                if (bey == null || bey == owner || bey == exclude || bey.BeyConfiguration == null) continue;
-                if (bey.BeyConfiguration.IsEnemy == owner.BeyConfiguration.IsEnemy) continue;
-                float d = Vector3.Distance(owner.transform.position, bey.transform.position);
-                if (d < best) { best = d; nearest = bey; }
-            }
-            return nearest;
         }
     }
 
     public class RicochetProjectileRuntime : MonoBehaviour
     {
-        private BeyConfiguration ownerConfig;
+        private BeyMovementController owner;
         private BeyMovementController currentTarget;
         private Rigidbody rb;
         private float speed;
@@ -95,9 +90,15 @@ namespace BladeSpinners.Abilities
         private HashSet<BeyMovementController> alreadyHit = new HashSet<BeyMovementController>();
         private float lifetime = 6f;
 
-        public void Initialize(BeyConfiguration owner, BeyMovementController firstTarget, float spd, float dmg, int maxBounces, float bRadius)
+        public void Initialize(
+            BeyMovementController ownerController,
+            BeyMovementController firstTarget,
+            float spd,
+            float dmg,
+            int maxBounces,
+            float bRadius)
         {
-            ownerConfig = owner;
+            owner = ownerController;
             currentTarget = firstTarget;
             speed = spd;
             damage = dmg;
@@ -124,10 +125,12 @@ namespace BladeSpinners.Abilities
 
         private void OnTriggerEnter(Collider other)
         {
-            BeyMovementController bey = other.GetComponentInParent<BeyMovementController>();
-            if (bey == null || bey.BeyConfiguration == null) return;
-            if (bey.BeyConfiguration == ownerConfig) return;
-            if (ownerConfig != null && bey.BeyConfiguration.IsEnemy == ownerConfig.IsEnemy) return;
+            if (!AbilityTargetQuery.TryResolveCollider(
+                    owner, other, AbilityTargetRelation.Enemy, out BeyMovementController bey))
+            {
+                return;
+            }
+
             if (alreadyHit.Contains(bey)) return;
 
             bey.BeyConfiguration.SetSpin(bey.BeyConfiguration.CurrentSpin - damage);
@@ -146,14 +149,11 @@ namespace BladeSpinners.Abilities
 
         private BeyMovementController FindNextTarget(Vector3 fromPos)
         {
-            BeyMovementController[] all = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
             BeyMovementController nearest = null;
             float best = float.MaxValue;
-            foreach (BeyMovementController bey in all)
+            foreach (BeyMovementController bey in
+                     AbilityTargetQuery.FindAll(owner, AbilityTargetRelation.Enemy))
             {
-                if (bey == null || bey.BeyConfiguration == null) continue;
-                if (ownerConfig != null && bey.BeyConfiguration == ownerConfig) continue;
-                if (ownerConfig != null && bey.BeyConfiguration.IsEnemy == ownerConfig.IsEnemy) continue;
                 if (alreadyHit.Contains(bey)) continue;
                 float d = Vector3.Distance(fromPos, bey.transform.position);
                 if (d < best && d <= bounceRadius) { best = d; nearest = bey; }

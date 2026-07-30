@@ -34,17 +34,14 @@ namespace BladeSpinners.Abilities
             Vector3 origin = beyController.transform.position;
             float totalStolen = 0f;
 
-            // Find all enemy beys within radius
-            var enemies = Object.FindObjectsByType<BladeSpinners.Gameplay.EnemyBeyController>(
-                FindObjectsSortMode.None);
-
-            foreach (var enemy in enemies)
+            foreach (BeyMovementController enemy in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         beyController,
+                         origin,
+                         drainRadius,
+                         AbilityTargetRelation.Enemy))
             {
-                if (enemy == null || enemy.BeyConfiguration == null) continue;
-
                 float dist = Vector3.Distance(origin, enemy.transform.position);
-                if (dist > drainRadius) continue;
-
                 // Steal spin (scaled by proximity)
                 float proximityFactor = 1f - (dist / drainRadius);
                 float stolen = spinStolen * proximityFactor;
@@ -57,9 +54,15 @@ namespace BladeSpinners.Abilities
             // Give stolen spin to player
             if (totalStolen > 0f)
             {
-                playerConfig.SetSpin(playerConfig.CurrentSpin + totalStolen);
+                float efficiency =
+                    playerConfig.ConsumeLifeStealRatio(1f);
+                float restored = totalStolen * efficiency;
+                playerConfig.SetSpin(
+                    playerConfig.CurrentSpin + restored);
                 SpawnDrainVisual(origin, drainRadius);
-                Debug.Log($"[Ability] Spin Drain stole {totalStolen:F1} total spin!");
+                Debug.Log(
+                    $"[Ability] Spin Drain drained {totalStolen:F1} and " +
+                    $"restored {restored:F1} spin at {efficiency:P0} efficiency.");
             }
             else
             {

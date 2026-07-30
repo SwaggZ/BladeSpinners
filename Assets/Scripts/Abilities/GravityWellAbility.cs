@@ -98,13 +98,12 @@ namespace BladeSpinners.Abilities
             if (tickTimer > 0f) return;
             tickTimer = 0.2f;
 
-            Collider[] hits = Physics.OverlapSphere(transform.position, radius);
-            foreach (Collider col in hits)
+            BeyMovementController ownerBey =
+                owner != null ? owner.GetComponentInParent<BeyMovementController>() : null;
+            foreach (BeyMovementController bey in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         ownerBey, transform.position, radius, AbilityTargetRelation.Enemy))
             {
-                if (owner != null && col.gameObject == owner) continue;
-                BeyMovementController bey = col.GetComponentInParent<BeyMovementController>();
-                if (bey == null) continue;
-                if (owner != null && bey.gameObject == owner) continue;
                 Vector3 dir = (transform.position - bey.transform.position).normalized;
                 if (bey.Rb != null) bey.Rb.AddForce(dir * pull, ForceMode.Force);
                 if (bey.BeyConfiguration != null)

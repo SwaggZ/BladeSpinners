@@ -29,25 +29,27 @@ namespace BladeSpinners.Abilities
             if (target.BeyConfiguration != null)
                 target.BeyConfiguration.SetSpin(target.BeyConfiguration.CurrentSpin - initialDamage);
 
-            SoulLinkRuntime.Apply(beyController, target, damageShare, duration);
+            float effectiveShare = beyController.BeyConfiguration != null
+                ? beyController.BeyConfiguration
+                    .ConsumeLifeStealRatio(damageShare)
+                : 0f;
+            SoulLinkRuntime.Apply(
+                beyController,
+                target,
+                effectiveShare,
+                duration);
             SpawnLinkVisual(beyController, target, duration);
-            Debug.Log("[Ability] Soul Link!");
+            Debug.Log(
+                $"[Ability] Soul Link! Restore share: {effectiveShare:P0}.");
         }
 
         private static BeyMovementController FindNearest(BeyMovementController self, float radius)
         {
-            BeyMovementController nearest = null;
-            float minDist = float.MaxValue;
-            Collider[] hits = Physics.OverlapSphere(self.transform.position, radius);
-            foreach (Collider col in hits)
-            {
-                if (col.gameObject == self.gameObject) continue;
-                BeyMovementController bey = col.GetComponentInParent<BeyMovementController>();
-                if (bey == null || bey == self) continue;
-                float dist = Vector3.Distance(self.transform.position, bey.transform.position);
-                if (dist < minDist) { minDist = dist; nearest = bey; }
-            }
-            return nearest;
+            return AbilityTargetQuery.FindNearest(
+                self,
+                self.transform.position,
+                radius,
+                AbilityTargetRelation.Enemy);
         }
 
         private void SpawnLinkVisual(BeyMovementController self, BeyMovementController target, float dur)

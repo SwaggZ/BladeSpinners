@@ -20,12 +20,20 @@ namespace BladeSpinners.Core
                 return;
             }
             Instance = this;
+            DontDestroyOnLoad(gameObject);
 
-            // Ensure bey-vs-bey physical collision is disabled at runtime.
-            // Trigger colliders (spin exchange) still fire.
+            // Bey mesh collision pairs are ignored individually by the runtime spawner.
+            // Keep the layer pair enabled because a global layer ignore also suppresses
+            // the trigger callbacks that drive spin exchange.
             int beyLayer = LayerMask.NameToLayer("Bey");
             if (beyLayer >= 0)
-                Physics.IgnoreLayerCollision(beyLayer, beyLayer, true);
+                Physics.IgnoreLayerCollision(beyLayer, beyLayer, false);
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
         }
 
         // ══════════════════════════════════════════════════════════════

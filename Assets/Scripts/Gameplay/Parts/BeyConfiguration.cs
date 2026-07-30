@@ -21,6 +21,13 @@ namespace BladeSpinners.Gameplay.Parts
         private float currentMana;
         private bool spinDrainPaused;
         private float manaRegenDelayRemaining;
+        private float abilityCooldownRemaining;
+        private float lastAbilityCooldownDuration;
+        private int lifeStealUsesThisMatch;
+        private readonly EnergyRingPassiveRuntime energyRingPassiveRuntime;
+
+        public const float LifeStealDecayPerUse = 0.65f;
+        public const float MaximumLifeStealBaseRatio = 0.50f;
 
         /// <summary>
         /// Event fired when spin value changes. Subscribers check spin thresholds.
@@ -43,6 +50,8 @@ namespace BladeSpinners.Gameplay.Parts
             InitializeEmptySlots();
             currentSpin = GameConstants.DEFAULT_STARTING_SPIN;
             currentMana = GameConstants.DEFAULT_MANA_POOL;
+            energyRingPassiveRuntime =
+                new EnergyRingPassiveRuntime(this);
         }
 
         /// <summary>
@@ -80,6 +89,11 @@ namespace BladeSpinners.Gameplay.Parts
             }
 
             statsDirty = true;
+            if (part.OccupiesSlots.Contains(PartType.EnergyRing))
+            {
+                energyRingPassiveRuntime.Refresh(
+                    GetEquippedPart(PartType.EnergyRing));
+            }
             OnPartSwapped?.Invoke(part.PartType, part);
         }
 
@@ -96,6 +110,12 @@ namespace BladeSpinners.Gameplay.Parts
                     equippedParts[slot] = null;
                 }
                 statsDirty = true;
+                if (part.OccupiesSlots.Contains(
+                        PartType.EnergyRing))
+                {
+                    energyRingPassiveRuntime.Refresh(
+                        GetEquippedPart(PartType.EnergyRing));
+                }
             }
         }
 
@@ -153,6 +173,8 @@ namespace BladeSpinners.Gameplay.Parts
         private void RecalculateStats()
         {
             cachedStats = new BeyStatBlock();
+            float tipSpinRetention = 50f;
+            float wheelSpinRetention = 50f;
 
             BeyPart tipPart = GetEquippedPart(PartType.Tip);
             if (tipPart != null)
@@ -163,6 +185,8 @@ namespace BladeSpinners.Gameplay.Parts
                 cachedStats.SlopeMultiplier = tipPart.SlopeMultiplier;
                 cachedStats.SpinThreshold = tipPart.SpinThreshold;
                 cachedStats.AltTipBehavior = tipPart.AltTipBehavior;
+                tipSpinRetention =
+                    BeyCombatStatCalculator.GetTipSpinRetention(tipPart);
             }
 
             BeyPart trackPart = GetEquippedPart(PartType.Track);
@@ -177,6 +201,11 @@ namespace BladeSpinners.Gameplay.Parts
             {
                 cachedStats.Weight = wheelPart.Weight;
                 cachedStats.MassBasedStaminaDrainRate = wheelPart.MassBasedStaminaDrainRate;
+                FusionWheelCombatProfile wheelProfile =
+                    FusionWheelCombatProfile.FromPart(wheelPart);
+                cachedStats.Attack = wheelProfile.Attack;
+                cachedStats.Defense = wheelProfile.Defense;
+                wheelSpinRetention = wheelProfile.SpinRetention;
             }
 
             BeyPart ringPart = GetEquippedPart(PartType.EnergyRing);
@@ -184,6 +213,8 @@ namespace BladeSpinners.Gameplay.Parts
             {
                 cachedStats.ManaPoolSize = ringPart.ManaPoolSize;
                 cachedStats.ManaRegenRate = ringPart.ManaRegenRate;
+                cachedStats.EquippedPassive =
+                    EnergyRingPassiveResolver.Resolve(ringPart);
             }
 
             BeyPart faceBoltPart = GetEquippedPart(PartType.FaceBolt);
@@ -192,10 +223,21 @@ namespace BladeSpinners.Gameplay.Parts
                 cachedStats.EquippedAbility = FaceBoltAbilityResolver.Resolve(faceBoltPart);
             }
 
-            // Calculate total stamina drain as Fusion Wheel mass drain + Tip behavior drain modifier
-            cachedStats.TotalStaminaDrainRate = 
-                (GameConstants.BASE_MASS_DRAIN_RATE * (cachedStats.Weight / 25f)) + 
-                (GameConstants.BASE_BEHAVIOR_DRAIN_RATE * cachedStats.BehaviorBasedStaminaDrainModifier);
+            cachedStats.SpinRetention =
+                BeyCombatStatCalculator.CombineSpinRetention(
+                    wheelSpinRetention,
+                    tipSpinRetention);
+
+            // The authored wheel drain now matters. Retention then modifies the
+            // combined wheel + Tip drain while remaining centered at 1x for 50.
+            float baseDrain =
+                cachedStats.MassBasedStaminaDrainRate
+                + GameConstants.BASE_BEHAVIOR_DRAIN_RATE
+                * cachedStats.BehaviorBasedStaminaDrainModifier;
+            cachedStats.TotalStaminaDrainRate =
+                baseDrain
+                * BeyCombatStatCalculator.GetRetentionDrainMultiplier(
+                    cachedStats.SpinRetention);
 
         }
 
@@ -229,6 +271,8 @@ namespace BladeSpinners.Gameplay.Parts
             // Check if we crossed a threshold
             if (oldSpin != currentSpin)
             {
+                energyRingPassiveRuntime.NotifySpinChanged(
+                    oldSpin, currentSpin);
                 OnSpinChanged?.Invoke(currentSpin);
             }
         }
@@ -244,10 +288,28 @@ namespace BladeSpinners.Gameplay.Parts
             BeyStatBlock stats = GetStatBlock();
             float gmDrain = GameManager.GetForBey(IsEnemy, g => g.spinDrainMultiplier, g => g.enemySpinDrainMultiplier);
             float drain = stats.TotalStaminaDrainRate * deltaTime * boostMultiplier * gmDrain;
+            drain =
+                energyRingPassiveRuntime.ModifyPassiveSpinDrain(
+                    drain);
             SetSpin(currentSpin - drain);
         }
 
         public float CurrentSpin => currentSpin;
+        public float StartingSpin
+        {
+            get
+            {
+                float multiplier = GameManager.GetForBey(
+                    IsEnemy,
+                    g => g.startingSpinMultiplier,
+                    g => g.enemyStartingSpinMultiplier);
+                return Mathf.Clamp(
+                    GameConstants.DEFAULT_STARTING_SPIN
+                    * Mathf.Max(0f, multiplier),
+                    GameConstants.MIN_SPIN,
+                    GameConstants.MAX_SPIN);
+            }
+        }
         public bool IsBurst => currentSpin <= 0;
         public bool IsSpinDrainPaused => spinDrainPaused;
 
@@ -262,13 +324,17 @@ namespace BladeSpinners.Gameplay.Parts
         public void SetMana(float value)
         {
             float oldMana = currentMana;
-            float gmPool = GameManager.Get(g => g.manaPoolMultiplier);
-            currentMana = Mathf.Clamp(value, GameConstants.MIN_MANA, GetStatBlock().ManaPoolSize * gmPool);
+            currentMana = Mathf.Clamp(
+                value,
+                GameConstants.MIN_MANA,
+                MaxMana);
 
             // Any mana spend (ability, boost upkeep, etc.) resets regen delay.
             if (currentMana < oldMana)
             {
                 manaRegenDelayRemaining = GameConstants.MANA_REGEN_DELAY_AFTER_USE;
+                energyRingPassiveRuntime.NotifyManaSpent(
+                    oldMana - currentMana);
             }
 
             if (oldMana != currentMana)
@@ -291,28 +357,224 @@ namespace BladeSpinners.Gameplay.Parts
             BeyStatBlock stats = GetStatBlock();
             float gmRegen = GameManager.GetForBey(IsEnemy, g => g.manaRegenMultiplier, g => g.enemyManaRegenMultiplier);
             float regen = stats.ManaRegenRate * deltaTime * gmRegen * GameConstants.BASE_MANA_REGEN_SCALAR;
+            regen =
+                energyRingPassiveRuntime.ModifyManaRegeneration(
+                    regen);
             SetMana(currentMana + regen);
         }
 
         public float CurrentMana => currentMana;
-
-        /// <summary>
-        /// Checks if the player has enough mana to use an ability.
-        /// </summary>
-        public bool CanUseAbility(float manaCost)
+        public float MaxMana
         {
-            return currentMana >= manaCost;
+            get
+            {
+                float multiplier = GameManager.GetForBey(
+                    IsEnemy,
+                    g => g.manaPoolMultiplier,
+                    g => g.enemyManaPoolMultiplier);
+                return Mathf.Max(
+                    GameConstants.MIN_MANA,
+                    GetStatBlock().ManaPoolSize
+                    * Mathf.Max(0f, multiplier));
+            }
         }
 
         /// <summary>
-        /// Consumes mana for ability usage.
+        /// Restores faction-aware starting resources and transient ability state.
+        /// Call after the loadout and IsEnemy flag have both been assigned.
         /// </summary>
-        public void SpendMana(float amount)
+        public void ResetResourcesForMatch()
         {
-            float gmCost = GameManager.GetForBey(IsEnemy, g => g.abilityCostMultiplier, g => g.enemyAbilityCostMultiplier);
-            SetMana(currentMana - amount * gmCost);
+            SetSpin(StartingSpin);
+            SetMana(MaxMana);
+            SetSpinDrainPaused(false);
+            ResetAbilityCooldown();
+            lifeStealUsesThisMatch = 0;
+            manaRegenDelayRemaining = 0f;
+            energyRingPassiveRuntime.ResetForMatch();
         }
 
+        /// <summary>
+        /// Returns this cast's effective restore ratio and advances the shared
+        /// per-match diminishing-return counter. Target damage is intentionally
+        /// unaffected; only spin returned to the caster is reduced.
+        /// </summary>
+        public float ConsumeLifeStealRatio(float baseRatio)
+        {
+            float ratio = Mathf.Clamp(
+                    baseRatio,
+                    0f,
+                    MaximumLifeStealBaseRatio)
+                * GetLifeStealEfficiency(lifeStealUsesThisMatch);
+            lifeStealUsesThisMatch++;
+            return ratio;
+        }
+
+        public static float GetLifeStealEfficiency(int previousUses)
+        {
+            return Mathf.Pow(
+                LifeStealDecayPerUse,
+                Mathf.Max(0, previousUses));
+        }
+
+        public int LifeStealUsesThisMatch => lifeStealUsesThisMatch;
+        public float NextLifeStealEfficiency =>
+            GetLifeStealEfficiency(lifeStealUsesThisMatch);
+
+        public void TickEnergyRingPassive(float deltaTime)
+        {
+            energyRingPassiveRuntime.Tick(deltaTime);
+        }
+
+        public float ModifyOutgoingCollisionDamage(
+            BeyConfiguration target,
+            float damage)
+        {
+            return energyRingPassiveRuntime
+                .ModifyOutgoingCollisionDamage(target, damage);
+        }
+
+        public float ApplyCollisionSpinDamage(
+            BeyConfiguration source,
+            float damage)
+        {
+            float modifiedDamage = energyRingPassiveRuntime
+                .ModifyIncomingCollisionDamage(source, damage);
+            float before = currentSpin;
+            SetSpin(before - modifiedDamage);
+            float damageTaken = before - currentSpin;
+            energyRingPassiveRuntime.NotifyCollisionDamageTaken(
+                source, damageTaken);
+            return damageTaken;
+        }
+
+        public void NotifyBeyCollision(
+            BeyConfiguration other,
+            float damageDealt,
+            float damageTaken)
+        {
+            energyRingPassiveRuntime.NotifyCollision(
+                other, damageDealt, damageTaken);
+        }
+
+        public float ModifyPickupAmount(float amount)
+        {
+            return energyRingPassiveRuntime
+                .ModifyPickupAmount(amount);
+        }
+
+        public EnergyRingPassiveRuntime EnergyRingPassive =>
+            energyRingPassiveRuntime;
+        public BeyPassive ActivePassive =>
+            energyRingPassiveRuntime.ActivePassive;
+
+        /// <summary>
+        /// Returns the final cost after global and faction-specific modifiers.
+        /// </summary>
+        public float GetEffectiveAbilityCost(BeyAbility ability)
+        {
+            return ability != null
+                ? GetEffectiveAbilityCost(ability.ManaCost)
+                : 0f;
+        }
+
+        /// <summary>
+        /// Returns the final cost for a base amount after all current modifiers.
+        /// </summary>
+        public float GetEffectiveAbilityCost(float baseManaCost)
+        {
+            float multiplier = GameManager.GetForBey(
+                IsEnemy,
+                g => g.abilityCostMultiplier,
+                g => g.enemyAbilityCostMultiplier);
+            return CalculateEffectiveAbilityCost(baseManaCost, multiplier);
+        }
+
+        public static float CalculateEffectiveAbilityCost(
+            float baseManaCost, float multiplier)
+        {
+            return Mathf.Max(0f, baseManaCost) * Mathf.Max(0f, multiplier);
+        }
+
+        /// <summary>
+        /// Checks the shared cooldown and effective, modified mana cost.
+        /// </summary>
+        public bool CanUseAbility(BeyAbility ability)
+        {
+            if (ability == null || !IsAbilityReady)
+                return false;
+
+            float effectiveCost = GetEffectiveAbilityCost(ability);
+            return currentMana + Mathf.Epsilon >= effectiveCost;
+        }
+
+        /// <summary>
+        /// Backward-compatible affordability check for callers that only have a base cost.
+        /// The shared cooldown and the same effective-cost calculation still apply.
+        /// </summary>
+        public bool CanUseAbility(float baseManaCost)
+        {
+            if (!IsAbilityReady)
+                return false;
+
+            float effectiveCost = GetEffectiveAbilityCost(baseManaCost);
+            return currentMana + Mathf.Epsilon >= effectiveCost;
+        }
+
+        /// <summary>
+        /// Atomically validates cooldown and affordability, spends the exact cost that
+        /// was checked, and starts the equipped ability's cooldown.
+        /// </summary>
+        public bool TryCommitAbilityUse(
+            BeyAbility ability, out float effectiveCost)
+        {
+            effectiveCost = GetEffectiveAbilityCost(ability);
+            if (ability == null
+                || !IsAbilityReady
+                || currentMana + Mathf.Epsilon < effectiveCost)
+            {
+                return false;
+            }
+
+            SetMana(currentMana - effectiveCost);
+            lastAbilityCooldownDuration = Mathf.Max(
+                0f, ability.CooldownDuration);
+            abilityCooldownRemaining = lastAbilityCooldownDuration;
+            return true;
+        }
+
+        public void TickAbilityCooldown(float deltaTime)
+        {
+            if (abilityCooldownRemaining <= 0f || deltaTime <= 0f)
+                return;
+
+            abilityCooldownRemaining = Mathf.Max(
+                0f, abilityCooldownRemaining - deltaTime);
+        }
+
+        public void ResetAbilityCooldown()
+        {
+            abilityCooldownRemaining = 0f;
+            lastAbilityCooldownDuration = 0f;
+        }
+
+        /// <summary>
+        /// Consumes an effective, modified mana cost. New ability activations should use
+        /// TryCommitAbilityUse so affordability and cooldown are handled atomically.
+        /// </summary>
+        public void SpendMana(float baseAmount)
+        {
+            SetMana(currentMana - GetEffectiveAbilityCost(baseAmount));
+        }
+
+        public float AbilityCooldownRemaining => abilityCooldownRemaining;
+        public float AbilityCooldownDuration => lastAbilityCooldownDuration;
+        public float AbilityCooldownNormalized =>
+            lastAbilityCooldownDuration > 0f
+                ? Mathf.Clamp01(
+                    abilityCooldownRemaining / lastAbilityCooldownDuration)
+                : 0f;
+        public bool IsAbilityReady => abilityCooldownRemaining <= 0f;
     }
 
     /// <summary>
@@ -332,11 +594,15 @@ namespace BladeSpinners.Gameplay.Parts
 
         public float Weight = 25f;
         public float MassBasedStaminaDrainRate = 0.5f;
+        public float Attack = 50f;
+        public float Defense = 50f;
+        public float SpinRetention = 50f;
 
         public float ManaPoolSize = 100f;
         public float ManaRegenRate = 20f;
 
         public Abilities.BeyAbility EquippedAbility;
+        public Abilities.BeyPassive EquippedPassive;
 
         // Calculated values
         public float TotalStaminaDrainRate = 0.8f; // Sum of mass + behavior drains

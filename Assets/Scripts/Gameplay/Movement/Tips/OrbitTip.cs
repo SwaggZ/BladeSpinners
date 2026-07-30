@@ -4,29 +4,28 @@ using BladeSpinners.Core;
 namespace BladeSpinners.Gameplay.Movement
 {
     /// <summary>
-    /// Orbit Tip: Player controls orbit radius and the Bey travels in a circle
-    /// around a central axis. Steering input adjusts the orbit rather than direct facing.
-    /// High skill ceiling, devastating on contact. Moderate drain.
-    /// This is a completely different control scheme.
+    /// Orbit Tip: travels forward while circling a small, moving local anchor.
+    /// The resulting path resembles a moon orbiting a planet as the planet moves.
+    /// Steering bends the anchor's travel path without expanding the local orbit.
     /// </summary>
     public class OrbitTip : ITipBehavior
     {
-        private Vector3 orbitCenter = Vector3.zero;
-        private float orbitRadius = 5f;
-        private float orbitSpeed = 15f; // m/s movement speed
+        public const float LocalOrbitRadius = 0.75f;
+        public const float ForwardTravelSpeed = 18f;
+        public const float AngularSpeedDegrees = 240f;
 
         public TipBehaviorType BehaviorType => TipBehaviorType.Orbit;
 
         public void ApplyMovement(BeyMovementController controller, float forwardInput)
         {
-            // Orbit tip moves in a circle around a point
-            // Forward input controls orbital speed, turning adjusts orbit radius
-            // This is delegated to BeyMovementController to re-interpret as orbital movement
-            orbitSpeed = Mathf.Max(0.1f, forwardInput * GameConstants.BASE_FORWARD_FORCE);
-            
-            // The actual orbital motion is handled in BeyMovementController
-            // because it needs access to the steering input too
-            controller.ApplyOrbitMovement(orbitCenter, orbitRadius, orbitSpeed);
+            float inputMagnitude = Mathf.Clamp01(Mathf.Abs(forwardInput));
+            float signedTravelSpeed =
+                Mathf.Sign(forwardInput) * ForwardTravelSpeed * inputMagnitude;
+
+            controller.ApplyOrbitMovement(
+                LocalOrbitRadius,
+                signedTravelSpeed,
+                AngularSpeedDegrees);
         }
 
         public void ApplyPhysicsModifiers(Rigidbody rb)

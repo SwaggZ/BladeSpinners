@@ -33,7 +33,7 @@ namespace BladeSpinners.Abilities
             if (forward.sqrMagnitude < 0.001f) forward = Vector3.forward;
             forward.Normalize();
 
-            TornadoRuntime.Spawn(beyController.transform.position, forward, beyController.BeyConfiguration,
+            TornadoRuntime.Spawn(beyController.transform.position, forward, beyController,
                 moveSpeed, tornadoRadius, damagePerSecond, liftForce, duration);
             Debug.Log("[Ability] Tornado!");
         }
@@ -41,18 +41,18 @@ namespace BladeSpinners.Abilities
 
     public class TornadoRuntime : MonoBehaviour
     {
-        private BeyConfiguration ownerConfig;
+        private BeyMovementController owner;
         private Vector3 moveDir;
         private float speed, radius, dps, lift, timer;
         private float tickTimer;
 
-        public static void Spawn(Vector3 pos, Vector3 dir, BeyConfiguration owner,
+        public static void Spawn(Vector3 pos, Vector3 dir, BeyMovementController ownerController,
             float spd, float rad, float dps, float lift, float dur)
         {
             GameObject obj = new GameObject("Tornado");
             obj.transform.position = pos;
             TornadoRuntime t = obj.AddComponent<TornadoRuntime>();
-            t.ownerConfig = owner; t.moveDir = dir; t.speed = spd;
+            t.owner = ownerController; t.moveDir = dir; t.speed = spd;
             t.radius = rad; t.dps = dps; t.lift = lift; t.timer = dur;
             t.CreateVisual(dur);
             Object.Destroy(obj, dur + 0.2f);
@@ -114,13 +114,14 @@ namespace BladeSpinners.Abilities
             if (tickTimer > 0f) return;
             tickTimer = 0.2f;
 
-            BeyMovementController[] beys = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
-            foreach (BeyMovementController bey in beys)
+            foreach (BeyMovementController bey in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         owner,
+                         transform.position,
+                         radius,
+                         AbilityTargetRelation.Enemy))
             {
-                if (bey == null || bey.BeyConfiguration == null || bey.BeyConfiguration == ownerConfig) continue;
-                if (bey.BeyConfiguration.IsEnemy == ownerConfig.IsEnemy) continue;
                 float dist = Vector3.Distance(transform.position, bey.transform.position);
-                if (dist > radius) continue;
                 float falloff = 1f - (dist / radius);
                 bey.BeyConfiguration.SetSpin(bey.BeyConfiguration.CurrentSpin - dps * 0.2f * falloff);
                 Rigidbody rb = bey.GetComponent<Rigidbody>();

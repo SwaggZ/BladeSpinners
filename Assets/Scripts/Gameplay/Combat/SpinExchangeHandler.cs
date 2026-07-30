@@ -4,42 +4,149 @@ using BladeSpinners.Gameplay.Parts;
 
 namespace BladeSpinners.Gameplay.Combat
 {
+    public readonly struct CollisionImpactProfile
+    {
+        public float RelativeSpeed { get; }
+        public float ClosingSpeed { get; }
+        public float ApproachAlignment { get; }
+        public float CollisionMagnitude { get; }
+        public float DefenderFacingMultiplier { get; }
+
+        public CollisionImpactProfile(
+            float relativeSpeed,
+            float closingSpeed,
+            float approachAlignment,
+            float collisionMagnitude,
+            float defenderFacingMultiplier)
+        {
+            RelativeSpeed = relativeSpeed;
+            ClosingSpeed = closingSpeed;
+            ApproachAlignment = approachAlignment;
+            CollisionMagnitude = collisionMagnitude;
+            DefenderFacingMultiplier = defenderFacingMultiplier;
+        }
+    }
+
     /// <summary>
     /// Handles spin exchange calculations during collisions between two Beyblades.
-    /// Spin is exchanged based on Fusion Wheel weight differential and attack contribution.
-    /// Heavier Beys deal more spin damage and take less spin damage.
+    /// Spin damage uses wheel Attack, defender Defense, weight, real relative
+    /// contact motion, and hit orientation.
     /// </summary>
     public class SpinExchangeHandler
     {
         /// <summary>
         /// Calculates spin damage dealt by attacker to defender during a collision.
-        /// Returns the amount of spin the defender loses (and attacker might gain).
+        /// collisionMagnitude comes from the real closing speed and approach angle.
         /// </summary>
         public static float CalculateSpinDamage(
             BeyStatBlock attackerStats,
             BeyStatBlock defenderStats,
             float collisionMagnitude,
-            float attackerVelocityMagnitude)
+            float attackerVelocityMagnitude,
+            float defenderFacingMultiplier = 1f)
         {
-            // Base spin damage from collision
             float spinDamage = GameConstants.COLLISION_SPIN_EXCHANGE_BASE;
 
-            // Weight differential multiplier
-            float weightDifference = attackerStats.Weight - defenderStats.Weight;
-            float weightMultiplier = 1f + (weightDifference / 100f) * GameConstants.WEIGHT_KNOCKBACK_MULTIPLIER;
-            weightMultiplier = Mathf.Clamp(weightMultiplier, 0.5f, 2f); // Cap at 0.5x to 2x
+            float weightDifference =
+                attackerStats.Weight - defenderStats.Weight;
+            float weightMultiplier =
+                1f + (weightDifference / 100f)
+                * GameConstants.WEIGHT_KNOCKBACK_MULTIPLIER;
+            weightMultiplier = Mathf.Clamp(weightMultiplier, 0.5f, 2f);
 
-            // Velocity contribution - faster collision deals more spin damage
-            float velocityFactor = Mathf.Clamp01(attackerVelocityMagnitude / 50f); // Scales to max at 50 m/s
+            // Personal speed contributes modestly. Relative contact motion remains
+            // authoritative through the collision-magnitude factor.
+            float velocityFactor = Mathf.Clamp01(
+                attackerVelocityMagnitude / 50f);
+            float personalSpeedMultiplier = Mathf.Lerp(
+                0.85f, 1.2f, velocityFactor);
+            float impactMultiplier = Mathf.Clamp(
+                collisionMagnitude, 0.15f, 2.25f);
+            float facingMultiplier = Mathf.Clamp(
+                defenderFacingMultiplier, 0.75f, 1.4f);
+            float attackMultiplier = Mathf.Lerp(
+                0.75f,
+                1.35f,
+                Mathf.Clamp01(attackerStats.Attack / 100f));
+            float defenseMultiplier = Mathf.Lerp(
+                1.25f,
+                0.70f,
+                Mathf.Clamp01(defenderStats.Defense / 100f));
 
-            spinDamage *= weightMultiplier * (1f + velocityFactor);
+            spinDamage *= weightMultiplier
+                * personalSpeedMultiplier
+                * impactMultiplier
+                * facingMultiplier
+                * attackMultiplier
+                * defenseMultiplier;
 
             return spinDamage;
         }
 
         /// <summary>
+        /// Evaluates the planar contact. Closing speed determines strength,
+        /// relative-velocity alignment distinguishes grazing from direct impacts, and
+        /// defender facing distinguishes front, side, and rear exposure.
+        /// </summary>
+        public static CollisionImpactProfile EvaluateImpact(
+            Vector3 attackerVelocity,
+            Vector3 defenderVelocity,
+            Vector3 attackerToDefenderNormal,
+            Vector3 defenderForward)
+        {
+            Vector3 contactNormal = attackerToDefenderNormal;
+            contactNormal.y = 0f;
+            if (contactNormal.sqrMagnitude < 0.0001f)
+                contactNormal = Vector3.right;
+            else
+                contactNormal.Normalize();
+
+            Vector3 relativeVelocity =
+                attackerVelocity - defenderVelocity;
+            relativeVelocity.y = 0f;
+            float relativeSpeed = relativeVelocity.magnitude;
+            float closingSpeed = Mathf.Max(
+                0f, Vector3.Dot(relativeVelocity, contactNormal));
+            float approachAlignment = relativeSpeed > 0.001f
+                ? Mathf.Clamp01(closingSpeed / relativeSpeed)
+                : 0f;
+
+            float contactSpeedFactor = Mathf.InverseLerp(
+                2f, 30f, closingSpeed);
+            float speedMagnitude = Mathf.Lerp(
+                0.35f, 1.8f, contactSpeedFactor);
+            float approachMultiplier = Mathf.Lerp(
+                0.55f, 1.2f, approachAlignment);
+            float collisionMagnitude =
+                speedMagnitude * approachMultiplier;
+
+            Vector3 planarDefenderForward = defenderForward;
+            planarDefenderForward.y = 0f;
+            float facingMultiplier = 1f;
+            if (planarDefenderForward.sqrMagnitude > 0.0001f)
+            {
+                planarDefenderForward.Normalize();
+                Vector3 directionToAttacker = -contactNormal;
+                float frontAlignment = Vector3.Dot(
+                    planarDefenderForward, directionToAttacker);
+
+                // Front = 0.85x, side = 1.075x, rear = 1.30x.
+                facingMultiplier = Mathf.Lerp(
+                    1.3f,
+                    0.85f,
+                    (frontAlignment + 1f) * 0.5f);
+            }
+
+            return new CollisionImpactProfile(
+                relativeSpeed,
+                closingSpeed,
+                approachAlignment,
+                collisionMagnitude,
+                facingMultiplier);
+        }
+
+        /// <summary>
         /// Handles a full collision exchange between two Beys.
-        /// Updates both Bey configurations' spin values.
         /// </summary>
         public static void HandleCollision(
             BeyConfiguration attackerConfig,
@@ -48,45 +155,82 @@ namespace BladeSpinners.Gameplay.Combat
             BeyStatBlock defenderStats,
             Vector3 attackerVelocity,
             Vector3 defenderVelocity,
+            Vector3 attackerToDefenderNormal,
+            Vector3 attackerForward,
+            Vector3 defenderForward,
             float spinExchangeMultiplier = 1f)
         {
-            // Calculate spin damage based on attacker's stats and velocity
+            CollisionImpactProfile attackerImpact = EvaluateImpact(
+                attackerVelocity,
+                defenderVelocity,
+                attackerToDefenderNormal,
+                defenderForward);
+            CollisionImpactProfile counterImpact = EvaluateImpact(
+                defenderVelocity,
+                attackerVelocity,
+                -attackerToDefenderNormal,
+                attackerForward);
+
             float spinDamageToDefender = CalculateSpinDamage(
                 attackerStats,
                 defenderStats,
-                1f, // Collision magnitude (could be enhanced with contact impact data)
-                attackerVelocity.magnitude
-            ) * spinExchangeMultiplier;
+                attackerImpact.CollisionMagnitude,
+                attackerVelocity.magnitude,
+                attackerImpact.DefenderFacingMultiplier)
+                * spinExchangeMultiplier;
 
-            // Calculate spin damage based on defender's counter-force
             float spinDamageToAttacker = CalculateSpinDamage(
                 defenderStats,
                 attackerStats,
-                1f,
-                defenderVelocity.magnitude * 0.3f // Defender's contribution is lower
-            ) * spinExchangeMultiplier;
+                counterImpact.CollisionMagnitude,
+                defenderVelocity.magnitude,
+                counterImpact.DefenderFacingMultiplier)
+                * 0.35f
+                * spinExchangeMultiplier;
 
-            // Apply spin damage
-            defenderConfig.SetSpin(defenderConfig.CurrentSpin - spinDamageToDefender);
-            attackerConfig.SetSpin(attackerConfig.CurrentSpin - spinDamageToAttacker);
+            spinDamageToDefender =
+                attackerConfig.ModifyOutgoingCollisionDamage(
+                    defenderConfig, spinDamageToDefender);
+            spinDamageToAttacker =
+                defenderConfig.ModifyOutgoingCollisionDamage(
+                    attackerConfig, spinDamageToAttacker);
 
-            // Debug logging — collision damage
-            string defName = defenderConfig.IsEnemy ? "Enemy" : "Player";
-            string atkName = attackerConfig.IsEnemy ? "Enemy" : "Player";
-            Debug.Log($"[Damage] {defName} took <color=red>-{spinDamageToDefender:F1}</color> spin → {defenderConfig.CurrentSpin:F1} remaining");
-            Debug.Log($"[Damage] {atkName} took <color=red>-{spinDamageToAttacker:F1}</color> spin → {attackerConfig.CurrentSpin:F1} remaining");
+            spinDamageToDefender =
+                defenderConfig.ApplyCollisionSpinDamage(
+                    attackerConfig, spinDamageToDefender);
+            spinDamageToAttacker =
+                attackerConfig.ApplyCollisionSpinDamage(
+                    defenderConfig, spinDamageToAttacker);
 
-            // TODO: Trigger collision effects (sound, particles, knockback)
+            string defenderName =
+                defenderConfig.IsEnemy ? "Enemy" : "Player";
+            string attackerName =
+                attackerConfig.IsEnemy ? "Enemy" : "Player";
+            Debug.Log(
+                $"[Damage] {defenderName} took <color=red>" +
+                $"-{spinDamageToDefender:F1}</color> spin -> " +
+                $"{defenderConfig.CurrentSpin:F1} remaining");
+            Debug.Log(
+                $"[Damage] {attackerName} took <color=red>" +
+                $"-{spinDamageToAttacker:F1}</color> spin -> " +
+                $"{attackerConfig.CurrentSpin:F1} remaining");
+            Debug.Log(
+                $"[Impact] relative={attackerImpact.RelativeSpeed:F1} " +
+                $"closing={attackerImpact.ClosingSpeed:F1} " +
+                $"alignment={attackerImpact.ApproachAlignment:F2} " +
+                $"magnitude={attackerImpact.CollisionMagnitude:F2} " +
+                $"facing={attackerImpact.DefenderFacingMultiplier:F2} " +
+                $"attack={attackerStats.Attack:F0} " +
+                $"defense={defenderStats.Defense:F0}");
         }
 
         /// <summary>
-        /// Determines if a collision should trigger spin exchange.
-        /// Low-speed collisions (rolling contact) don't exchange as much spin.
+        /// Requires real motion into the contact plane. Fast parallel movement is a
+        /// graze rather than a full collision merely because relative speed is high.
         /// </summary>
-        public static bool ShouldExchangeSpin(float collisionRelativeVelocity)
+        public static bool ShouldExchangeSpin(float collisionClosingSpeed)
         {
-            // Only exchange spin on meaningful collisions (> 5 m/s relative velocity)
-            return collisionRelativeVelocity > 5f;
+            return collisionClosingSpeed > 2f;
         }
     }
 }

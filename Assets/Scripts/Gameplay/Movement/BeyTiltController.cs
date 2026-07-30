@@ -43,7 +43,11 @@ namespace BladeSpinners.Gameplay.Movement
                 return;
 
             // --- Continuous Y-axis spin (always runs, even without movement controller) ---
-            float spinFraction = Mathf.Clamp01(beyConfiguration.CurrentSpin / GameConstants.DEFAULT_STARTING_SPIN);
+            float startingSpin = Mathf.Max(
+                0.01f,
+                beyConfiguration.StartingSpin);
+            float spinFraction = Mathf.Clamp01(
+                beyConfiguration.CurrentSpin / startingSpin);
             float gmVisual = GameManager.GetForBey(beyConfiguration.IsEnemy, g => g.visualSpinMultiplier, g => g.enemyVisualSpinMultiplier);
             float currentSpinSpeed = Mathf.Lerp(MIN_SPIN_SPEED, BASE_SPIN_SPEED, spinFraction) * gmVisual;
             spinAngleY += currentSpinSpeed * Time.deltaTime;
@@ -59,7 +63,8 @@ namespace BladeSpinners.Gameplay.Movement
             if (movementController != null)
             {
                 // Check if entering wobble state (low spin)
-                float spinRatio = beyConfiguration.CurrentSpin / GameConstants.DEFAULT_STARTING_SPIN;
+                float spinRatio =
+                    beyConfiguration.CurrentSpin / startingSpin;
                 bool shouldWobble = spinRatio < GameConstants.SPIN_WOBBLE_THRESHOLD;
 
                 if (shouldWobble && !isWobbling)

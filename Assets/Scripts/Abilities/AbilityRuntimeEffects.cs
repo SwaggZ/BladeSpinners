@@ -8,7 +8,6 @@ namespace BladeSpinners.Abilities
     public class AbilityRuntimeEffects : MonoBehaviour
     {
         private BeyMovementController ownerController;
-        private BeyConfiguration ownerConfig;
 
         public static AbilityRuntimeEffects GetOrCreate(BeyMovementController controller)
         {
@@ -20,7 +19,6 @@ namespace BladeSpinners.Abilities
             }
 
             fx.ownerController = controller;
-            fx.ownerConfig = controller.BeyConfiguration;
             return fx;
         }
 
@@ -49,26 +47,30 @@ namespace BladeSpinners.Abilities
 
         public void SpawnPoisonCloud(float radius, float duration, float dps)
         {
-            if (ownerController == null || ownerConfig == null) return;
+            if (ownerController == null || ownerController.BeyConfiguration == null) return;
             GameObject cloud = new GameObject("PoisonCloud");
             cloud.transform.position = ownerController.transform.position;
 
             PoisonCloudRuntime runtime = cloud.AddComponent<PoisonCloudRuntime>();
-            runtime.Initialize(ownerConfig, radius, duration, dps);
+            runtime.Initialize(ownerController, radius, duration, dps);
         }
     }
 
     public class PoisonCloudRuntime : MonoBehaviour
     {
-        private BeyConfiguration ownerConfig;
+        private BeyMovementController ownerController;
         private float radius;
         private float duration;
         private float dps;
         private float tickTimer;
 
-        public void Initialize(BeyConfiguration owner, float cloudRadius, float cloudDuration, float damagePerSecond)
+        public void Initialize(
+            BeyMovementController owner,
+            float cloudRadius,
+            float cloudDuration,
+            float damagePerSecond)
         {
-            ownerConfig = owner;
+            ownerController = owner;
             radius = Mathf.Max(0.5f, cloudRadius);
             duration = Mathf.Max(0.5f, cloudDuration);
             dps = Mathf.Max(0f, damagePerSecond);
@@ -90,22 +92,13 @@ namespace BladeSpinners.Abilities
             tickTimer = 0.25f;
             float damage = dps * 0.25f;
 
-            BeyMovementController[] beys = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
-            foreach (BeyMovementController bey in beys)
+            foreach (BeyMovementController bey in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         ownerController,
+                         transform.position,
+                         radius,
+                         AbilityTargetRelation.Enemy))
             {
-                if (bey == null || bey.BeyConfiguration == null)
-                    continue;
-
-                if (ownerConfig != null && bey.BeyConfiguration == ownerConfig)
-                    continue;
-
-                if (ownerConfig != null && bey.BeyConfiguration.IsEnemy == ownerConfig.IsEnemy)
-                    continue;
-
-                float dist = Vector3.Distance(transform.position, bey.transform.position);
-                if (dist > radius)
-                    continue;
-
                 bey.BeyConfiguration.SetSpin(bey.BeyConfiguration.CurrentSpin - damage);
             }
         }

@@ -97,12 +97,11 @@ namespace BladeSpinners.Abilities
             if (chargeVfx != null) Object.Destroy(chargeVfx);
 
             // Damage + knockback
-            Collider[] hits = Physics.OverlapSphere(pos, radius);
-            foreach (Collider col in hits)
+            BeyMovementController ownerBey = GetComponent<BeyMovementController>();
+            foreach (BeyMovementController enemy in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         ownerBey, pos, radius, AbilityTargetRelation.Enemy))
             {
-                if (col.gameObject == gameObject) continue;
-                BeyMovementController enemy = col.GetComponentInParent<BeyMovementController>();
-                if (enemy == null || enemy.gameObject == gameObject) continue;
                 if (enemy.BeyConfiguration != null)
                     enemy.BeyConfiguration.SetSpin(enemy.BeyConfiguration.CurrentSpin - dmg);
                 if (enemy.Rb != null)

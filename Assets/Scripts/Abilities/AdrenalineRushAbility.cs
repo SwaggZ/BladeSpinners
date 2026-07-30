@@ -11,12 +11,11 @@ namespace BladeSpinners.Abilities
         [SerializeField] private float speedMultiplier = 1.6f;
         [SerializeField] private float massDelta = -0.3f;
         [SerializeField] private float duration = 4f;
-        [SerializeField] private float contactDamageBonus = 8f;
 
         private void OnEnable()
         {
             abilityName = "Adrenaline Rush";
-            description = "Adrenaline surges through your core — move faster and hit harder on contact.";
+            description = "Adrenaline surges through your core — gain an immediate speed burst and become lighter for rapid movement.";
             manaCost = 45f;
             rarity = Core.AbilityRarity.Common;
         }

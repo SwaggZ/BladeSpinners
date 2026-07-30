@@ -30,6 +30,7 @@ namespace BladeSpinners.Abilities
 
     public class MoltenRainRuntime : MonoBehaviour
     {
+        private BeyMovementController owner;
         private Vector3 center;
         private float radius, dmg, interval, timer, elapsed;
         private int remaining;
@@ -37,6 +38,7 @@ namespace BladeSpinners.Abilities
         public static void Apply(BeyMovementController ctrl, Vector3 pos, float rad, float dmgPerDrop, int count, float dur)
         {
             MoltenRainRuntime mr = ctrl.gameObject.AddComponent<MoltenRainRuntime>();
+            mr.owner = ctrl;
             mr.center = pos;
             mr.radius = rad;
             mr.dmg = dmgPerDrop;
@@ -76,7 +78,7 @@ namespace BladeSpinners.Abilities
             drop.transform.localScale = Vector3.one * 0.4f;
             Collider c = drop.GetComponent<Collider>(); if (c != null) c.enabled = false;
             ApplyMat(drop, new Color(1f, 0.5f, 0f), new Color(5f, 2f, 0f));
-            drop.AddComponent<MoltenDropFall>().Init(impactPos, dmg);
+            drop.AddComponent<MoltenDropFall>().Init(owner, impactPos, dmg);
             Object.Destroy(drop, 2f);
 
             // Impact scorch on ground
@@ -103,11 +105,17 @@ namespace BladeSpinners.Abilities
 
     public class MoltenDropFall : MonoBehaviour
     {
+        private BeyMovementController owner;
         private Vector3 target;
         private float dmg;
         private bool hit;
 
-        public void Init(Vector3 t, float d) { target = t; dmg = d; }
+        public void Init(BeyMovementController caster, Vector3 t, float d)
+        {
+            owner = caster;
+            target = t;
+            dmg = d;
+        }
 
         private void Update()
         {
@@ -116,11 +124,11 @@ namespace BladeSpinners.Abilities
             if (Vector3.Distance(transform.position, target) < 0.2f)
             {
                 hit = true;
-                Collider[] hits = Physics.OverlapSphere(target, 1.5f);
-                foreach (Collider col in hits)
+                foreach (BeyMovementController bey in
+                         AbilityTargetQuery.FindUniqueBeysInRadius(
+                             owner, target, 1.5f, AbilityTargetRelation.Enemy))
                 {
-                    BeyMovementController bey = col.GetComponentInParent<BeyMovementController>();
-                    if (bey != null && bey.BeyConfiguration != null)
+                    if (bey.BeyConfiguration != null)
                         bey.BeyConfiguration.SetSpin(bey.BeyConfiguration.CurrentSpin - dmg);
                 }
                 transform.localScale = Vector3.one * 0.1f;

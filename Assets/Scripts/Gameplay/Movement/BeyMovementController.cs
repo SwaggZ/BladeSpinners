@@ -17,9 +17,6 @@ namespace BladeSpinners.Gameplay.Movement
         private BeyConfiguration beyConfiguration;
 
         [SerializeField]
-        private float turnSpeed = GameConstants.BASE_TURN_SPEED;
-
-        [SerializeField]
         private bool debugMovement = false;
 
         private Rigidbody rb;
@@ -75,11 +72,15 @@ namespace BladeSpinners.Gameplay.Movement
         private float jumpGraceTimer = 0f;
         private const float JUMP_GRACE_DURATION = 0.15f; // seconds
 
-        // Orbital movement tracking (for OrbitTip)
+        // Moving local anchor used by OrbitTip.
         private bool isOrbiting = false;
         private Vector3 orbitCenter = Vector3.zero;
-        private float orbitRadius = 5f;
+        private float orbitRadius = OrbitTip.LocalOrbitRadius;
         private float orbitAngle = 0f;
+        private const float ORBIT_STEERING_WEIGHT = 0.65f;
+        private const float ORBIT_POSITION_CORRECTION = 8f;
+        private const float ORBIT_MAX_CORRECTION_SPEED = 6f;
+        private const float ORBIT_REANCHOR_DISTANCE = 1.5f;
 
         // --- AI direction override ---
         // When set, ApplyForwardForce/ApplySteeringInput use this instead of Camera.main.
@@ -117,30 +118,18 @@ namespace BladeSpinners.Gameplay.Movement
             overrideRightDirection = right;
         }
 
+        private void Awake()
+        {
+            // MatchManager can disable this component before its first Start call.
+            // Cache physics dependencies in Awake so visual controllers and collision
+            // handlers can safely inspect the bey during the pre-match countdown.
+            InitializePhysicsDependencies();
+        }
+
         private void Start()
         {
-            rb = GetComponent<Rigidbody>();
+            InitializePhysicsDependencies();
             isEnemy = GetComponent<EnemyBeyController>() != null;
-            groundLayer = LayerMask.GetMask("Ground");
-
-            if (rb != null)
-            {
-                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-                rb.interpolation = RigidbodyInterpolation.Interpolate;
-            }
-            
-            // Add bouncy physics material for realistic Beyblade landing
-            SphereCollider sphereCol = GetComponent<SphereCollider>();
-            if (sphereCol != null && !sphereCol.isTrigger && sphereCol.sharedMaterial == null)
-            {
-                PhysicsMaterial bouncyMat = new PhysicsMaterial("BeyBounce");
-                bouncyMat.bounciness = 0.02f;
-                bouncyMat.dynamicFriction = 0f; // Zero friction to reduce collision sticking
-                bouncyMat.staticFriction = 0f;
-                bouncyMat.frictionCombine = PhysicsMaterialCombine.Minimum;
-                bouncyMat.bounceCombine = PhysicsMaterialCombine.Minimum;
-                sphereCol.material = bouncyMat;
-            }
             
             if (debugMovement)
             {
@@ -162,6 +151,34 @@ namespace BladeSpinners.Gameplay.Movement
             if (beyConfiguration != null)
             {
                 beyConfiguration.OnSpinChanged += OnSpinChanged;
+            }
+        }
+
+        private void InitializePhysicsDependencies()
+        {
+            if (rb == null)
+                rb = GetComponent<Rigidbody>();
+
+            groundLayer = LayerMask.GetMask("Ground");
+
+            if (rb != null)
+            {
+                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+                rb.interpolation = RigidbodyInterpolation.Interpolate;
+            }
+
+            // Add a low-bounce material only to a physical root sphere. Runtime beys use
+            // a trigger sphere, while authored/test beys may use a physical one.
+            SphereCollider sphereCol = GetComponent<SphereCollider>();
+            if (sphereCol != null && !sphereCol.isTrigger && sphereCol.sharedMaterial == null)
+            {
+                PhysicsMaterial bouncyMat = new PhysicsMaterial("BeyBounce");
+                bouncyMat.bounciness = 0.02f;
+                bouncyMat.dynamicFriction = 0f;
+                bouncyMat.staticFriction = 0f;
+                bouncyMat.frictionCombine = PhysicsMaterialCombine.Minimum;
+                bouncyMat.bounceCombine = PhysicsMaterialCombine.Minimum;
+                sphereCol.material = bouncyMat;
             }
         }
 
@@ -188,55 +205,66 @@ namespace BladeSpinners.Gameplay.Movement
             if (jumpGraceTimer > 0f)
                 return;
 
-            // Check contact normals — if any contact points upward (within ~60° of vertical),
-            // we're on a walkable surface. This works on flat ground, slopes, and bowl walls.
-            // Also average the surface normal for slope-aware grounding force.
-            Vector3 bestNormal = Vector3.zero;
-            float bestY = -1f;
+            if (!IsGroundCollision(collision))
+                return;
+
+            // Average every upward-facing arena contact. Selecting only the flattest
+            // triangle made movement snap between faceted normals around bowl curves.
+            Vector3 normalSum = Vector3.zero;
+            int normalCount = 0;
             foreach (ContactPoint contact in collision.contacts)
             {
-                if (contact.normal.y > bestY)
+                if (contact.normal.y > 0.12f)
                 {
-                    bestY = contact.normal.y;
-                    bestNormal = contact.normal;
+                    normalSum += contact.normal;
+                    normalCount++;
                 }
             }
 
-            if (bestY > 0.3f) // ~72° from horizontal — slightly more permissive for curved bowls
+            if (normalCount > 0)
             {
+                Vector3 groundNormal = normalSum.normalized;
                 isGrounded = true;
-                lastGroundNormal = bestNormal;
+                lastGroundNormal = Vector3.Slerp(
+                    lastGroundNormal,
+                    groundNormal,
+                    0.65f).normalized;
 
-                if (rb != null && rb.linearVelocity.y > 1.2f)
+                if (rb != null)
                 {
                     Vector3 velocity = rb.linearVelocity;
-                    velocity.y = 1.2f;
-                    rb.linearVelocity = velocity;
+                    float separatingSpeed =
+                        Vector3.Dot(velocity, lastGroundNormal);
+                    if (separatingSpeed > 0.35f)
+                    {
+                        velocity -= lastGroundNormal
+                            * (separatingSpeed - 0.35f);
+                        rb.linearVelocity = velocity;
+                    }
                 }
 
                 if (debugMovement)
-                    Debug.Log($"[BeyMovement] GROUNDED via collision: {collision.gameObject.name}, normal: {bestNormal}");
-            }
-            // On very steep surfaces (below grounding threshold), project velocity along
-            // the surface to prevent wedging into polygon edges.
-            else if (bestY > 0.05f && rb != null)
-            {
-                Vector3 vel = rb.linearVelocity;
-                // Remove velocity component going INTO the surface
-                float intoSurface = Vector3.Dot(vel, bestNormal);
-                if (intoSurface < -0.5f)
-                {
-                    vel -= bestNormal * intoSurface;
-                    rb.linearVelocity = vel;
-                }
+                    Debug.Log($"[BeyMovement] GROUNDED via collision: {collision.gameObject.name}, normal: {lastGroundNormal}");
             }
         }
 
         private void OnCollisionExit(Collision collision)
         {
+            if (!IsGroundCollision(collision))
+                return;
+
             // When leaving any collider, do a quick spherecast down to verify we're truly airborne.
             // This prevents false negatives when sliding between adjacent colliders (bowl + wall).
-            if (!Physics.SphereCast(transform.position, 0.15f, Vector3.down, out _, groundCheckDistance + 0.2f))
+            Vector3 checkDirection = -lastGroundNormal;
+            int mask = groundLayer != 0 ? groundLayer : Physics.DefaultRaycastLayers;
+            if (!Physics.SphereCast(
+                    transform.position,
+                    0.15f,
+                    checkDirection,
+                    out _,
+                    groundCheckDistance + 0.2f,
+                    mask,
+                    QueryTriggerInteraction.Ignore))
             {
                 isGrounded = false;
                 if (debugMovement)
@@ -246,6 +274,12 @@ namespace BladeSpinners.Gameplay.Movement
 
         private void FixedUpdate()
         {
+            // Cooldowns live in BeyConfiguration and tick once through the shared
+            // movement lifecycle for both player and AI beys.
+            beyConfiguration?.TickAbilityCooldown(Time.fixedDeltaTime);
+            beyConfiguration?.TickEnergyRingPassive(
+                Time.fixedDeltaTime);
+
             if (beyConfiguration == null || activeTipBehavior == null)
                 return;
 
@@ -269,17 +303,11 @@ namespace BladeSpinners.Gameplay.Movement
             // so the bey doesn't wedge into polygon edges.
             if (isGrounded)
             {
-                float slopeAngle = 1f - lastGroundNormal.y; // 0 = flat, ~1 = vertical
-                if (slopeAngle > 0.35f)
-                {
-                    // Steep slope: push INTO the surface (along -normal) instead of straight down.
-                    // Reduced force prevents wedging while keeping contact.
-                    rb.AddForce(-lastGroundNormal * 30f, ForceMode.Acceleration);
-                }
-                else
-                {
-                    rb.AddForce(Vector3.down * 50f, ForceMode.Acceleration);
-                }
+                // Hold toward the actual contacted surface. Straight world-down force
+                // shoves a moving Bey into faceted curve edges and then launches it.
+                rb.AddForce(
+                    -lastGroundNormal * 42f,
+                    ForceMode.Acceleration);
             }
 
             // --- Stuck / edge-catch detection and recovery ---
@@ -309,9 +337,14 @@ namespace BladeSpinners.Gameplay.Movement
             {
                 // No forward input — decay momentum strength (coast/slow down)
                 DecayMomentum();
+                if (activeTipBehavior.BehaviorType == TipBehaviorType.Orbit)
+                    isOrbiting = false;
             }
 
-            if (cachedSteeringInput != 0)
+            // Orbit incorporates steering into its moving anchor. Applying the generic
+            // side force as well would enlarge and distort the local circle.
+            if (cachedSteeringInput != 0
+                && activeTipBehavior.BehaviorType != TipBehaviorType.Orbit)
             {
                 ApplySteeringInput(cachedSteeringInput);
             }
@@ -417,6 +450,9 @@ namespace BladeSpinners.Gameplay.Movement
 
             float inputSign = Mathf.Sign(forceAmount);
             Vector3 forceDirection = desiredDirection * inputSign;
+            if (isGrounded)
+                forceDirection =
+                    GetSurfaceTangent(forceDirection).normalized;
 
             // --- Direction change penalty ---
             // If current velocity is going one way and we're pushing another,
@@ -494,6 +530,8 @@ namespace BladeSpinners.Gameplay.Movement
             }
             sideDirection.y = 0;
             sideDirection.Normalize();
+            sideDirection =
+                GetSurfaceTangent(sideDirection).normalized;
 
             // Weight affects how easily you can steer (lighter = more agile)
             float weightFactor = (currentWeight - GameConstants.MIN_WEIGHT) / (GameConstants.MAX_WEIGHT - GameConstants.MIN_WEIGHT);
@@ -555,6 +593,9 @@ namespace BladeSpinners.Gameplay.Movement
             knockbackStunTimer = KNOCKBACK_STUN_DURATION;
             // Reset momentum so the bey has to rebuild speed after being hit
             momentumStrength = 0f;
+            // Knockback can move the Bey well away from its local orbit. Resume from
+            // the post-hit location rather than tethering it to the old anchor.
+            isOrbiting = false;
 
             Debug.Log($"[BeyMovement] KNOCKBACK on {gameObject.name}  dir={direction:F2}  str={strength:F1}  force={strength * gmKnockback:F1}");
         }
@@ -592,28 +633,146 @@ namespace BladeSpinners.Gameplay.Movement
                 Debug.Log("[BeyMovement] JUMP");
         }
 
-        public void ApplyOrbitMovement(Vector3 center, float radius, float speed)
+        public void ApplyOrbitMovement(
+            float radius,
+            float travelSpeed,
+            float angularSpeedDegrees)
         {
-            if (!isGrounded)
+            if (rb == null)
                 return;
 
-            isOrbiting = true;
-            orbitCenter = center;
-            orbitRadius = radius;
+            if (!isGrounded)
+            {
+                // Airborne physics must remain controlled by gravity and impulses.
+                // Re-anchor from the landing position instead of a stale orbit angle.
+                isOrbiting = false;
+                return;
+            }
 
-            float radiansPerSecond = speed / radius;
-            orbitAngle += radiansPerSecond * Time.fixedDeltaTime;
+            float safeRadius = Mathf.Max(0.1f, radius);
+            Vector3 forwardDirection = GetOrbitForwardDirection();
+            Vector3 rightDirection = GetOrbitRightDirection(forwardDirection);
+            float turnMultiplier = GameManager.GetForBey(
+                isEnemy, g => g.turnSpeedMultiplier, g => g.enemyTurnSpeedMultiplier);
+            float steeringOffset = Mathf.Clamp(
+                cachedSteeringInput * ORBIT_STEERING_WEIGHT * turnMultiplier,
+                -0.9f,
+                0.9f);
+            Vector3 travelDirection =
+                (forwardDirection + rightDirection * steeringOffset).normalized;
+            float speedMultiplier = GameManager.GetForBey(
+                isEnemy, g => g.speedMultiplier, g => g.enemySpeedMultiplier);
+            Vector3 anchorVelocity =
+                travelDirection * travelSpeed * boost * speedMultiplier;
+
+            Vector3 currentOffset = transform.position - orbitCenter;
+            currentOffset.y = 0f;
+            bool radiusChanged = Mathf.Abs(orbitRadius - safeRadius) > 0.001f;
+            bool displacedFromAnchor =
+                isOrbiting
+                && currentOffset.magnitude
+                    > safeRadius + ORBIT_REANCHOR_DISTANCE;
+
+            if (!isOrbiting || radiusChanged || displacedFromAnchor)
+            {
+                // Place a fresh local anchor one radius to the Bey's left. The Bey
+                // starts on the anchor's right edge, so resuming never causes a snap.
+                Vector3 initialOffset = rightDirection * safeRadius;
+                orbitCenter = transform.position - initialOffset;
+                orbitCenter.y = transform.position.y;
+                orbitAngle = Mathf.Atan2(initialOffset.z, initialOffset.x);
+                isOrbiting = true;
+            }
+
+            orbitRadius = safeRadius;
+            orbitCenter.y = transform.position.y;
 
             Vector3 orbitPosition = orbitCenter + new Vector3(
-                Mathf.Cos(orbitAngle) * radius,
-                0,
-                Mathf.Sin(orbitAngle) * radius
-            );
+                Mathf.Cos(orbitAngle) * orbitRadius,
+                0f,
+                Mathf.Sin(orbitAngle) * orbitRadius);
 
-            Vector3 directionToOrbit = (orbitPosition - transform.position).normalized;
-            rb.linearVelocity = directionToOrbit * speed;
+            // Orbit is planar. Bowl floors sit below world Y=0, so including the
+            // target's Y injected upward velocity and made Orbit tips hover.
+            orbitPosition.y = transform.position.y;
+            Vector3 positionError = orbitPosition - transform.position;
+            positionError.y = 0f;
 
-            transform.LookAt(transform.position + directionToOrbit);
+            float radiansPerSecond =
+                angularSpeedDegrees * Mathf.Deg2Rad;
+            float orbitDirection = Mathf.Sign(radiansPerSecond);
+            Vector3 tangentDirection = new Vector3(
+                -Mathf.Sin(orbitAngle) * orbitDirection,
+                0f,
+                Mathf.Cos(orbitAngle) * orbitDirection);
+            Vector3 orbitalVelocity =
+                tangentDirection * Mathf.Abs(radiansPerSecond) * orbitRadius;
+            Vector3 correctionVelocity = Vector3.ClampMagnitude(
+                positionError * ORBIT_POSITION_CORRECTION,
+                ORBIT_MAX_CORRECTION_SPEED);
+            Vector3 horizontalVelocity =
+                anchorVelocity + orbitalVelocity + correctionVelocity;
+
+            if (horizontalVelocity.sqrMagnitude > 0.0001f)
+                transform.LookAt(transform.position + horizontalVelocity.normalized);
+
+            // Apply velocity last. Rotating a Rigidbody through its Transform can cause
+            // Unity to resynchronize its physics state and discard a preceding write.
+            Vector3 currentVelocity = rb.linearVelocity;
+            rb.linearVelocity = new Vector3(
+                horizontalVelocity.x,
+                currentVelocity.y,
+                horizontalVelocity.z);
+
+            // Advance the invisible anchor and local phase for the next physics step.
+            // Their combination produces forward travel plus the small circular motion.
+            orbitCenter += anchorVelocity * Time.fixedDeltaTime;
+            orbitCenter.y = transform.position.y;
+            orbitAngle = Mathf.Repeat(
+                orbitAngle + radiansPerSecond * Time.fixedDeltaTime,
+                Mathf.PI * 2f);
+        }
+
+        private Vector3 GetOrbitForwardDirection()
+        {
+            Vector3 direction;
+            if (overrideForwardDirection.HasValue)
+            {
+                direction = overrideForwardDirection.Value;
+            }
+            else
+            {
+                Camera mainCamera = Camera.main;
+                direction = mainCamera != null
+                    ? mainCamera.transform.forward
+                    : transform.forward;
+            }
+
+            direction.y = 0f;
+            return direction.sqrMagnitude > 0.0001f
+                ? direction.normalized
+                : Vector3.forward;
+        }
+
+        private Vector3 GetOrbitRightDirection(Vector3 forwardDirection)
+        {
+            Vector3 direction;
+            if (overrideRightDirection.HasValue)
+            {
+                direction = overrideRightDirection.Value;
+            }
+            else
+            {
+                Camera mainCamera = Camera.main;
+                direction = mainCamera != null
+                    ? mainCamera.transform.right
+                    : Vector3.Cross(Vector3.up, forwardDirection);
+            }
+
+            direction.y = 0f;
+            return direction.sqrMagnitude > 0.0001f
+                ? direction.normalized
+                : Vector3.right;
         }
 
         private void CheckGrounded()
@@ -687,6 +846,7 @@ namespace BladeSpinners.Gameplay.Movement
 
             TipBehaviorType activeBehaviorType = beyConfiguration.GetActiveTipBehavior();
             activeTipBehavior = TipBehaviorFactory.CreateTipBehavior(activeBehaviorType);
+            isOrbiting = false;
         }
 
         private void OnBurst()
@@ -710,31 +870,40 @@ namespace BladeSpinners.Gameplay.Movement
         private void DetectAndRecoverFromStuck()
         {
             Vector3 currentVel = rb.linearVelocity;
-            float prevSpeed = new Vector3(prevFrameVelocity.x, 0f, prevFrameVelocity.z).magnitude;
-            float currSpeed = new Vector3(currentVel.x, 0f, currentVel.z).magnitude;
+            Vector3 previousTangent =
+                GetSurfaceTangent(prevFrameVelocity);
+            Vector3 currentTangent =
+                GetSurfaceTangent(currentVel);
+            float prevSpeed = previousTangent.magnitude;
+            float currSpeed = currentTangent.magnitude;
 
             // Detect: had meaningful speed, then suddenly lost most of it (edge catch)
             bool suddenStop = prevSpeed > 2f && currSpeed < prevSpeed * STUCK_DETECT_THRESHOLD;
-            // Detect: velocity Y spiked wildly (bounce off polygon edge)
-            bool bouncedWild = Mathf.Abs(currentVel.y) > 4f && Mathf.Abs(prevFrameVelocity.y) < 1.5f && isGrounded;
+            // Detect velocity separating sharply from the contacted surface.
+            float separatingSpeed =
+                Vector3.Dot(currentVel, lastGroundNormal);
+            float previousSeparatingSpeed =
+                Vector3.Dot(prevFrameVelocity, lastGroundNormal);
+            bool bouncedWild = separatingSpeed > 3f
+                && previousSeparatingSpeed < 1.5f
+                && isGrounded;
 
             if (suddenStop || bouncedWild)
             {
                 stuckTimer += Time.fixedDeltaTime;
                 if (stuckTimer >= STUCK_RECOVERY_DELAY)
                 {
-                    // Nudge: small upward + last-known-good direction push
-                    Vector3 nudgeDir = prevFrameVelocity.normalized;
-                    nudgeDir.y = 0f;
+                    // Recover along the bowl tangent without injecting an upward launch.
+                    Vector3 nudgeDir = previousTangent.normalized;
                     if (nudgeDir.sqrMagnitude < 0.01f)
-                        nudgeDir = transform.forward;
-                    nudgeDir = nudgeDir.normalized;
+                        nudgeDir =
+                            GetSurfaceTangent(transform.forward);
 
-                    rb.linearVelocity = new Vector3(
-                        nudgeDir.x * prevSpeed * 0.5f,
-                        Mathf.Max(currentVel.y, 0.8f), // slight lift off surface
-                        nudgeDir.z * prevSpeed * 0.5f);
-                    rb.AddForce((Vector3.up + nudgeDir) * STUCK_NUDGE_FORCE, ForceMode.VelocityChange);
+                    rb.linearVelocity =
+                        nudgeDir * Mathf.Max(1f, prevSpeed * 0.65f);
+                    rb.AddForce(
+                        nudgeDir * STUCK_NUDGE_FORCE * 0.25f,
+                        ForceMode.VelocityChange);
 
                     stuckTimer = 0f;
                     if (debugMovement)
@@ -746,19 +915,42 @@ namespace BladeSpinners.Gameplay.Movement
                 stuckTimer = 0f;
             }
 
-            // Clamp wild vertical bounces while grounded
-            if (isGrounded && currentVel.y > 3f)
+            // Clamp motion away from the ground normal, preserving legitimate
+            // along-curve vertical velocity on the bowl wall.
+            if (isGrounded && separatingSpeed > 0.35f)
             {
-                currentVel.y = Mathf.Min(currentVel.y, 1.5f);
+                currentVel -= lastGroundNormal
+                    * (separatingSpeed - 0.35f);
                 rb.linearVelocity = currentVel;
             }
 
             prevFrameVelocity = rb.linearVelocity;
         }
 
+        private bool IsGroundCollision(Collision collision)
+        {
+            return collision != null
+                && (groundLayer == 0
+                    || (groundLayer
+                        & (1 << collision.gameObject.layer)) != 0);
+        }
+
+        private Vector3 GetSurfaceTangent(Vector3 direction)
+        {
+            if (!isGrounded)
+                return direction;
+
+            Vector3 tangent =
+                Vector3.ProjectOnPlane(direction, lastGroundNormal);
+            return tangent.sqrMagnitude > 0.0001f
+                ? tangent
+                : Vector3.zero;
+        }
+
         public Rigidbody Rb => rb;
         public bool IsGrounded => isGrounded;
-        public Vector3 CurrentVelocity => rb.linearVelocity;
+        public Vector3 GroundNormal => lastGroundNormal;
+        public Vector3 CurrentVelocity => rb != null ? rb.linearVelocity : Vector3.zero;
         public float CurrentHorizontalSpeed => rb != null
             ? new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z).magnitude
             : 0f;
@@ -827,7 +1019,7 @@ namespace BladeSpinners.Gameplay.Movement
             if (beyConfiguration != null)
             {
                 spinFrac = Mathf.Clamp01(beyConfiguration.CurrentSpin / GameConstants.MAX_SPIN);
-                float manaPool = beyConfiguration.GetStatBlock().ManaPoolSize;
+                float manaPool = beyConfiguration.MaxMana;
                 manaFrac = manaPool > 0 ? Mathf.Clamp01(beyConfiguration.CurrentMana / manaPool) : 0f;
             }
 

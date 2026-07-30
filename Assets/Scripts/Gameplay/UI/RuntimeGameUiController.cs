@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Utilities;
 using UnityEngine.SceneManagement;
 using BladeSpinners.Core;
 using BladeSpinners.Gameplay;
 using BladeSpinners.Abilities;
+using BladeSpinners.Audio;
 using BladeSpinners.Gameplay.Parts;
 
 namespace BladeSpinners.Gameplay.UI
@@ -16,16 +18,39 @@ namespace BladeSpinners.Gameplay.UI
         private const string PartsDebugSceneName = "PartsDebugScene";
 
         // ── Enum types ───────────────────────────────────────────────────────────
-        private enum RootUiState { MainMenu, InRun, Paused, BetweenArenas }
-        private enum MenuPanel   { Home, Inventory, Settings, Keybinds }
+        private enum RootUiState
+        {
+            StartScreen,
+            MainMenu,
+            InRun,
+            Paused,
+            BetweenArenas
+        }
+        private enum MenuPanel
+        {
+            Home,
+            Inventory,
+            Records,
+            Settings,
+            Keybinds
+        }
 
         // ── Singleton ────────────────────────────────────────────────────────────
         private static RuntimeGameUiController instance;
 
         // ── State ────────────────────────────────────────────────────────────────
-        private RootUiState rootState     = RootUiState.MainMenu;
+        private RootUiState rootState     = RootUiState.StartScreen;
         private MenuPanel   mainMenuPanel = MenuPanel.Home;
         private MenuPanel   pausePanel    = MenuPanel.Home;
+        private MusicSituation? requestedMusicSituation;
+        private const float StartScreenInputDelay = 0.45f;
+        private const float StartScreenExitDuration = 1.15f;
+        private const string StartScreenCatchphrase =
+            "BUILD YOUR BLADE. CLAIM THE ARENA.";
+        private float startScreenEnteredAt;
+        private float startScreenExitStartedAt = -1f;
+        private Texture2D startScreenLogo;
+        private IDisposable startScreenInputSubscription;
 
         private RuntimeRunBuilder.RunContext runContext;
         private Camera fallbackMenuCamera;
@@ -36,6 +61,11 @@ namespace BladeSpinners.Gameplay.UI
         private PartType? selectedInventorySlot;
         private BeyPart selectedInventoryPart;
         private BeyPart selectedLootPart;
+        private float runElapsedSeconds;
+        private float arenaElapsedSeconds;
+        private int arenasClearedThisRun;
+        private bool hasActiveRun;
+        private bool runRecordSubmitted;
 
         private Vector2 ownedScroll;
         private Vector2 runScroll;
@@ -76,7 +106,14 @@ namespace BladeSpinners.Gameplay.UI
         private List<BeyPart> swapPreviewQueue;
 
         // ── Settings sliders ────────────────────────────────────────────────────
-        private float settingsVolume      = 1f;
+        private float settingsMasterVolume =
+            AudioMixLevels.DefaultMaster;
+        private float settingsSoundEffectsVolume =
+            AudioMixLevels.DefaultSoundEffects;
+        private float settingsMusicVolume =
+            AudioMixLevels.DefaultMusic;
+        private float settingsGuiVolume =
+            AudioMixLevels.DefaultGui;
         private float settingsSensitivity = 1f;
         private float settingsClippingOpacity = 0.2f;
         private float settingsRingsOpacity = 1f;
@@ -169,6 +206,13 @@ namespace BladeSpinners.Gameplay.UI
             if (instance != null && instance != this) { Destroy(gameObject); return; }
             instance = this;
             DontDestroyOnLoad(gameObject);
+            LoadAudioSettings();
+            startScreenEnteredAt = Time.unscaledTime;
+            startScreenLogo =
+                Resources.Load<Texture2D>("UI/GameLogo");
+            startScreenInputSubscription =
+                InputSystem.onAnyButtonPress.Call(
+                    _ => TryBeginStartScreenExit());
 
             // Always start with cursor free (main menu)
             Cursor.lockState = CursorLockMode.None;
@@ -218,6 +262,14 @@ namespace BladeSpinners.Gameplay.UI
             Debug.Log("[BladeSpinners] Awake() finished successfully");
         }
 
+        private void OnDestroy()
+        {
+            startScreenInputSubscription?.Dispose();
+            startScreenInputSubscription = null;
+            if (instance == this)
+                instance = null;
+        }
+
         private static bool IsPartsDebugSceneActive()
         {
             Scene activeScene = SceneManager.GetActiveScene();
@@ -226,6 +278,17 @@ namespace BladeSpinners.Gameplay.UI
 
         private void Update()
         {
+            if (rootState == RootUiState.StartScreen)
+            {
+                UpdateStartScreenTransition();
+                if (rootState == RootUiState.StartScreen)
+                {
+                    UpdateCursorState();
+                    UpdateMusicSituation();
+                    return;
+                }
+            }
+
             if (rootState == RootUiState.InRun || rootState == RootUiState.Paused || rootState == RootUiState.BetweenArenas)
             {
                 Keyboard kb = Keyboard.current;
@@ -234,6 +297,7 @@ namespace BladeSpinners.Gameplay.UI
             }
 
             UpdateCursorState();
+            UpdateRunTimersAndRecords();
 
             if (rootState != RootUiState.InRun
                 || runContext.Match == null
@@ -244,6 +308,7 @@ namespace BladeSpinners.Gameplay.UI
             }
 
             HandleRunProgressionAdvance();
+            UpdateMusicSituation();
 
             // Spin the preview bey model
             if (previewSpinChild != null)
@@ -280,6 +345,7 @@ namespace BladeSpinners.Gameplay.UI
                 EnsureStyles();
                 switch (rootState)
                 {
+                    case RootUiState.StartScreen: DrawStartScreen(); break;
                     case RootUiState.MainMenu: DrawMainMenu(); break;
                     case RootUiState.Paused:   DrawPauseMenu(); break;
                     case RootUiState.BetweenArenas: DrawArenaIntermissionMenu(); break;
@@ -305,6 +371,379 @@ namespace BladeSpinners.Gameplay.UI
                 GUI.color = Color.white;
                 Debug.LogError($"[BladeSpinners] OnGUI exception: {e}");
             }
+            finally
+            {
+                if (Event.current != null
+                    && Event.current.type
+                        == EventType.Repaint)
+                {
+                    MusicNowPlayingBanner
+                        .NotifyUiRepaintComplete();
+                }
+                MusicNowPlayingBanner.DrawAfterGameUi();
+            }
+        }
+
+        private void DrawStartScreen()
+        {
+            Rect screen = new Rect(
+                0f,
+                0f,
+                Screen.width,
+                Screen.height);
+            DrawVerticalGradient(
+                screen,
+                new Color(0.008f, 0.025f, 0.070f, 1f),
+                new Color(0.002f, 0.003f, 0.014f, 1f),
+                24);
+
+            float now = Time.unscaledTime;
+            float exitProgress =
+                startScreenExitStartedAt < 0f
+                    ? 0f
+                    : Mathf.Clamp01(
+                        (now - startScreenExitStartedAt)
+                        / StartScreenExitDuration);
+            float easedExit =
+                exitProgress * exitProgress
+                * (3f - 2f * exitProgress);
+
+            DrawStartScreenStars(
+                screen,
+                now,
+                easedExit);
+            DrawArenaBurstMotif(
+                new Rect(
+                    screen.x,
+                    screen.y + screen.height * 0.13f,
+                    screen.width,
+                    screen.height * 0.54f));
+
+            float logoWidth = Mathf.Clamp(
+                screen.width * 0.56f,
+                420f,
+                960f);
+            float logoHeight = Mathf.Clamp(
+                screen.height * 0.28f,
+                170f,
+                360f);
+            float logoScale =
+                1f + easedExit * 0.22f;
+            Rect logoRect = new Rect(
+                screen.center.x
+                    - logoWidth * logoScale * 0.5f,
+                screen.height * 0.24f
+                    - logoHeight * (logoScale - 1f) * 0.5f,
+                logoWidth * logoScale,
+                logoHeight * logoScale);
+
+            Color previousColor = GUI.color;
+            GUI.color = new Color(
+                1f,
+                1f,
+                1f,
+                1f - easedExit);
+            if (startScreenLogo != null)
+            {
+                GUI.DrawTexture(
+                    logoRect,
+                    startScreenLogo,
+                    ScaleMode.ScaleToFit,
+                    true);
+            }
+            else
+            {
+                DrawPlaceholderStartLogo(
+                    logoRect,
+                    now);
+            }
+
+            GUIStyle catchphraseStyle =
+                new GUIStyle(sectionLabelStyle)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontSize = Mathf.Clamp(
+                        Mathf.RoundToInt(
+                            24f * GetUiScale()),
+                        16,
+                        42)
+                };
+            DrawFittedLabel(
+                new Rect(
+                    screen.width * 0.18f,
+                    screen.height * 0.57f,
+                    screen.width * 0.64f,
+                    Mathf.Clamp(
+                        screen.height * 0.08f,
+                        46f,
+                        86f)),
+                StartScreenCatchphrase,
+                catchphraseStyle,
+                new Color(
+                    0.72f,
+                    0.90f,
+                    1f,
+                    1f - easedExit),
+                12);
+
+            if (startScreenExitStartedAt < 0f)
+            {
+                float breath =
+                    0.58f
+                    + 0.42f
+                    * (0.5f
+                        + 0.5f
+                        * Mathf.Sin(now * 2.4f));
+                GUIStyle promptStyle =
+                    new GUIStyle(bodyLabelStyle)
+                    {
+                        alignment =
+                            TextAnchor.MiddleCenter,
+                        fontStyle = FontStyle.Bold,
+                        fontSize = Mathf.Clamp(
+                            Mathf.RoundToInt(
+                                21f * GetUiScale()),
+                            15,
+                            38)
+                    };
+                DrawFittedLabel(
+                    new Rect(
+                        screen.width * 0.25f,
+                        screen.height * 0.76f,
+                        screen.width * 0.50f,
+                        Mathf.Clamp(
+                            screen.height * 0.08f,
+                            48f,
+                            88f)),
+                    "CLICK ANYWHERE OR PRESS ANY BUTTON",
+                    promptStyle,
+                    new Color(
+                        1f,
+                        1f,
+                        1f,
+                        breath),
+                    12);
+            }
+            GUI.color = previousColor;
+
+            if (exitProgress > 0f)
+            {
+                float ringSize =
+                    Mathf.Lerp(
+                        screen.height * 0.12f,
+                        screen.width * 1.10f,
+                        easedExit);
+                Rect ring = new Rect(
+                    screen.center.x - ringSize * 0.5f,
+                    screen.center.y - ringSize * 0.5f,
+                    ringSize,
+                    ringSize);
+                DrawFrameCorners(
+                    ring,
+                    new Color(
+                        ACCENT_CYAN.r,
+                        ACCENT_CYAN.g,
+                        ACCENT_CYAN.b,
+                        (1f - easedExit) * 0.85f),
+                    ringSize * 0.12f,
+                    Mathf.Clamp(
+                        5f * (1f - easedExit),
+                        1f,
+                        5f));
+                float flashAlpha =
+                    Mathf.Clamp01(
+                        (exitProgress - 0.68f)
+                        / 0.32f);
+                DrawRect(
+                    screen,
+                    new Color(
+                        0.55f,
+                        0.88f,
+                        1f,
+                        flashAlpha));
+            }
+        }
+
+        private static void DrawStartScreenStars(
+            Rect screen,
+            float time,
+            float launchProgress)
+        {
+            const int StarCount = 110;
+            for (int i = 0; i < StarCount; i++)
+            {
+                float x = StartScreenHash01(
+                    i * 92821 + 17);
+                float ySeed = StartScreenHash01(
+                    i * 68917 + 71);
+                float speed =
+                    Mathf.Lerp(
+                        4f,
+                        18f,
+                        StartScreenHash01(
+                            i * 31337 + 29));
+                float y = Mathf.Repeat(
+                    ySeed * screen.height
+                        + time * speed,
+                    screen.height);
+                float twinkle =
+                    0.35f
+                    + 0.65f
+                    * (0.5f
+                        + 0.5f
+                        * Mathf.Sin(
+                            time
+                                * (1.1f + speed * 0.08f)
+                            + i));
+                float size =
+                    Mathf.Lerp(
+                        1f,
+                        3.2f,
+                        StartScreenHash01(
+                            i * 47293 + 43));
+                float streak =
+                    launchProgress
+                    * Mathf.Lerp(
+                        18f,
+                        105f,
+                        speed / 18f);
+                DrawRect(
+                    new Rect(
+                        screen.x + x * screen.width,
+                        screen.y + y,
+                        size,
+                        size + streak),
+                    new Color(
+                        0.58f,
+                        0.84f,
+                        1f,
+                        twinkle
+                            * (1f - launchProgress * 0.55f)));
+            }
+        }
+
+        private void DrawPlaceholderStartLogo(
+            Rect rect,
+            float time)
+        {
+            float pulse =
+                0.78f
+                + 0.22f
+                * (0.5f
+                    + 0.5f
+                    * Mathf.Sin(time * 1.4f));
+            Rect core = new Rect(
+                rect.center.x - rect.height * 0.34f,
+                rect.y + rect.height * 0.02f,
+                rect.height * 0.68f,
+                rect.height * 0.68f);
+            DrawFrameCorners(
+                core,
+                new Color(
+                    ACCENT_CYAN.r,
+                    ACCENT_CYAN.g,
+                    ACCENT_CYAN.b,
+                    pulse),
+                core.width * 0.32f,
+                Mathf.Clamp(
+                    rect.height * 0.012f,
+                    2f,
+                    5f));
+            DrawRect(
+                new Rect(
+                    core.x + core.width * 0.16f,
+                    core.center.y - 2f,
+                    core.width * 0.68f,
+                    4f),
+                ACCENT_CYAN);
+            DrawRect(
+                new Rect(
+                    core.center.x - 2f,
+                    core.y + core.height * 0.16f,
+                    4f,
+                    core.height * 0.68f),
+                ACCENT_ORANGE);
+
+            GUIStyle logoStyle =
+                new GUIStyle(titleBarStyle)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontSize = Mathf.Clamp(
+                        Mathf.RoundToInt(
+                            62f * GetUiScale()),
+                        34,
+                        112)
+                };
+            DrawFittedLabel(
+                new Rect(
+                    rect.x,
+                    rect.y + rect.height * 0.63f,
+                    rect.width,
+                    rect.height * 0.34f),
+                "BLADE SPINNERS",
+                logoStyle,
+                Color.white,
+                20);
+        }
+
+        private static float StartScreenHash01(
+            int value)
+        {
+            unchecked
+            {
+                uint hash = (uint)value;
+                hash ^= hash >> 16;
+                hash *= 0x7feb352d;
+                hash ^= hash >> 15;
+                hash *= 0x846ca68b;
+                hash ^= hash >> 16;
+                return (hash & 0x00ffffff)
+                    / 16777215f;
+            }
+        }
+
+        private void TryBeginStartScreenExit()
+        {
+            if (rootState != RootUiState.StartScreen
+                || startScreenExitStartedAt >= 0f
+                || Time.unscaledTime
+                    - startScreenEnteredAt
+                    < StartScreenInputDelay)
+            {
+                return;
+            }
+
+            startScreenExitStartedAt =
+                Time.unscaledTime;
+            startScreenInputSubscription?.Dispose();
+            startScreenInputSubscription = null;
+            SoundManager.PlayUi(
+                SoundPaths.GuiStartScreenTransition);
+            Debug.Log(
+                "[BladeSpinners] Start Screen transition began.");
+        }
+
+        private void UpdateStartScreenTransition()
+        {
+            if (startScreenExitStartedAt < 0f
+                || Time.unscaledTime
+                    - startScreenExitStartedAt
+                    < StartScreenExitDuration)
+            {
+                return;
+            }
+
+            rootState = RootUiState.MainMenu;
+            mainMenuPanel = MenuPanel.Home;
+            requestedMusicSituation =
+                MusicSituation.MainMenu;
+            SoundManager.PlayMusicSituation(
+                MusicSituation.MainMenu,
+                true);
+            EnsureFallbackMenuCamera();
+            UpdateCursorState();
+            Debug.Log(
+                "[BladeSpinners] Start Screen transition completed.");
         }
 
         private void DrawInRunOverlays()
@@ -314,12 +753,94 @@ namespace BladeSpinners.Gameplay.UI
                 return;
 
             DrawRunDepthOverlay();
+            DrawEnergyRingPassiveOverlay();
 
             if (match.CurrentState == MatchManager.MatchState.WaitingToStart)
                 DrawStartCountdownOverlay(match);
 
             if (match.CurrentState == MatchManager.MatchState.PlayerLost)
                 DrawDeathOverlay(match);
+        }
+
+        private void DrawEnergyRingPassiveOverlay()
+        {
+            BeyConfiguration configuration =
+                runContext.Player?.BeyConfiguration;
+            EnergyRingPassiveRuntime passiveRuntime =
+                configuration?.EnergyRingPassive;
+            BeyPassive passive = passiveRuntime?.ActivePassive;
+            if (passive == null)
+                return;
+
+            int sw = Screen.width;
+            int sh = Screen.height;
+            float panelW = Mathf.Clamp(
+                sw * 0.26f, 300f, 520f);
+            float panelH = Mathf.Clamp(
+                sh * 0.072f, 66f, 102f);
+            Rect panel = new Rect(
+                Mathf.Clamp(sw * 0.008f, 14f, 28f),
+                Mathf.Clamp(sh * 0.085f, 76f, 132f),
+                panelW,
+                panelH);
+
+            bool showProc =
+                Time.unscaledTime
+                    - passiveRuntime.LastFeedbackTime
+                <= 1.8f;
+            Color border = showProc
+                ? ACCENT_YEL
+                : new Color(
+                    ACCENT_CYAN.r,
+                    ACCENT_CYAN.g,
+                    ACCENT_CYAN.b,
+                    0.75f);
+            DrawPanelFrame(
+                panel,
+                new Color(0.02f, 0.06f, 0.12f, 0.86f),
+                new Color(0.03f, 0.09f, 0.16f, 0.90f),
+                border,
+                showProc ? 3f : 2f);
+
+            GUIStyle passiveNameStyle =
+                new GUIStyle(sectionLabelStyle)
+                {
+                    fontSize = Mathf.RoundToInt(
+                        Mathf.Clamp(
+                            sh * 0.017f, 14f, 27f)),
+                    alignment = TextAnchor.MiddleLeft
+                };
+            GUIStyle passiveProcStyle =
+                new GUIStyle(bodyLabelStyle)
+                {
+                    fontSize = Mathf.RoundToInt(
+                        Mathf.Clamp(
+                            sh * 0.015f, 12f, 23f)),
+                    alignment = TextAnchor.MiddleLeft
+                };
+            passiveProcStyle.normal.textColor =
+                showProc ? ACCENT_YEL : ACCENT_CYAN;
+
+            float pad = Mathf.Clamp(
+                panel.height * 0.15f, 9f, 15f);
+            GUI.Label(
+                new Rect(
+                    panel.x + pad,
+                    panel.y + 5f,
+                    panel.width - pad * 2f,
+                    panel.height * 0.44f),
+                $"PASSIVE  //  {passive.PassiveName.ToUpperInvariant()}",
+                passiveNameStyle);
+            GUI.Label(
+                new Rect(
+                    panel.x + pad,
+                    panel.y + panel.height * 0.45f,
+                    panel.width - pad * 2f,
+                    panel.height * 0.42f),
+                showProc
+                    ? passiveRuntime.LastFeedbackMessage.ToUpperInvariant()
+                    : "ENERGY RING ONLINE",
+                passiveProcStyle);
         }
 
         private void DrawRunDepthOverlay()
@@ -330,12 +851,17 @@ namespace BladeSpinners.Gameplay.UI
 
             int sw = Screen.width;
             int sh = Screen.height;
-            string label = $"LEVEL {progression.CurrentLevelOneBased}/{progression.TotalLevels}   ARENA {progression.CurrentArenaOneBased}/{progression.ArenasPerLevel}";
+            string label =
+                $"LEVEL {progression.CurrentLevelOneBased}/{progression.TotalLevels}   " +
+                $"ARENA {progression.CurrentArenaOneBased}/{progression.ArenasPerLevel}\n" +
+                $"RUN {FormatRunTime(runElapsedSeconds)}   " +
+                $"ARENA {FormatRunTime(arenaElapsedSeconds)}";
 
             GUIStyle infoStyle = new GUIStyle(bodyLabelStyle)
             {
                 alignment = TextAnchor.MiddleLeft,
                 fontStyle = FontStyle.Bold,
+                wordWrap = true,
                 fontSize = Mathf.RoundToInt(Mathf.Clamp(sh * 0.021f, 18f, 46f))
             };
 
@@ -344,7 +870,10 @@ namespace BladeSpinners.Gameplay.UI
             Vector2 textSize = infoStyle.CalcSize(new GUIContent(label));
 
             float badgeW = Mathf.Clamp(textSize.x + padX * 2f, 360f, sw * 0.58f);
-            float badgeH = Mathf.Clamp(textSize.y + padY * 2f, 52f, 92f);
+            float badgeH = Mathf.Clamp(
+                textSize.y + padY * 2f,
+                64f,
+                138f);
             Rect badge = new Rect(
                 Mathf.Clamp(sw * 0.008f, 14f, 28f),
                 Mathf.Clamp(sh * 0.01f, 12f, 26f),
@@ -482,7 +1011,29 @@ namespace BladeSpinners.Gameplay.UI
             GUI.Label(titleRect, "YOU BURSTED", deathTitleStyle);
             GUI.Label(reasonRect, reasonText.ToUpperInvariant(), deathReasonStyle);
 
-            float remainingY = reasonRect.yMax + sectionGap;
+            float timingH = Mathf.Clamp(
+                24f * uiScale,
+                22f,
+                42f);
+            Rect timingRect = new Rect(
+                content.x,
+                reasonRect.yMax + 3f,
+                content.width,
+                timingH);
+            GUIStyle timingStyle =
+                FitLabelStyle(
+                    bodyLabelStyle,
+                    "RUN 00:00.00   ARENA 00:00.00",
+                    content.width,
+                    10);
+            GUI.Label(
+                timingRect,
+                $"RUN {FormatRunTime(runElapsedSeconds)}   " +
+                $"ARENA {FormatRunTime(arenaElapsedSeconds)}   " +
+                $"{arenasClearedThisRun} ARENAS CLEARED",
+                timingStyle);
+
+            float remainingY = timingRect.yMax + sectionGap;
             float remainingH = Mathf.Max(60f, content.yMax - remainingY);
 
             float lootH = hasLoot ? Mathf.Max(90f, remainingH * (showKillerBuild ? 0.40f : 0.80f)) : 0f;
@@ -545,7 +1096,7 @@ namespace BladeSpinners.Gameplay.UI
             string _btnLabel = hasLoot && _lootSelected > 0
                 ? $"TAKE LOOT ({_lootSelected}) & LEAVE"
                 : "LEAVE RUN";
-            if (GUI.Button(buttonRect, _btnLabel, navButtonStyle))
+            if (WithButtonSound(GUI.Button(buttonRect, _btnLabel, navButtonStyle)))
             {
                 CommitTransferLootAndReturnToMenu();
             }
@@ -662,9 +1213,15 @@ namespace BladeSpinners.Gameplay.UI
 
             GUILayout.EndVertical();
             GUILayout.Space(Mathf.Clamp(10f * uiScale, 10f, 18f));
-            GUILayout.BeginVertical(GUILayout.Width(detailWidth), GUILayout.Height(scrollH));
-            DrawSelectedPartCard(selectedLootPart, "SALVAGE PART", true);
-            GUILayout.EndVertical();
+            Rect detailRect = GUILayoutUtility.GetRect(
+                detailWidth,
+                scrollH,
+                GUILayout.Width(detailWidth),
+                GUILayout.Height(scrollH));
+            DrawSelectedPartCardInRect(
+                detailRect,
+                selectedLootPart,
+                "SALVAGE PART");
             GUILayout.EndHorizontal();
         }
 
@@ -751,10 +1308,16 @@ namespace BladeSpinners.Gameplay.UI
             switch (mainMenuPanel)
             {
                 case MenuPanel.Inventory:
-                    DrawFramedContentPanel(contentRect, "PART INVENTORY", delegate
-                    {
-                        DrawInventoryPanel(false);
-                    });
+                    DrawInventoryWorkspace(
+                        contentRect,
+                        false);
+                    break;
+
+                case MenuPanel.Records:
+                    DrawFramedContentPanel(
+                        contentRect,
+                        "PERSONAL BESTS",
+                        DrawPersonalBestPanel);
                     break;
 
                 case MenuPanel.Settings:
@@ -905,6 +1468,148 @@ namespace BladeSpinners.Gameplay.UI
                 GUILayout.EndScrollView();
         }
 
+        private void DrawInventoryWorkspace(
+            Rect area,
+            bool isRunInventory)
+        {
+            DrawPanelFrame(
+                area,
+                new Color(0.03f, 0.06f, 0.11f, 0.94f),
+                new Color(0.05f, 0.10f, 0.16f, 0.95f),
+                ACCENT_CYAN,
+                2f);
+
+            float uiScale = GetUiScale();
+            float pad = Mathf.Clamp(
+                12f * uiScale,
+                10f,
+                20f);
+            float headerH = Mathf.Clamp(
+                34f * uiScale,
+                30f,
+                48f);
+            float gap = Mathf.Clamp(
+                12f * uiScale,
+                10f,
+                20f);
+            DrawFittedLabel(
+                new Rect(
+                    area.x + pad,
+                    area.y + 6f,
+                    area.width - pad * 2f,
+                    headerH),
+                isRunInventory
+                    ? "RUN INVENTORY"
+                    : "PART INVENTORY",
+                sectionLabelStyle,
+                ACCENT_CYAN,
+                10);
+
+            Rect content = new Rect(
+                area.x + pad,
+                area.y + headerH + 8f,
+                area.width - pad * 2f,
+                area.height - headerH - pad - 8f);
+            float detailW = Mathf.Clamp(
+                content.width * 0.34f,
+                300f,
+                520f);
+            Rect listRect = new Rect(
+                content.x,
+                content.y,
+                Mathf.Max(260f, content.width - detailW - gap),
+                content.height);
+            Rect detailRect = new Rect(
+                listRect.xMax + gap,
+                content.y,
+                detailW,
+                content.height);
+
+            GUILayout.BeginArea(listRect);
+            DrawInventoryPanel(isRunInventory);
+            GUILayout.EndArea();
+            DrawSelectedPartCardInRect(
+                detailRect,
+                selectedInventoryPart,
+                "SELECTED PART");
+        }
+
+        private void DrawPersonalBestPanel()
+        {
+            IReadOnlyList<RunRecord> fastest =
+                RunRecordStore.GetFastestCompleted();
+            IReadOnlyList<RunRecord> deepest =
+                RunRecordStore.GetDeepest();
+
+            GUILayout.BeginHorizontal();
+            DrawRunRecordColumn(
+                "FASTEST COMPLETED RUNS",
+                fastest,
+                true);
+            GUILayout.Space(Mathf.Clamp(
+                18f * GetUiScale(),
+                14f,
+                28f));
+            DrawRunRecordColumn(
+                "MOST ARENAS CLEARED",
+                deepest,
+                false);
+            GUILayout.EndHorizontal();
+        }
+
+        private void DrawRunRecordColumn(
+            string header,
+            IReadOnlyList<RunRecord> records,
+            bool fastestColumn)
+        {
+            GUILayout.BeginVertical(
+                listItemStyle,
+                GUILayout.ExpandWidth(true),
+                GUILayout.ExpandHeight(true));
+            GUILayout.Label(header, sectionLabelStyle);
+            GUILayout.Space(6f);
+
+            if (records == null || records.Count == 0)
+            {
+                GUILayout.Label(
+                    fastestColumn
+                        ? "COMPLETE A RUN TO SET YOUR FIRST TIME."
+                        : "FINISH AN ARENA TO SET YOUR FIRST DEPTH.",
+                    bodyLabelStyle);
+                GUILayout.FlexibleSpace();
+                GUILayout.EndVertical();
+                return;
+            }
+
+            GUIStyle recordStyle = new GUIStyle(statRowStyle)
+            {
+                alignment = TextAnchor.MiddleLeft,
+                clipping = TextClipping.Clip
+            };
+            for (int i = 0; i < records.Count; i++)
+            {
+                RunRecord record = records[i];
+                string status = record.completed
+                    ? "COMPLETE"
+                    : "DEFEATED";
+                string label = fastestColumn
+                    ? $"{i + 1,2}.  {FormatRunTime(record.durationSeconds)}   " +
+                      $"{record.arenasCleared}/{record.totalArenas} ARENAS"
+                    : $"{i + 1,2}.  {record.arenasCleared}/{record.totalArenas} ARENAS   " +
+                      $"{FormatRunTime(record.durationSeconds)}   {status}";
+                GUILayout.Label(
+                    label,
+                    recordStyle,
+                    GUILayout.MinHeight(
+                        Mathf.Clamp(
+                            34f * GetUiScale(),
+                            30f,
+                            52f)));
+            }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndVertical();
+        }
+
         private void DrawPreviewAndStats(Rect area, PlayerManager runPlayer)
         {
             float uiScale = GetUiScale();
@@ -923,6 +1628,8 @@ namespace BladeSpinners.Gameplay.UI
             BeyStatBlock stats = GetStatsForDisplay(runPlayer);
             float spin = stats != null ? GetCurrentSpinForDisplay(runPlayer) : 0f;
             float mana = stats != null ? GetCurrentManaForDisplay(runPlayer) : 0f;
+            float maxMana =
+                stats != null ? GetMaxManaForDisplay(runPlayer) : 0f;
 
             // Preview row
             float prevTexH = area.height * 0.50f;
@@ -945,7 +1652,12 @@ namespace BladeSpinners.Gameplay.UI
             if (showOverallCard)
             {
                 Rect overallRect = new Rect(texRect.xMax + previewGap, previewRowY, cardWidth, previewRowH);
-                DrawOverallStatsCard(overallRect, stats, spin, mana);
+                DrawOverallStatsCard(
+                    overallRect,
+                    stats,
+                    spin,
+                    mana,
+                    maxMana);
             }
 
             // Stats section — yellow bar separator + black header
@@ -961,7 +1673,7 @@ namespace BladeSpinners.Gameplay.UI
             {
                 float rowY  = statsY + 4f + barH + 6f;
                 float rowH  = area.yMax - rowY - 8f;
-                GUIStyle fittedStatStyle = FitLabelStyle(statRowStyle, $"MANA     {mana:0.0} / {stats.ManaPoolSize:0.0}", area.width - innerPad * 2f, 10);
+                GUIStyle fittedStatStyle = FitLabelStyle(statRowStyle, $"MANA     {mana:0.0} / {maxMana:0.0}", area.width - innerPad * 2f, 10);
                 BeyPart selectedPart = GetFocusedInventoryPart();
                 bool showPart = selectedPart != null;
                 float fullW = area.width - innerPad * 2f;
@@ -971,7 +1683,9 @@ namespace BladeSpinners.Gameplay.UI
 
                 GUILayout.BeginArea(new Rect(area.x + innerPad, rowY, leftW, rowH));
                 GUILayout.Label($"SPIN     {spin:0.0} / {GameConstants.MAX_SPIN:0}",   fittedStatStyle);
-                GUILayout.Label($"MANA     {mana:0.0} / {stats.ManaPoolSize:0.0}",     fittedStatStyle);
+                GUILayout.Label($"MANA     {mana:0.0} / {maxMana:0.0}",                fittedStatStyle);
+                GUILayout.Label($"ATK / DEF {stats.Attack:0} / {stats.Defense:0}",      fittedStatStyle);
+                GUILayout.Label($"RETAIN   {stats.SpinRetention:0}",                   fittedStatStyle);
                 GUILayout.Label($"WEIGHT   {stats.Weight:0.0}",                        fittedStatStyle);
                 GUILayout.Label($"TIP      {stats.TipBehavior.ToString().ToUpper()}",  fittedStatStyle);
                 GUILayout.Label($"DRAIN    {stats.TotalStaminaDrainRate:0.00}",        fittedStatStyle);
@@ -987,7 +1701,12 @@ namespace BladeSpinners.Gameplay.UI
             }
         }
 
-        private void DrawOverallStatsCard(Rect area, BeyStatBlock stats, float spin, float mana)
+        private void DrawOverallStatsCard(
+            Rect area,
+            BeyStatBlock stats,
+            float spin,
+            float mana,
+            float maxMana)
         {
             if (stats == null)
                 return;
@@ -1006,7 +1725,9 @@ namespace BladeSpinners.Gameplay.UI
             GUILayout.Label("OVERALL STATS", headerStyle);
             GUILayout.Space(4f);
             GUILayout.Label($"SPIN     {spin:0.0} / {GameConstants.MAX_SPIN:0}", statStyle);
-            GUILayout.Label($"MANA     {mana:0.0} / {stats.ManaPoolSize:0.0}", statStyle);
+            GUILayout.Label($"MANA     {mana:0.0} / {maxMana:0.0}", statStyle);
+            GUILayout.Label($"ATK / DEF {stats.Attack:0} / {stats.Defense:0}", statStyle);
+            GUILayout.Label($"RETAIN   {stats.SpinRetention:0}", statStyle);
             GUILayout.Label($"WEIGHT   {stats.Weight:0.0}", statStyle);
             GUILayout.Label($"TIP      {stats.TipBehavior.ToString().ToUpper()}", statStyle);
             GUILayout.Label($"HEIGHT   {stats.TrackHeight:0.00}", statStyle);
@@ -1039,18 +1760,15 @@ namespace BladeSpinners.Gameplay.UI
 
         private void DrawSelectedPartCard(BeyPart part, string header, bool drawBackground)
         {
+            if (drawBackground)
+                GUILayout.BeginVertical(listItemStyle);
+
             if (part == null)
             {
                 GUILayout.Label("SELECT A PART TO VIEW ITS STATS AND ABILITY.", bodyLabelStyle);
+                if (drawBackground)
+                    GUILayout.EndVertical();
                 return;
-            }
-
-            if (drawBackground)
-            {
-                Rect bg = GUILayoutUtility.GetRect(10f, 10f, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
-                DrawRect(bg, new Color(0f, 0f, 0f, 0.26f));
-                DrawRect(new Rect(bg.x, bg.y, bg.width, 3f), ACCENT_YEL);
-                GUILayout.BeginArea(new Rect(bg.x + 10f, bg.y + 8f, bg.width - 20f, bg.height - 16f));
             }
 
             GUIStyle headerStyle = FitLabelStyle(sectionLabelStyle, header, 420f, 10);
@@ -1067,24 +1785,86 @@ namespace BladeSpinners.Gameplay.UI
             for (int i = 0; i < partLines.Count; i++)
                 GUILayout.Label(partLines[i], statStyle);
 
-            BeyAbility ability = ResolveAbilityForPart(part);
-            GUILayout.Space(6f);
-            GUILayout.Label("ABILITY", headerStyle);
-            if (ability == null)
+            if (part.PartType == PartType.EnergyRing)
             {
-                GUILayout.Label("NONE", detailStyle);
+                BeyPassive passive =
+                    EnergyRingPassiveResolver.Resolve(part);
+                GUILayout.Space(6f);
+                GUILayout.Label("PASSIVE", headerStyle);
+                if (passive == null)
+                {
+                    GUILayout.Label("NONE", detailStyle);
+                }
+                else
+                {
+                    GUILayout.Label(
+                        passive.PassiveName.ToUpperInvariant(),
+                        statStyle);
+                    GUILayout.Label(
+                        $"PASSIVE RARITY  {passive.Rarity.ToString().ToUpperInvariant()}",
+                        statStyle);
+                    GUILayout.Label(
+                        passive.Description.ToUpperInvariant(),
+                        detailStyle);
+                }
             }
-            else
+            else if (part.PartType == PartType.FaceBolt)
             {
-                GUILayout.Label(ability.AbilityName.ToUpperInvariant(), statStyle);
-                GUILayout.Label($"ABILITY RARITY  {ability.Rarity.ToString().ToUpper()}", statStyle);
-                GUILayout.Label($"MANA COST       {ability.ManaCost:0.#}", statStyle);
-                if (!string.IsNullOrWhiteSpace(ability.Description))
-                    GUILayout.Label(ability.Description.ToUpperInvariant(), detailStyle);
+                BeyAbility ability = ResolveAbilityForPart(part);
+                GUILayout.Space(6f);
+                GUILayout.Label("ABILITY", headerStyle);
+                if (ability == null)
+                {
+                    GUILayout.Label("NONE", detailStyle);
+                }
+                else
+                {
+                    GUILayout.Label(
+                        ability.AbilityName.ToUpperInvariant(),
+                        statStyle);
+                    GUILayout.Label(
+                        $"ABILITY RARITY  {ability.Rarity.ToString().ToUpper()}",
+                        statStyle);
+                    GUILayout.Label(
+                        $"MANA COST       {ability.ManaCost:0.#}",
+                        statStyle);
+                    if (!string.IsNullOrWhiteSpace(
+                            ability.Description))
+                    {
+                        GUILayout.Label(
+                            ability.Description.ToUpperInvariant(),
+                            detailStyle);
+                    }
+                }
             }
 
             if (drawBackground)
-                GUILayout.EndArea();
+                GUILayout.EndVertical();
+        }
+
+        private void DrawSelectedPartCardInRect(
+            Rect area,
+            BeyPart part,
+            string header)
+        {
+            DrawPanelFrame(
+                area,
+                new Color(0.015f, 0.035f, 0.065f, 0.96f),
+                new Color(0.04f, 0.08f, 0.13f, 0.97f),
+                ACCENT_YEL,
+                2f);
+            float pad = Mathf.Clamp(
+                12f * GetUiScale(),
+                10f,
+                18f);
+            Rect content = new Rect(
+                area.x + pad,
+                area.y + pad,
+                Mathf.Max(1f, area.width - pad * 2f),
+                Mathf.Max(1f, area.height - pad * 2f));
+            GUILayout.BeginArea(content);
+            DrawSelectedPartCard(part, header, false);
+            GUILayout.EndArea();
         }
 
         private static BeyAbility ResolveAbilityForPart(BeyPart part)
@@ -1105,6 +1885,7 @@ namespace BladeSpinners.Gameplay.UI
             {
                 case PartType.Tip:
                     lines.Add($"TIP       {part.TipBehavior.ToString().ToUpper()}");
+                    lines.Add($"RETENTION {BeyCombatStatCalculator.GetTipSpinRetention(part):0}");
                     lines.Add($"DRAIN MOD {part.BehaviorBasedStaminaDrainModifier:0.00}");
                     lines.Add($"UPHILL    {part.UphillResistanceMultiplier:0.00}");
                     lines.Add($"SLOPE     {part.SlopeMultiplier:0.00}");
@@ -1116,13 +1897,23 @@ namespace BladeSpinners.Gameplay.UI
                     break;
 
                 case PartType.FusionWheel:
+                    FusionWheelCombatProfile profile =
+                        FusionWheelCombatProfile.FromPart(part);
+                    lines.Add($"ATTACK    {profile.Attack:0}");
+                    lines.Add($"DEFENSE   {profile.Defense:0}");
+                    lines.Add($"CONTACT   {profile.ContactStyle} / {profile.ShapeDescription}");
                     lines.Add($"WEIGHT    {part.Weight:0.0}");
+                    lines.Add($"RETENTION {profile.SpinRetention:0}");
                     lines.Add($"MASS DRAIN {part.MassBasedStaminaDrainRate:0.00}");
                     break;
 
                 case PartType.EnergyRing:
                     lines.Add($"MANA POOL {part.ManaPoolSize:0.0}");
                     lines.Add($"MANA REGEN {part.ManaRegenRate:0.0}");
+                    BeyPassive passive =
+                        EnergyRingPassiveResolver.Resolve(part);
+                    lines.Add(
+                        $"PASSIVE   {(passive != null ? passive.PassiveName.ToUpperInvariant() : "NONE")}");
                     break;
 
                 case PartType.FaceBolt:
@@ -1140,8 +1931,55 @@ namespace BladeSpinners.Gameplay.UI
         {
             GUILayout.Label("SETTINGS", sectionLabelStyle);
             GUILayout.Space(6);
-            settingsVolume = DrawThemedSlider("MASTER VOLUME", settingsVolume, 0f, 1f);
+            GUILayout.Label("AUDIO", sectionLabelStyle);
+            GUILayout.Space(2);
+
+            float nextMaster = DrawThemedSlider(
+                "MASTER VOLUME",
+                settingsMasterVolume,
+                0f,
+                1f);
             GUILayout.Space(4);
+            float nextSoundEffects = DrawThemedSlider(
+                "SOUND EFFECTS VOLUME",
+                settingsSoundEffectsVolume,
+                0f,
+                1f);
+            GUILayout.Space(4);
+            float nextMusic = DrawThemedSlider(
+                "MUSIC VOLUME",
+                settingsMusicVolume,
+                0f,
+                1f);
+            GUILayout.Space(4);
+            float nextGui = DrawThemedSlider(
+                "GUI VOLUME",
+                settingsGuiVolume,
+                0f,
+                1f);
+            if (!Mathf.Approximately(
+                    nextMaster,
+                    settingsMasterVolume)
+                || !Mathf.Approximately(
+                    nextSoundEffects,
+                    settingsSoundEffectsVolume)
+                || !Mathf.Approximately(
+                    nextMusic,
+                    settingsMusicVolume)
+                || !Mathf.Approximately(
+                    nextGui,
+                    settingsGuiVolume))
+            {
+                settingsMasterVolume = nextMaster;
+                settingsSoundEffectsVolume = nextSoundEffects;
+                settingsMusicVolume = nextMusic;
+                settingsGuiVolume = nextGui;
+                ApplyAudioSettings(true);
+            }
+
+            GUILayout.Space(10);
+            GUILayout.Label("GAMEPLAY", sectionLabelStyle);
+            GUILayout.Space(2);
             settingsSensitivity = DrawThemedSlider("CAM SENSITIVITY", settingsSensitivity, 0.25f, 2f);
             GUILayout.Space(4);
             float newRingsOpacity = DrawThemedSlider("RINGS UI OPACITY", settingsRingsOpacity, 0f, 1f);
@@ -1217,19 +2055,28 @@ namespace BladeSpinners.Gameplay.UI
 
             float pad = Mathf.Clamp(12f * GetUiScale(), 12f, 24f);
             float logoW = Mathf.Clamp(rect.width * 0.28f, 260f, 440f);
-            float tabsW = Mathf.Clamp(rect.width * 0.36f, 320f, 560f);
+            float tabsW = Mathf.Clamp(
+                rect.width * 0.48f,
+                420f,
+                760f);
             Rect brandRect = new Rect(rect.x + pad, rect.y + pad * 0.6f, logoW, rect.height - pad * 1.2f);
-            Rect tabsRect = new Rect(rect.center.x - tabsW * 0.5f, rect.y + pad * 0.55f, tabsW, rect.height - pad * 1.1f);
+            Rect tabsRect = new Rect(
+                rect.xMax - pad - tabsW,
+                rect.y + pad * 0.55f,
+                tabsW,
+                rect.height - pad * 1.1f);
 
             DrawBrandLockup(brandRect);
 
             float gap = Mathf.Clamp(10f * GetUiScale(), 8f, 18f);
-            float tabW = (tabsRect.width - gap * 2f) / 3f;
+            float tabW = (tabsRect.width - gap * 3f) / 4f;
             if (TopTabBtn("GARAGE", new Rect(tabsRect.x, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Home))
                 SetMainMenuPanel(MenuPanel.Home);
             if (TopTabBtn("INVENTORY", new Rect(tabsRect.x + tabW + gap, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Inventory))
                 SetMainMenuPanel(MenuPanel.Inventory);
-            if (TopTabBtn("SETTINGS", new Rect(tabsRect.x + (tabW + gap) * 2f, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Settings))
+            if (TopTabBtn("RECORDS", new Rect(tabsRect.x + (tabW + gap) * 2f, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Records))
+                SetMainMenuPanel(MenuPanel.Records);
+            if (TopTabBtn("SETTINGS", new Rect(tabsRect.x + (tabW + gap) * 3f, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Settings))
                 SetMainMenuPanel(MenuPanel.Settings);
         }
 
@@ -1259,16 +2106,33 @@ namespace BladeSpinners.Gameplay.UI
             float buttonH = rect.height - pad * 2f;
             float autoW = Mathf.Clamp(rect.width * 0.20f, 180f, 280f);
             float saveW = Mathf.Clamp(rect.width * 0.20f, 180f, 280f);
+            float nextSongW = Mathf.Clamp(
+                rect.width * 0.15f,
+                140f,
+                220f);
             float startW = Mathf.Clamp(rect.width * 0.28f, 220f, 360f);
 
             Rect autoRect = new Rect(rect.x + pad, rect.y + pad, autoW, buttonH);
             Rect saveRect = new Rect(autoRect.xMax + gap, rect.y + pad, saveW, buttonH);
             Rect startRect = new Rect(rect.xMax - pad - startW, rect.y + pad, startW, buttonH);
+            Rect nextSongRect = new Rect(
+                startRect.x - gap - nextSongW,
+                rect.y + pad,
+                nextSongW,
+                buttonH);
 
             if (ActionBtn("AUTO OPTIMIZE", autoRect, ACCENT_CYAN, false))
                 AutoOptimizeCurrentBuild();
             if (ActionBtn("SAVE BUILD", saveRect, new Color(0.18f, 0.62f, 1f, 1f), false))
                 buildSlotPickerOpen = !buildSlotPickerOpen;
+            if (ActionBtn(
+                    "NEXT SONG",
+                    nextSongRect,
+                    ACCENT_MAGENTA,
+                    false))
+            {
+                SoundManager.SkipToNextMusic();
+            }
             if (ActionBtn("START RUN", startRect, ACCENT_ORANGE, false))
                 StartRun();
 
@@ -1319,6 +2183,17 @@ namespace BladeSpinners.Gameplay.UI
             Rect topRect = new Rect(shell.x + gutter, shell.y + gutter, shell.width - gutter * 2f, topH);
             DrawPanelFrame(topRect, new Color(0.03f, 0.07f, 0.14f, 0.96f), new Color(0.04f, 0.10f, 0.18f, 0.96f), ACCENT_CYAN, 2f);
             DrawFittedLabel(new Rect(topRect.x + 16f, topRect.y + 8f, topRect.width * 0.28f, topRect.height - 16f), title, titleBarStyle, Color.white, 12);
+            DrawFittedLabel(
+                new Rect(
+                    topRect.x + topRect.width * 0.29f,
+                    topRect.y + 8f,
+                    topRect.width * 0.28f,
+                    topRect.height - 16f),
+                $"RUN {FormatRunTime(runElapsedSeconds)}   " +
+                $"ARENA {FormatRunTime(arenaElapsedSeconds)}",
+                bodyLabelStyle,
+                ACCENT_CYAN,
+                10);
 
             float actionH = Mathf.Clamp(44f * uiScale, 40f, 58f);
             float actionW = Mathf.Clamp(156f * uiScale, 140f, 220f);
@@ -1345,10 +2220,9 @@ namespace BladeSpinners.Gameplay.UI
             switch (pausePanel)
             {
                 case MenuPanel.Inventory:
-                    DrawFramedContentPanel(contentRect, "RUN INVENTORY", delegate
-                    {
-                        DrawInventoryPanel(true);
-                    });
+                    DrawInventoryWorkspace(
+                        contentRect,
+                        true);
                     break;
 
                 case MenuPanel.Settings:
@@ -1464,7 +2338,7 @@ namespace BladeSpinners.Gameplay.UI
                     hoveredRow = row;
                 }
 
-                if (GUI.Button(row, GUIContent.none, GUIStyle.none))
+                if (WithButtonSound(GUI.Button(row, GUIContent.none, GUIStyle.none)))
                     garageSwapSlot = type;
             }
 
@@ -1571,7 +2445,8 @@ namespace BladeSpinners.Gameplay.UI
                 DrawPartSprite(iconRect, part);
             DrawFittedLabel(new Rect(rect.x + 6f, rect.yMax - 26f, rect.width - 12f, 18f), part != null ? PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant() : "EMPTY", bodyLabelStyle, Color.white, 9);
 
-            if (!suppressInteraction && GUI.Button(rect, GUIContent.none, GUIStyle.none))
+            if (!suppressInteraction
+                && WithButtonSound(GUI.Button(rect, GUIContent.none, GUIStyle.none)))
                 garageSwapSlot = garageSwapSlot == type ? (PartType?)null : type;
         }
 
@@ -1657,7 +2532,10 @@ namespace BladeSpinners.Gameplay.UI
 
             if (detailPart != null)
             {
-                DrawSelectedPartCard(detailPart, "PART DATA", true);
+                DrawSelectedPartCard(
+                    detailPart,
+                    "PART DATA",
+                    false);
             }
             else
             {
@@ -1680,6 +2558,29 @@ namespace BladeSpinners.Gameplay.UI
                     GUILayout.Label(ability.Rarity.ToString().ToUpperInvariant(), bodyLabelStyle);
                     if (!string.IsNullOrWhiteSpace(ability.Description))
                         GUILayout.Label(ability.Description.ToUpperInvariant(), bodyLabelStyle);
+                }
+
+                loadout.TryGetValue(
+                    PartType.EnergyRing,
+                    out BeyPart energyRing);
+                BeyPassive passive =
+                    EnergyRingPassiveResolver.Resolve(energyRing);
+                GUILayout.Space(10f);
+                GUILayout.Label(
+                    "ACTIVE PASSIVE",
+                    sectionLabelStyle);
+                if (passive == null)
+                {
+                    GUILayout.Label("NONE", bodyLabelStyle);
+                }
+                else
+                {
+                    GUILayout.Label(
+                        passive.PassiveName.ToUpperInvariant(),
+                        statRowStyle);
+                    GUILayout.Label(
+                        passive.Description.ToUpperInvariant(),
+                        bodyLabelStyle);
                 }
 
                 if (stats != null)
@@ -1726,9 +2627,9 @@ namespace BladeSpinners.Gameplay.UI
             string[] labels = { "ATTACK", "DEFENSE", "STAMINA", "AGILITY", "WEIGHT", "CONTROL", "ENERGY" };
             float[] values =
             {
-                Mathf.Clamp01(stats.Weight / 48f * 0.65f + stats.MassBasedStaminaDrainRate / 1.8f * 0.20f + (stats.EquippedAbility != null ? 0.15f : 0f)),
-                Mathf.Clamp01(stats.Weight / 60f * 0.30f + (2.2f - stats.TotalStaminaDrainRate) / 2.2f * 0.40f + stats.UphillResistanceMultiplier / 1.8f * 0.30f),
-                Mathf.Clamp01((2.4f - stats.TotalStaminaDrainRate) / 2.4f * 0.70f + (2.0f - stats.BehaviorBasedStaminaDrainModifier) / 2.0f * 0.30f),
+                Mathf.Clamp01(stats.Attack / 100f),
+                Mathf.Clamp01(stats.Defense / 100f),
+                Mathf.Clamp01(stats.SpinRetention / 100f),
                 Mathf.Clamp01((1.5f - Mathf.Clamp(stats.Weight / 55f, 0f, 1.5f)) * 0.35f + stats.JumpArcModifier / 1.5f * 0.25f + GetTipAgilityFactor(stats.TipBehavior) * 0.40f),
                 Mathf.Clamp01(stats.Weight / 55f),
                 Mathf.Clamp01((2.0f - stats.SlopeMultiplier) / 1.5f * 0.45f + (2.0f - stats.UphillResistanceMultiplier) / 1.7f * 0.35f + GetTipControlFactor(stats.TipBehavior) * 0.20f),
@@ -1837,7 +2738,7 @@ namespace BladeSpinners.Gameplay.UI
                 DrawMotionBandClipped(new Rect(rect.x + rect.width * 0.56f, rect.y, rect.width * 0.32f, rect.height), ACCENT_CYAN, 8f, 14f, 0.10f);
             DrawFrameCorners(rect, new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, active ? 0.60f : 0.25f), rect.width * 0.22f, 2f);
             DrawFittedLabel(rect, label, navButtonStyle, Color.white, 10);
-            return GUI.Button(rect, GUIContent.none, GUIStyle.none);
+            return WithButtonSound(GUI.Button(rect, GUIContent.none, GUIStyle.none));
         }
 
         private bool ActionBtn(string label, Rect rect, Color accent, bool hot, bool enabled = true)
@@ -1896,7 +2797,16 @@ namespace BladeSpinners.Gameplay.UI
             Rect textRect = rect;
             GUIStyle textStyle = label == "START RUN" ? startButtonStyle : navButtonStyle;
             DrawFittedLabel(textRect, label, textStyle, textColor, 10);
-            return enabled && GUI.Button(rect, GUIContent.none, GUIStyle.none);
+            return WithButtonSound(
+                enabled && GUI.Button(rect, GUIContent.none, GUIStyle.none));
+        }
+
+        private static bool WithButtonSound(bool clicked)
+        {
+            if (clicked)
+                SoundManager.PlayUi(SoundPaths.GuiButton);
+
+            return clicked;
         }
 
         private void SaveCurrentBuildToSlot(int slotIndex)
@@ -1922,6 +2832,7 @@ namespace BladeSpinners.Gameplay.UI
 
         private void AutoOptimizeCurrentBuild()
         {
+            bool equippedAny = false;
             foreach (PartType type in Enum.GetValues(typeof(PartType)))
             {
                 List<BeyPart> typeParts = GetOwnedParts(type);
@@ -1939,12 +2850,17 @@ namespace BladeSpinners.Gameplay.UI
                 }
 
                 if (bestPart != null)
+                {
                     selectedMainMenuLoadout[type] = bestPart;
+                    equippedAny = true;
+                }
             }
 
             RefreshPreviewFromLoadout(selectedMainMenuLoadout);
             ShowTransientUiMessage("Auto optimize equipped the highest rated owned parts.");
             AutoSave();
+            if (equippedAny)
+                SoundManager.PlayUi(SoundPaths.GuiEquipPart);
         }
 
         private void EquipPartFromGarage(PartType slot, BeyPart part, bool useRunInventory, PlayerManager runPlayer)
@@ -1963,6 +2879,8 @@ namespace BladeSpinners.Gameplay.UI
                 RefreshPreviewFromLoadout(selectedMainMenuLoadout);
                 AutoSave();
             }
+
+            SoundManager.PlayUi(SoundPaths.GuiEquipPart);
         }
 
         private Dictionary<PartType, BeyPart> CloneLoadout(Dictionary<PartType, BeyPart> source)
@@ -2018,9 +2936,22 @@ namespace BladeSpinners.Gameplay.UI
                 case PartType.Track:
                     return rarityBoost + part.TrackHeight * 20f + part.JumpArcModifier * 18f;
                 case PartType.FusionWheel:
-                    return rarityBoost + part.Weight * 1.7f + part.MassBasedStaminaDrainRate * 10f;
+                    FusionWheelCombatProfile profile =
+                        FusionWheelCombatProfile.FromPart(part);
+                    return rarityBoost
+                        + profile.Attack * 0.55f
+                        + profile.Defense * 0.40f
+                        + profile.SpinRetention * 0.25f;
                 case PartType.EnergyRing:
-                    return rarityBoost + part.ManaPoolSize * 0.36f + part.ManaRegenRate * 1.1f;
+                    BeyPassive passive =
+                        EnergyRingPassiveResolver.Resolve(part);
+                    float passiveScore = passive != null
+                        ? ((int)passive.Rarity + 1) * 5f
+                        : 0f;
+                    return rarityBoost
+                        + part.ManaPoolSize * 0.36f
+                        + part.ManaRegenRate * 1.1f
+                        + passiveScore;
                 case PartType.FaceBolt:
                     return rarityBoost + (part.EquippedAbility != null ? part.EquippedAbility.ManaCost * 3f + ((int)part.EquippedAbility.Rarity + 1) * 10f : 18f);
                 default:
@@ -2100,6 +3031,11 @@ namespace BladeSpinners.Gameplay.UI
             }
 
             Debug.Log("[BladeSpinners] Run started successfully");
+            runElapsedSeconds = 0f;
+            arenaElapsedSeconds = 0f;
+            arenasClearedThisRun = 0;
+            hasActiveRun = true;
+            runRecordSubmitted = false;
             rootState   = RootUiState.InRun;
             mainMenuPanel = MenuPanel.Home;
             pausePanel    = MenuPanel.Home;
@@ -2115,8 +3051,12 @@ namespace BladeSpinners.Gameplay.UI
 
         private void ReturnToMainMenu()
         {
+            if (hasActiveRun && !runRecordSubmitted)
+                RecordCurrentRun(false);
+
             Time.timeScale = 1f;
             RuntimeRunBuilder.ClearRunObjectsForMainMenu();
+            hasActiveRun = false;
             rootState     = RootUiState.MainMenu;
             mainMenuPanel = MenuPanel.Home;
             pausePanel    = MenuPanel.Home;
@@ -2180,6 +3120,121 @@ namespace BladeSpinners.Gameplay.UI
             ResetPreviewRotationState();
         }
 
+        private void UpdateMusicSituation()
+        {
+            MusicSituation desired = ResolveMusicSituation();
+            if (rootState == RootUiState.StartScreen)
+            {
+                if (requestedMusicSituation
+                        == MusicSituation.StartScreen
+                    && SoundManager.CurrentMusicSituation
+                        == MusicSituation.StartScreen
+                    && SoundManager.IsMusicPlaying)
+                {
+                    return;
+                }
+
+                requestedMusicSituation =
+                    MusicSituation.StartScreen;
+                SoundManager.PlayMusicSituation(
+                    MusicSituation.StartScreen);
+                return;
+            }
+
+            bool menuBrowsing =
+                rootState == RootUiState.MainMenu
+                && (desired == MusicSituation.MainMenu
+                    || desired
+                        == MusicSituation.Inventory);
+            if (menuBrowsing)
+            {
+                bool requestChanged =
+                    requestedMusicSituation != desired;
+                requestedMusicSituation = desired;
+
+                MusicSituation? playing =
+                    SoundManager.CurrentMusicSituation;
+                bool playingMenuMusic =
+                    playing == MusicSituation.MainMenu
+                    || playing
+                        == MusicSituation.Inventory;
+                if (!SoundManager.IsMusicPlaying
+                    || !playingMenuMusic)
+                {
+                    SoundManager.PlayMusicSituation(
+                        desired);
+                    return;
+                }
+
+                if (requestChanged
+                    || playing != desired)
+                {
+                    SoundManager.QueueMusicSituation(
+                        desired);
+                }
+                return;
+            }
+
+            if (requestedMusicSituation == desired
+                && SoundManager.CurrentMusicSituation == desired
+                && SoundManager.IsMusicPlaying)
+            {
+                return;
+            }
+
+            requestedMusicSituation = desired;
+            SoundManager.PlayMusicSituation(desired);
+        }
+
+        private MusicSituation ResolveMusicSituation()
+        {
+            if (rootState == RootUiState.StartScreen)
+                return MusicSituation.StartScreen;
+
+            bool inventoryOpen =
+                (rootState == RootUiState.MainMenu
+                    && mainMenuPanel == MenuPanel.Inventory)
+                || ((rootState == RootUiState.Paused
+                        || rootState == RootUiState.BetweenArenas)
+                    && pausePanel == MenuPanel.Inventory);
+            MatchManager match = runContext.Match;
+            RuntimeRunBuilder.RunProgression progression =
+                runContext.Progression;
+            return DetermineMusicSituation(
+                rootState == RootUiState.MainMenu,
+                inventoryOpen,
+                match != null
+                    && match.CurrentState
+                        == MatchManager.MatchState.PlayerWon,
+                match != null
+                    && match.CurrentState
+                        == MatchManager.MatchState.PlayerLost,
+                progression != null
+                    ? progression.DepthIndex
+                    : -1);
+        }
+
+        public static MusicSituation DetermineMusicSituation(
+            bool isMainMenu,
+            bool inventoryOpen,
+            bool playerWon,
+            bool playerLost,
+            int depthIndex)
+        {
+            if (inventoryOpen)
+                return MusicSituation.Inventory;
+            if (isMainMenu)
+                return MusicSituation.MainMenu;
+            if (playerLost)
+                return MusicSituation.Lose;
+            if (playerWon)
+                return MusicSituation.Victory;
+            return depthIndex + 1
+                    == GameConstants.BOSS_MAP_DEPTH
+                ? MusicSituation.BossBattle
+                : MusicSituation.Battle;
+        }
+
         private void ResetPreviewRotationState()
         {
             previewManualPitch = 0f;
@@ -2207,6 +3262,17 @@ namespace BladeSpinners.Gameplay.UI
 
             if (runContext.Match.CurrentState != MatchManager.MatchState.PlayerWon)
                 return;
+
+            RuntimeRunBuilder.RunProgression progression =
+                runContext.Progression;
+            if (progression != null)
+            {
+                arenasClearedThisRun = Mathf.Max(
+                    arenasClearedThisRun,
+                    progression.DepthIndex + 1);
+                if (progression.IsLastArena)
+                    RecordCurrentRun(true);
+            }
 
             rootState = RootUiState.BetweenArenas;
             pausePanel = MenuPanel.Home;
@@ -2247,6 +3313,7 @@ namespace BladeSpinners.Gameplay.UI
                 progression,
                 carriedInventory);
 
+            arenaElapsedSeconds = 0f;
             rootState = RootUiState.InRun;
             pausePanel = MenuPanel.Home;
             selectedInventorySlot = null;
@@ -2254,6 +3321,76 @@ namespace BladeSpinners.Gameplay.UI
             ApplySettingsToCameraController(runContext.CameraController);
             ApplySettingsToPlayer(runContext.Player);
             UpdateCursorState();
+        }
+
+        private void UpdateRunTimersAndRecords()
+        {
+            if (!hasActiveRun || runContext.Match == null)
+                return;
+
+            MatchManager.MatchState state =
+                runContext.Match.CurrentState;
+            if (rootState == RootUiState.InRun
+                && state == MatchManager.MatchState.InProgress)
+            {
+                float delta = Mathf.Max(
+                    0f,
+                    Time.unscaledDeltaTime);
+                runElapsedSeconds += delta;
+                arenaElapsedSeconds += delta;
+            }
+
+            if (state == MatchManager.MatchState.PlayerLost
+                && !runRecordSubmitted)
+            {
+                RecordCurrentRun(false);
+            }
+        }
+
+        private void RecordCurrentRun(bool completed)
+        {
+            if (!hasActiveRun || runRecordSubmitted)
+                return;
+
+            RuntimeRunBuilder.RunProgression progression =
+                runContext.Progression;
+            if (progression == null)
+                return;
+
+            if (completed)
+            {
+                arenasClearedThisRun = Mathf.Max(
+                    arenasClearedThisRun,
+                    progression.TotalArenaCount);
+            }
+
+            RunRecordStore.Record(
+                runElapsedSeconds,
+                arenasClearedThisRun,
+                progression.TotalArenaCount,
+                progression.RunSeed,
+                completed);
+            runRecordSubmitted = true;
+            Debug.Log(
+                $"[RunRecords] Recorded {(completed ? "completed" : "ended")} " +
+                $"run: {arenasClearedThisRun}/{progression.TotalArenaCount} arenas, " +
+                $"{FormatRunTime(runElapsedSeconds)}.");
+        }
+
+        private static string FormatRunTime(float seconds)
+        {
+            int totalCentiseconds = Mathf.Max(
+                0,
+                Mathf.FloorToInt(seconds * 100f));
+            int hours = totalCentiseconds / 360000;
+            int minutes =
+                totalCentiseconds / 6000 % 60;
+            int wholeSeconds =
+                totalCentiseconds / 100 % 60;
+            int centiseconds = totalCentiseconds % 100;
+            return hours > 0
+                ? $"{hours:00}:{minutes:00}:{wholeSeconds:00}.{centiseconds:00}"
+                : $"{minutes:00}:{wholeSeconds:00}.{centiseconds:00}";
         }
 
         // ══════════════════════════════════════════════════════════════════════════
@@ -2437,6 +3574,13 @@ namespace BladeSpinners.Gameplay.UI
         {
             if (player?.BeyConfiguration != null) return player.BeyConfiguration.CurrentMana;
             return previewConfig?.CurrentMana ?? 0f;
+        }
+
+        private float GetMaxManaForDisplay(PlayerManager player)
+        {
+            if (player?.BeyConfiguration != null)
+                return player.BeyConfiguration.MaxMana;
+            return previewConfig?.MaxMana ?? 0f;
         }
 
         // ══════════════════════════════════════════════════════════════════════════
@@ -2691,13 +3835,15 @@ namespace BladeSpinners.Gameplay.UI
 
         private void EnsureFallbackMenuCamera()
         {
-            if (rootState != RootUiState.MainMenu)
+            if (rootState != RootUiState.MainMenu
+                && rootState != RootUiState.StartScreen)
                 return;
 
             Camera existingMain = Camera.main;
             if (existingMain != null)
             {
                 fallbackMenuCamera = existingMain;
+                EnsureMenuAudioListener(fallbackMenuCamera);
                 // Ensure sensible clear settings for the menu background
                 fallbackMenuCamera.clearFlags = CameraClearFlags.SolidColor;
                 fallbackMenuCamera.backgroundColor = new Color(0.03f, 0.03f, 0.04f, 1f);
@@ -2705,7 +3851,10 @@ namespace BladeSpinners.Gameplay.UI
             }
 
             if (fallbackMenuCamera != null)
+            {
+                EnsureMenuAudioListener(fallbackMenuCamera);
                 return;
+            }
 
             Debug.Log("[BladeSpinners] No Camera.main found, creating fallback camera");
             GameObject cameraObject = new GameObject("__MenuCamera");
@@ -2718,8 +3867,21 @@ namespace BladeSpinners.Gameplay.UI
             camera.nearClipPlane = 0.01f;
             camera.farClipPlane = 1000f;
             camera.depth = -100f;
+            EnsureMenuAudioListener(camera);
 
             fallbackMenuCamera = camera;
+        }
+
+        private static void EnsureMenuAudioListener(
+            Camera camera)
+        {
+            if (camera == null
+                || FindFirstObjectByType<AudioListener>() != null)
+            {
+                return;
+            }
+
+            camera.gameObject.AddComponent<AudioListener>();
         }
 
         private void RefreshPreviewFromLoadout(Dictionary<PartType, BeyPart> loadout)
@@ -2742,7 +3904,9 @@ namespace BladeSpinners.Gameplay.UI
 
         private bool ShouldRenderPreviewThisFrame()
         {
-            if (rootState == RootUiState.MainMenu || rootState == RootUiState.Paused || rootState == RootUiState.BetweenArenas)
+            if (rootState == RootUiState.MainMenu
+                || rootState == RootUiState.Paused
+                || rootState == RootUiState.BetweenArenas)
                 return true;
 
             if (rootState == RootUiState.InRun
@@ -2825,6 +3989,27 @@ namespace BladeSpinners.Gameplay.UI
             float normalized = Mathf.InverseLerp(minValue, maxValue, value);
             DrawRect(new Rect(rect.x, rect.y + 8f, rect.width * normalized, 6f), ACCENT_YEL);
             return GUI.HorizontalSlider(rect, value, minValue, maxValue, sliderTrackStyle, sliderThumbStyle);
+        }
+
+        private void LoadAudioSettings()
+        {
+            AudioMixLevels levels =
+                AudioMixPreferences.Load();
+            settingsMasterVolume = levels.Master;
+            settingsSoundEffectsVolume = levels.SoundEffects;
+            settingsMusicVolume = levels.Music;
+            settingsGuiVolume = levels.Gui;
+            ApplyAudioSettings(false);
+        }
+
+        private void ApplyAudioSettings(bool persist)
+        {
+            SoundManager.SetMixVolumes(
+                settingsMasterVolume,
+                settingsSoundEffectsVolume,
+                settingsMusicVolume,
+                settingsGuiVolume,
+                persist);
         }
 
         private void ApplySettingsToCameraController(ThirdPersonCameraController cameraController)
@@ -3083,7 +4268,7 @@ namespace BladeSpinners.Gameplay.UI
             GUI.contentColor = fg;
             GUI.Label(labelRect, label, fittedStyle);
             GUI.contentColor = Color.white;
-            return GUI.Button(r, GUIContent.none, GUIStyle.none);
+            return WithButtonSound(GUI.Button(r, GUIContent.none, GUIStyle.none));
         }
 
         private bool NavBtn(string label, Rect rect, bool active)
@@ -3112,7 +4297,7 @@ namespace BladeSpinners.Gameplay.UI
             Rect labelRect = new Rect(rect.x + accentWidth, rect.y, rect.width - accentWidth, rect.height - borderHeight);
             DrawFittedLabel(labelRect, label, navButtonStyle, fg, 12);
 
-            return GUI.Button(rect, GUIContent.none, GUIStyle.none);
+            return WithButtonSound(GUI.Button(rect, GUIContent.none, GUIStyle.none));
         }
 
         // ══════════════════════════════════════════════════════════════════════════

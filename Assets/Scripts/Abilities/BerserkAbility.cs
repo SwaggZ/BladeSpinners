@@ -43,8 +43,6 @@ namespace BladeSpinners.Abilities
         private BeyMovementController controller;
         private float multiplier;
         private float timer;
-        private float originalSpeed;
-        private bool applied;
 
         public static void Apply(BeyMovementController ctrl, float speedMult, float dur)
         {
@@ -63,7 +61,6 @@ namespace BladeSpinners.Abilities
         {
             if (controller == null || controller.Rb == null) return;
             controller.Rb.linearVelocity *= multiplier;
-            applied = true;
         }
 
         private void Update()

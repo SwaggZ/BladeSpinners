@@ -26,6 +26,7 @@ namespace BladeSpinners.Gameplay.Effects
             go.transform.SetParent(parent, false);
 
             ParticleSystem particleSystem = go.AddComponent<ParticleSystem>();
+            particleSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             var main = particleSystem.main;
             main.duration = 0.35f;
             main.loop = false;
@@ -76,6 +77,7 @@ namespace BladeSpinners.Gameplay.Effects
             go.transform.SetParent(parent, false);
 
             ParticleSystem particleSystem = go.AddComponent<ParticleSystem>();
+            particleSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             var main = particleSystem.main;
             main.duration = 0.16f;
             main.loop = false;

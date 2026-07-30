@@ -26,7 +26,11 @@ namespace BladeSpinners.Abilities
             if (beyController == null || beyController.BeyConfiguration == null)
                 return;
 
-            BeyMovementController target = FindNearestEnemy(beyController);
+            BeyMovementController target = AbilityTargetQuery.FindNearest(
+                beyController,
+                beyController.transform.position,
+                pullRange,
+                AbilityTargetRelation.Enemy);
             if (target == null)
             {
                 Debug.Log("[Ability] Serpent Coil: no target found.");
@@ -49,21 +53,6 @@ namespace BladeSpinners.Abilities
 
             SpawnVisual(beyController.transform.position, target.transform.position);
             Debug.Log("[Ability] Serpent Coil!");
-        }
-
-        private BeyMovementController FindNearestEnemy(BeyMovementController owner)
-        {
-            BeyMovementController[] all = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
-            BeyMovementController nearest = null;
-            float best = float.MaxValue;
-            foreach (BeyMovementController bey in all)
-            {
-                if (bey == null || bey == owner || bey.BeyConfiguration == null) continue;
-                if (bey.BeyConfiguration.IsEnemy == owner.BeyConfiguration.IsEnemy) continue;
-                float d = Vector3.Distance(owner.transform.position, bey.transform.position);
-                if (d < best && d <= pullRange) { best = d; nearest = bey; }
-            }
-            return nearest;
         }
 
         private void SpawnVisual(Vector3 from, Vector3 to)

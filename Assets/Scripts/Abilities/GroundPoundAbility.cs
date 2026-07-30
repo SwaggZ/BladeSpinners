@@ -32,25 +32,19 @@ namespace BladeSpinners.Abilities
             rb.AddForce(Vector3.down * slamForce, ForceMode.VelocityChange);
 
             Vector3 origin = beyController.transform.position;
-            BeyConfiguration ownerConfig = beyController.BeyConfiguration;
-            EnemyBeyController[] enemies = Object.FindObjectsByType<EnemyBeyController>(FindObjectsSortMode.None);
-            foreach (EnemyBeyController enemy in enemies)
+            foreach (BeyMovementController enemy in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         beyController,
+                         origin,
+                         impactRadius,
+                         AbilityTargetRelation.Enemy))
             {
-                if (enemy == null || enemy.BeyConfiguration == null)
-                    continue;
-
-                Rigidbody enemyRb = enemy.GetComponent<Rigidbody>();
+                Rigidbody enemyRb = enemy.Rb;
                 if (enemyRb == null)
-                    continue;
-
-                if (enemy.BeyConfiguration == ownerConfig)
                     continue;
 
                 Vector3 toEnemy = enemy.transform.position - origin;
                 float dist = toEnemy.magnitude;
-                if (dist > impactRadius)
-                    continue;
-
                 float falloff = 1f - (dist / impactRadius);
                 enemy.BeyConfiguration.SetSpin(enemy.BeyConfiguration.CurrentSpin - spinDamage * falloff);
 

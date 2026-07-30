@@ -1,12 +1,12 @@
 using UnityEngine;
-using System;
+using BladeSpinners.Gameplay.Parts;
 
 namespace BladeSpinners.Abilities
 {
     /// <summary>
-    /// Base class for all Beyblade passive abilities equipped on Energy Rings.
-    /// Passive effects are always active and hook into combat and movement events.
-    /// Each Energy Ring can have one passive in addition to owning mana stats.
+    /// Immutable definition for an Energy Ring passive. Runtime counters and cooldowns
+    /// live in EnergyRingPassiveRuntime so one definition can safely be shared by every
+    /// player and enemy using that passive.
     /// </summary>
     public abstract class BeyPassive : ScriptableObject
     {
@@ -28,42 +28,92 @@ namespace BladeSpinners.Abilities
         public Core.AbilityRarity Rarity => rarity;
         public Sprite Icon => icon;
 
-        /// <summary>
-        /// Called when this passive is equipped to an Energy Ring.
-        /// Use to hook into events or initialize state.
-        /// </summary>
-        /// <param name="beyController">The BeyMovementController this passive is attached to.</param>
-        public virtual void OnEquipped(Gameplay.Movement.BeyMovementController beyController)
+        internal void ConfigureRuntimeMetadata(
+            string displayName,
+            string passiveDescription,
+            Core.AbilityRarity passiveRarity)
+        {
+            passiveName = displayName;
+            description = passiveDescription;
+            rarity = passiveRarity;
+            name = $"{displayName} (Runtime)";
+            hideFlags = HideFlags.HideAndDontSave;
+        }
+
+        public virtual void OnEquipped(EnergyRingPassiveRuntime runtime)
         {
         }
 
-        /// <summary>
-        /// Called when this passive is unequipped.
-        /// Use to unhook from events or cleanup state.
-        /// </summary>
-        public virtual void OnUnequipped()
+        public virtual void OnUnequipped(EnergyRingPassiveRuntime runtime)
         {
         }
 
-        /// <summary>
-        /// Called every frame while the passive is active.
-        /// </summary>
-        /// <param name="beyController">The BeyMovementController this passive is attached to.</param>
-        public virtual void Update(Gameplay.Movement.BeyMovementController beyController)
+        public virtual void Tick(
+            EnergyRingPassiveRuntime runtime,
+            float deltaTime)
         {
         }
 
-        /// <summary>
-        /// Called when this Bey collides with another Bey.
-        /// </summary>
-        public virtual void OnCollisionWithBey(object otherBeyInfo)
+        public virtual float ModifyOutgoingCollisionDamage(
+            EnergyRingPassiveRuntime runtime,
+            BeyConfiguration target,
+            float damage)
+        {
+            return damage;
+        }
+
+        public virtual float ModifyIncomingCollisionDamage(
+            EnergyRingPassiveRuntime runtime,
+            BeyConfiguration source,
+            float damage)
+        {
+            return damage;
+        }
+
+        public virtual float ModifyPassiveSpinDrain(
+            EnergyRingPassiveRuntime runtime,
+            float drain)
+        {
+            return drain;
+        }
+
+        public virtual float ModifyManaRegeneration(
+            EnergyRingPassiveRuntime runtime,
+            float regeneration)
+        {
+            return regeneration;
+        }
+
+        public virtual float ModifyPickupAmount(
+            EnergyRingPassiveRuntime runtime,
+            float amount)
+        {
+            return amount;
+        }
+
+        public virtual void OnCollisionWithBey(
+            EnergyRingPassiveRuntime runtime,
+            EnergyRingCollisionInfo collision)
         {
         }
 
-        /// <summary>
-        /// Called when spin value changes.
-        /// </summary>
-        public virtual void OnSpinChanged(float newSpin)
+        public virtual void OnCollisionDamageTaken(
+            EnergyRingPassiveRuntime runtime,
+            BeyConfiguration source,
+            float damageTaken)
+        {
+        }
+
+        public virtual void OnSpinChanged(
+            EnergyRingPassiveRuntime runtime,
+            float previousSpin,
+            float newSpin)
+        {
+        }
+
+        public virtual void OnManaSpent(
+            EnergyRingPassiveRuntime runtime,
+            float amount)
         {
         }
     }

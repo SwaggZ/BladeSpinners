@@ -110,18 +110,11 @@ namespace BladeSpinners.Abilities
 
         private BeyMovementController FindNearest()
         {
-            BeyMovementController nearest = null;
-            float minDist = float.MaxValue;
-            Collider[] hits = Physics.OverlapSphere(transform.position, fireRange);
-            foreach (Collider col in hits)
-            {
-                if (col.gameObject == gameObject) continue;
-                BeyMovementController bey = col.GetComponentInParent<BeyMovementController>();
-                if (bey == null || bey == ctrl) continue;
-                float dist = Vector3.Distance(transform.position, bey.transform.position);
-                if (dist < minDist) { minDist = dist; nearest = bey; }
-            }
-            return nearest;
+            return AbilityTargetQuery.FindNearest(
+                ctrl,
+                transform.position,
+                fireRange,
+                AbilityTargetRelation.Enemy);
         }
 
         private static void ApplyMat(GameObject obj, Color baseCol, Color emission)

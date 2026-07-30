@@ -118,7 +118,7 @@ namespace BladeSpinners.Gameplay
             if (beyConfiguration != null)
             {
                 spinFraction = Mathf.Clamp01(beyConfiguration.CurrentSpin / GameConstants.MAX_SPIN);
-                float manaPool = beyConfiguration.GetStatBlock().ManaPoolSize;
+                float manaPool = beyConfiguration.MaxMana;
                 manaFraction = manaPool > 0f ? Mathf.Clamp01(beyConfiguration.CurrentMana / manaPool) : 0f;
             }
 

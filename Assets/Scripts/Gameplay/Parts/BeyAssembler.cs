@@ -129,12 +129,12 @@ namespace BladeSpinners.Gameplay.Parts
 
             if (bouncyMaterial == null)
             {
-                bouncyMaterial = new PhysicsMaterial("BeyPartBounce");
-                bouncyMaterial.bounciness = 0.4f;
+                bouncyMaterial = new PhysicsMaterial("BeyPartLowBounce");
+                bouncyMaterial.bounciness = 0.02f;
                 bouncyMaterial.dynamicFriction = 0f;
                 bouncyMaterial.staticFriction = 0f;
                 bouncyMaterial.frictionCombine = PhysicsMaterialCombine.Minimum;
-                bouncyMaterial.bounceCombine = PhysicsMaterialCombine.Maximum;
+                bouncyMaterial.bounceCombine = PhysicsMaterialCombine.Minimum;
             }
         }
 

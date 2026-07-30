@@ -26,13 +26,11 @@ namespace BladeSpinners.Abilities
             Vector3 pos = beyController.transform.position;
             int rooted = 0;
 
-            Collider[] hits = Physics.OverlapSphere(pos, radius);
-            foreach (Collider col in hits)
+            foreach (BeyMovementController enemy in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         beyController, pos, radius, AbilityTargetRelation.Enemy))
             {
                 if (rooted >= maxTargets) break;
-                if (col.gameObject == beyController.gameObject) continue;
-                BeyMovementController enemy = col.GetComponentInParent<BeyMovementController>();
-                if (enemy == null || enemy == beyController) continue;
                 if (enemy.BeyConfiguration != null)
                     enemy.BeyConfiguration.SetSpin(enemy.BeyConfiguration.CurrentSpin - damage);
                 SpectralChainRoot.Apply(enemy, rootDuration);

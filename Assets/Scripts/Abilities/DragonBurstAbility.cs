@@ -40,23 +40,20 @@ namespace BladeSpinners.Abilities
                 beyController.Rb.AddForce(forward * surgeImpulse, ForceMode.VelocityChange);
             }
 
-            BeyConfiguration ownerConfig = beyController.BeyConfiguration;
-            EnemyBeyController[] enemies = Object.FindObjectsByType<EnemyBeyController>(FindObjectsSortMode.None);
-            foreach (EnemyBeyController enemy in enemies)
+            foreach (BeyMovementController enemy in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         beyController,
+                         origin,
+                         coneRange,
+                         AbilityTargetRelation.Enemy))
             {
-                if (enemy == null || enemy.BeyConfiguration == null)
-                    continue;
-
-                Rigidbody enemyRb = enemy.GetComponent<Rigidbody>();
+                Rigidbody enemyRb = enemy.Rb;
                 if (enemyRb == null)
-                    continue;
-
-                if (enemy.BeyConfiguration == ownerConfig)
                     continue;
 
                 Vector3 toEnemy = enemy.transform.position - origin;
                 float dist = toEnemy.magnitude;
-                if (dist > coneRange || dist < 0.01f)
+                if (dist < 0.01f)
                     continue;
 
                 Vector3 flatDir = toEnemy;

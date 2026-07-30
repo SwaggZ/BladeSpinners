@@ -65,7 +65,7 @@ namespace BladeSpinners.Abilities
                 DBZAuraHelper.ApplyTransparentMat(shard, new Color(0.6f, 0.85f, 1f, 0.3f), new Color(0.5f, 1.2f, 2.5f));
 
                 IceShardProjectile proj = shard.AddComponent<IceShardProjectile>();
-                proj.Initialize(beyController.BeyConfiguration, shardDamage, freezeChance, freezeDuration);
+                proj.Initialize(beyController, shardDamage, freezeChance, freezeDuration);
                 Object.Destroy(shard, 3f);
             }
             Debug.Log("[Ability] Ice Shard!");
@@ -74,21 +74,27 @@ namespace BladeSpinners.Abilities
 
     public class IceShardProjectile : MonoBehaviour
     {
-        private BeyConfiguration ownerConfig;
+        private BeyMovementController owner;
         private float damage;
         private float freezeChance;
         private float freezeDur;
 
-        public void Initialize(BeyConfiguration owner, float dmg, float fc, float fd)
+        public void Initialize(BeyMovementController ownerController, float dmg, float fc, float fd)
         {
-            ownerConfig = owner; damage = dmg; freezeChance = fc; freezeDur = fd;
+            owner = ownerController;
+            damage = dmg;
+            freezeChance = fc;
+            freezeDur = fd;
         }
 
         private void OnTriggerEnter(Collider other)
         {
-            BeyMovementController hit = other.GetComponentInParent<BeyMovementController>();
-            if (hit == null || hit.BeyConfiguration == null || hit.BeyConfiguration == ownerConfig) return;
-            if (ownerConfig != null && hit.BeyConfiguration.IsEnemy == ownerConfig.IsEnemy) return;
+            if (!AbilityTargetQuery.TryResolveCollider(
+                    owner, other, AbilityTargetRelation.Enemy, out BeyMovementController hit))
+            {
+                return;
+            }
+
             hit.BeyConfiguration.SetSpin(hit.BeyConfiguration.CurrentSpin - damage);
             if (Random.value < freezeChance)
                 FreezeRuntime.Apply(hit, freezeDur);

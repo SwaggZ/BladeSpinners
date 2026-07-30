@@ -183,13 +183,28 @@ namespace BladeSpinners.World
                 float x = Mathf.Cos(angle) * placementRadius;
                 float z = Mathf.Sin(angle) * placementRadius;
 
-                GameObject pickup = CreatePickupPlaceholder(radius, flatRatio, depth, x, z, pickupIndex, isMana);
+                GameObject pickup = CreatePickupPlaceholder(
+                    shape,
+                    depth,
+                    x,
+                    z,
+                    pickupIndex,
+                    isMana);
                 pickup.transform.SetParent(root.transform, false);
             }
 
             // Ground layer for collision detection
-            int groundLayer = LayerMask.NameToLayer("Default");
+            int groundLayer = LayerMask.NameToLayer("Ground");
+            if (groundLayer < 0)
+            {
+                Debug.LogError("[ProceduralArenaGenerator] Required 'Ground' layer is missing. Falling back to Default.");
+                groundLayer = 0;
+            }
             SetLayerRecursive(root, groundLayer);
+            PickupPlaceholder[] pickups =
+                root.GetComponentsInChildren<PickupPlaceholder>(true);
+            for (int i = 0; i < pickups.Length; i++)
+                SetLayerRecursive(pickups[i].gameObject, 0);
 
             return root;
         }
@@ -778,14 +793,21 @@ namespace BladeSpinners.World
         // PICKUP COLLECTIBLES — trigger colliders + visual spheres
         // ================================================================
 
-        private static GameObject CreatePickupPlaceholder(float arenaRadius, float flatRatio, float depth,
+        private static GameObject CreatePickupPlaceholder(
+            ArenaShapeDefinition shape,
+            float depth,
             float x, float z, int index, bool isMana)
         {
-            float distFromCenter = Mathf.Sqrt(x * x + z * z);
-            float y = GetBowlHeight(distFromCenter, arenaRadius, flatRatio, depth);
+            float y = GetSurfaceHeight(shape, depth, x, z);
 
-            GameObject pickup = new GameObject(isMana ? $"ManaPickup_{index}" : $"StaminaPickup_{index}");
-            pickup.transform.position = new Vector3(x, y + 0.8f, z); // float above ground
+            GameObject pickup = new GameObject(
+                isMana
+                    ? $"ManaPickup_{index}"
+                    : $"SpinPickup_{index}");
+            pickup.transform.localPosition = new Vector3(
+                x,
+                y + GameConstants.PICKUP_SPAWN_HEIGHT,
+                z);
 
             // Trigger collider for collection — larger radius for easier pickup
             SphereCollider trigger = pickup.AddComponent<SphereCollider>();
@@ -812,12 +834,37 @@ namespace BladeSpinners.World
 
             // Add the placeholder tag component
             pickup.AddComponent<PickupPlaceholder>().Initialize(
-                isMana ? PickupType.SpinMedium : PickupType.StaminaTemporary);
+                isMana ? PickupType.Mana : PickupType.SpinMedium);
 
             // Add bob + billboard animation
             pickup.AddComponent<PickupBobAnimation>();
 
             return pickup;
+        }
+
+        public static float GetSurfaceHeight(
+            ArenaShapeDefinition shape,
+            float depth,
+            float x,
+            float z)
+        {
+            ArenaShapeDefinition evaluatedShape = shape;
+            evaluatedShape.Depth = depth;
+            float axisX = Mathf.Max(0.01f, evaluatedShape.AxisX);
+            float axisZ = Mathf.Max(0.01f, evaluatedShape.AxisZ);
+            float scaledX = x / axisX;
+            float scaledZ = z / axisZ;
+            float angle = Mathf.Atan2(scaledZ, scaledX);
+            float distance = Mathf.Sqrt(
+                scaledX * scaledX + scaledZ * scaledZ);
+            float boundary = Mathf.Max(
+                0.01f,
+                ArenaShapeLibrary.EvaluateBoundaryRadius(
+                    angle,
+                    evaluatedShape));
+            return ArenaShapeLibrary.EvaluateSurfaceHeight(
+                distance / boundary,
+                evaluatedShape);
         }
 
         // ================================================================

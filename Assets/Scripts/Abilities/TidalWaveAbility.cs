@@ -28,17 +28,15 @@ namespace BladeSpinners.Abilities
                 return;
 
             Vector3 origin = beyController.transform.position;
-            BeyConfiguration ownerConfig = beyController.BeyConfiguration;
-            BeyMovementController[] beys = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
-
-            foreach (BeyMovementController bey in beys)
+            foreach (BeyMovementController bey in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         beyController,
+                         origin,
+                         waveRadius,
+                         AbilityTargetRelation.Enemy))
             {
-                if (bey == null || bey.BeyConfiguration == null || bey.BeyConfiguration == ownerConfig) continue;
-                if (bey.BeyConfiguration.IsEnemy == ownerConfig.IsEnemy) continue;
-
                 Vector3 toEnemy = bey.transform.position - origin;
                 float dist = toEnemy.magnitude;
-                if (dist > waveRadius) continue;
 
                 float falloff = 1f - (dist / waveRadius);
                 bey.BeyConfiguration.SetSpin(bey.BeyConfiguration.CurrentSpin - spinDamage * falloff);

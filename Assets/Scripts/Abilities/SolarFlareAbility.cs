@@ -12,7 +12,6 @@ namespace BladeSpinners.Abilities
         [SerializeField] private float explosionRadius = 8f;
         [SerializeField] private float centerDamage = 35f;
         [SerializeField] private float knockbackImpulse = 22f;
-        [SerializeField] private float blindDuration = 1.5f;
 
         private void OnEnable()
         {
@@ -28,17 +27,15 @@ namespace BladeSpinners.Abilities
                 return;
 
             Vector3 origin = beyController.transform.position;
-            BeyConfiguration ownerConfig = beyController.BeyConfiguration;
-            BeyMovementController[] beys = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
-
-            foreach (BeyMovementController bey in beys)
+            foreach (BeyMovementController bey in
+                     AbilityTargetQuery.FindUniqueBeysInRadius(
+                         beyController,
+                         origin,
+                         explosionRadius,
+                         AbilityTargetRelation.Enemy))
             {
-                if (bey == null || bey.BeyConfiguration == null || bey.BeyConfiguration == ownerConfig) continue;
-                if (bey.BeyConfiguration.IsEnemy == ownerConfig.IsEnemy) continue;
-
                 Vector3 toEnemy = bey.transform.position - origin;
                 float dist = toEnemy.magnitude;
-                if (dist > explosionRadius) continue;
 
                 float falloff = 1f - (dist / explosionRadius);
                 bey.BeyConfiguration.SetSpin(bey.BeyConfiguration.CurrentSpin - centerDamage * falloff);

@@ -2,7 +2,6 @@ using UnityEngine;
 using BladeSpinners.Core;
 using BladeSpinners.Gameplay.Parts;
 using BladeSpinners.Gameplay.Movement;
-using BladeSpinners.Gameplay.Effects;
 
 namespace BladeSpinners.Gameplay
 {
@@ -213,18 +212,8 @@ namespace BladeSpinners.Gameplay
 
         private void TryActivateAbility()
         {
-            if (beyConfiguration == null) return;
-
-            BeyStatBlock stats = beyConfiguration.GetStatBlock();
-            if (stats.EquippedAbility == null) return;
-
-            float manaCost = stats.EquippedAbility.ManaCost;
-            if (beyConfiguration.CanUseAbility(manaCost))
-            {
-                beyConfiguration.SpendMana(manaCost);
-                stats.EquippedAbility.Activate(beyMovementController);
-                AbilityEmblemHologramEffect.Spawn(beyMovementController);
-            }
+            AbilityActivationService.TryActivateEquipped(
+                beyConfiguration, beyMovementController);
         }
 
         // ── Gizmos ───────────────────────────────────────────────────

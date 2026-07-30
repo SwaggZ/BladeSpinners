@@ -177,8 +177,7 @@ namespace BladeSpinners.Gameplay
             if (movementController != null) movementController.enabled = true;
             if (aiInput != null) aiInput.enabled = true;
 
-            beyConfiguration?.SetSpin(GameConstants.DEFAULT_STARTING_SPIN);
-            beyConfiguration?.SetMana(GameConstants.DEFAULT_MANA_POOL);
+            beyConfiguration?.ResetResourcesForMatch();
             gameObject.SetActive(true);
         }
     }

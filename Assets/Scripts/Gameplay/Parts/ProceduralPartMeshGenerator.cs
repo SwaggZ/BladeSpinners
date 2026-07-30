@@ -40,7 +40,7 @@ namespace BladeSpinners.Gameplay.Parts
             {
                 PartType.Tip => GenerateTipMesh(part, rng),
                 PartType.Track => GenerateTrackMesh(part, rng),
-                PartType.FusionWheel => GenerateFusionWheelMesh(part, rng),
+                PartType.FusionWheel => GenerateFusionWheelMesh(part),
                 PartType.EnergyRing => GenerateEnergyRingMesh(part, rng),
                 PartType.FaceBolt => GenerateFaceBoltMesh(part, rng),
                 _ => null
@@ -685,20 +685,13 @@ namespace BladeSpinners.Gameplay.Parts
             return Mathf.Lerp(0.03f, 0.07f, t);
         }
 
-        private static Mesh GenerateFusionWheelMesh(BeyPart part, System.Random rng)
+        private static Mesh GenerateFusionWheelMesh(BeyPart part)
         {
             float t = Mathf.InverseLerp(GameConstants.MIN_WEIGHT, GameConstants.MAX_WEIGHT, part.Weight);
             float baseOuterRadius = Mathf.Lerp(0.1f, 0.18f, t);
             float height = GetFusionWheelHeight(part);
-
-            // Symmetry planes (1–2) from seed
-            int symmetryPlanes = 1 + rng.Next(0, 2);
-
-            // Seed-driven blade configuration
-            int bladeCount = 3 + rng.Next(0, 6); // 3–8 blades
-            float bladeProtrusion = 0.015f + (float)rng.NextDouble() * 0.035f; // how far blades stick out
-            float bladeWidth = 0.15f + (float)rng.NextDouble() * 0.25f; // angular fraction per blade (0.15–0.4)
-            float bladeSweep = -0.05f + (float)rng.NextDouble() * 0.1f; // slight angular offset for swept look
+            FusionWheelCombatProfile profile =
+                FusionWheelCombatProfile.FromPart(part);
 
             // Generate per-segment outer radius
             float[] outerRadii = new float[RING_SEGMENTS];
@@ -707,13 +700,15 @@ namespace BladeSpinners.Gameplay.Parts
                 float segAngle = (float)i / RING_SEGMENTS; // 0–1 range
 
                 float maxBladeFactor = 0f;
-                for (int b = 0; b < bladeCount; b++)
+                for (int b = 0; b < profile.BladeCount; b++)
                 {
-                    float bladeCenter = ((float)b / bladeCount + bladeSweep) % 1f;
+                    float bladeCenter =
+                        ((float)b / profile.BladeCount + profile.BladeSweep) % 1f;
                     float dist = Mathf.Abs(segAngle - bladeCenter);
                     dist = Mathf.Min(dist, 1f - dist); // wrap around
 
-                    float halfWidth = bladeWidth / (2f * bladeCount);
+                    float halfWidth =
+                        profile.BladeWidth / (2f * profile.BladeCount);
                     if (dist < halfWidth)
                     {
                         // Smooth falloff from blade center
@@ -723,11 +718,13 @@ namespace BladeSpinners.Gameplay.Parts
                     }
                 }
 
-                outerRadii[i] = baseOuterRadius + bladeProtrusion * maxBladeFactor;
+                outerRadii[i] =
+                    baseOuterRadius
+                    + profile.BladeProtrusion * maxBladeFactor;
             }
 
             // Enforce symmetry so blades are evenly mirrored
-            EnforceSymmetry(outerRadii, symmetryPlanes);
+            EnforceSymmetry(outerRadii, profile.SymmetryPlanes);
 
             // Fusion Wheels are solid metal cores (no center hole).
             return GenerateModulatedSolidDisc(outerRadii, height, RING_SEGMENTS);

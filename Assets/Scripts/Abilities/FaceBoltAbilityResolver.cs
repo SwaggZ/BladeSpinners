@@ -203,7 +203,7 @@ namespace BladeSpinners.Abilities
             { "Lucky Star", typeof(LuckyStarAbility) },
             { "Apex", typeof(OverchargeAbility) },
             { "Ragnarok", typeof(MeteorStrikeAbility) },
-            { "Ruinbringer", typeof(BlackHoleAbility) },
+            { "Ruinbringer", typeof(GravityWellAbility) },
             { "Titan's Wrath", typeof(WarCryAbility) },
             { "Worldender", typeof(BlackHoleAbility) },
 
