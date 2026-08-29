@@ -10,7 +10,7 @@ namespace BladeSpinners.Gameplay
 {
     /// <summary>
     /// Coordinates match state: tracks all active beys, detects burst/KO,
-    /// announces results, and handles match restart.
+    /// triggers slow-mo finishes, announces results, and handles match restart.
     /// Attach to a persistent GameObject in the scene (e.g., "MatchManager").
     /// </summary>
     public class MatchManager : MonoBehaviour
@@ -61,6 +61,18 @@ namespace BladeSpinners.Gameplay
         public event System.Action<MatchState> OnMatchStateChanged;
         public event System.Action<string> OnBeyBurst;
         public event System.Action<PlayerDefeatReason, string> OnPlayerDefeated;
+        public event System.Action<BladeSpinners.Abilities.LaunchRating, float> OnRipCordExecuted;
+
+        // ── Rip-Cord Minigame ──────────────────────────────────────────
+        private bool hasPlayerRipped = false;
+        private float ripAccuracy = 0f;
+        private BladeSpinners.Abilities.LaunchRating ripRating = BladeSpinners.Abilities.LaunchRating.Good;
+        private float ripMultiplier = 1f;
+
+        public bool HasPlayerRipped => hasPlayerRipped;
+        public float RipAccuracy => ripAccuracy;
+        public BladeSpinners.Abilities.LaunchRating RipRating => ripRating;
+        public float RipMultiplier => ripMultiplier;
 
         public MatchState CurrentState => currentState;
         public int EnemiesRemaining => aliveEnemies.Count;
@@ -93,6 +105,11 @@ namespace BladeSpinners.Gameplay
             for (int i = 0; i < enemies.Count; i++)
                 enemies[i]?.BeyConfiguration?.ResetResourcesForMatch();
 
+            hasPlayerRipped = false;
+            ripAccuracy = 0f;
+            ripRating = BladeSpinners.Abilities.LaunchRating.Good;
+            ripMultiplier = 1f;
+
             ResetDefeatTracking();
             SetCombatControllersEnabled(false);
 
@@ -100,10 +117,99 @@ namespace BladeSpinners.Gameplay
             stateTimer = countdownDuration;
         }
 
+        /// <summary>
+        /// Called by UI or input when the player rips the cord during countdown.
+        /// </summary>
+        public void ExecuteRipCord(float needlePosition01)
+        {
+            if (currentState != MatchState.WaitingToStart || hasPlayerRipped)
+                return;
+
+            hasPlayerRipped = true;
+
+            // Needle oscillates 0..1. Sweet spot is centered around [0.85..0.98] (peak tension)
+            bool hasTurboRip = playerManager != null && playerManager.BeyConfiguration != null && playerManager.BeyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.TurboRip);
+            float optimal = 0.90f;
+            float dist = Mathf.Abs(needlePosition01 - optimal);
+            float window = hasTurboRip ? 0.57f : 0.38f;
+            ripAccuracy = Mathf.Clamp01(1f - (dist / window));
+
+            if (ripAccuracy >= 0.88f)
+            {
+                ripRating = BladeSpinners.Abilities.LaunchRating.Perfect;
+                ripMultiplier = hasTurboRip ? 1.40f : 1.25f;
+                if (playerManager?.BeyConfiguration?.ShrineState != null)
+                    playerManager.BeyConfiguration.ShrineState.AddPoints(50);
+            }
+            else if (ripAccuracy >= 0.62f)
+            {
+                ripRating = BladeSpinners.Abilities.LaunchRating.Great;
+                ripMultiplier = hasTurboRip ? 1.18f : 1.08f;
+            }
+            else if (ripAccuracy >= 0.32f)
+            {
+                ripRating = BladeSpinners.Abilities.LaunchRating.Good;
+                ripMultiplier = 0.92f;
+            }
+            else
+            {
+                ripRating = BladeSpinners.Abilities.LaunchRating.Mishap;
+                ripMultiplier = 0.75f;
+            }
+
+            ApplyRipLaunchResults();
+        }
+
+        private void ApplyRipLaunchResults()
+        {
+            if (playerManager != null && playerManager.BeyConfiguration != null)
+            {
+                playerManager.BeyConfiguration.ApplyLaunchRipMultiplier(ripMultiplier);
+
+                Vector3 pPos = playerManager.transform.position;
+                Vector3 pFwd = playerManager.transform.forward;
+
+                BladeSpinners.Abilities.EpicAbilityVFXHelper.SpawnLaunchRipVFX(pPos, pFwd, ripRating);
+
+                // Forward surge impulse based on quality
+                Rigidbody pRb = playerManager.GetComponent<Rigidbody>();
+                if (pRb != null)
+                {
+                    float launchForce = ripRating switch
+                    {
+                        BladeSpinners.Abilities.LaunchRating.Perfect => 18f,
+                        BladeSpinners.Abilities.LaunchRating.Great => 12f,
+                        BladeSpinners.Abilities.LaunchRating.Good => 6f,
+                        _ => 2f
+                    };
+                    pRb.AddForce(pFwd * launchForce + Vector3.down * 4f, ForceMode.Impulse);
+                }
+
+                // Comic popup
+                string ratingTitle = ripRating switch
+                {
+                    BladeSpinners.Abilities.LaunchRating.Perfect => $"PERFECT RIP!! {Mathf.RoundToInt(ripMultiplier * 100)}% SPIN",
+                    BladeSpinners.Abilities.LaunchRating.Great => $"GREAT RIP! {Mathf.RoundToInt(ripMultiplier * 100)}% SPIN",
+                    BladeSpinners.Abilities.LaunchRating.Good => $"GOOD RIP {Mathf.RoundToInt(ripMultiplier * 100)}% SPIN",
+                    _ => $"MISHAP RIP... {Mathf.RoundToInt(ripMultiplier * 100)}% SPIN"
+                };
+                Color ratingColor = ripRating switch
+                {
+                    BladeSpinners.Abilities.LaunchRating.Perfect => new Color(1f, 0.85f, 0.1f, 1f),
+                    BladeSpinners.Abilities.LaunchRating.Great => new Color(0.1f, 0.85f, 1f, 1f),
+                    BladeSpinners.Abilities.LaunchRating.Good => new Color(1f, 0.6f, 0.1f, 1f),
+                    _ => new Color(0.7f, 0.7f, 0.7f, 1f)
+                };
+                float popScale = ripRating == BladeSpinners.Abilities.LaunchRating.Perfect ? 1.55f : 1.15f;
+                BladeSpinners.Gameplay.UI.RuntimeGameUiController.SpawnComicPopup(ratingTitle, ratingColor, popScale);
+            }
+
+            OnRipCordExecuted?.Invoke(ripRating, ripMultiplier);
+        }
+
         public void NotifyPlayerJump()
         {
-            // Kept for compatibility with callers. Death attribution now depends
-            // strictly on recent blade collision timing.
+            // Kept for compatibility with callers.
         }
 
         public void NotifyPlayerHitByEnemy(BeyConfiguration enemyConfig, bool wasKnockback)
@@ -155,6 +261,10 @@ namespace BladeSpinners.Gameplay
                     stateTimer -= Time.deltaTime;
                     if (stateTimer <= 0f)
                     {
+                        if (!hasPlayerRipped)
+                        {
+                            ExecuteRipCord(0.5f); // fallback rip
+                        }
                         SetCombatControllersEnabled(true);
                         SetState(MatchState.InProgress);
                     }
@@ -276,17 +386,47 @@ namespace BladeSpinners.Gameplay
         private string BuildBurstDefeatMessage()
         {
             if (WasRecentEnemyCollision())
-                return "An enemy bursted you.";
+            {
+                string[] burstLines =
+                {
+                    "Opponent sent your parts flying into the stratosphere!",
+                    "DISMANTLED! Your Bey didn't even have time to scream!",
+                    "That hit shattered your spin in 4K Ultra HD!",
+                    "MEGA CRITICAL! Your Bey exploded into confetti!"
+                };
+                return burstLines[Random.Range(0, burstLines.Length)];
+            }
 
-            return "You spun out naturally.";
+            string[] spinOutLines =
+            {
+                "Friction 1 - 0 You. Spin stamina completely exhausted!",
+                "You ran out of juice! Did you forget to wind the launcher?",
+                "Total spin flatline! The arena floor claimed your velocity!"
+            };
+            return spinOutLines[Random.Range(0, spinOutLines.Length)];
         }
 
         private string BuildRingOutDefeatMessage(PlayerDefeatReason reason)
         {
             if (reason == PlayerDefeatReason.KnockedOutByEnemy)
-                return "An enemy knocked you out of the arena.";
+            {
+                string[] knockOutLines =
+                {
+                    "MEGA YEET! You were launched clean out of the stadium!",
+                    "Calculated home run by the opponent! Bye bye!",
+                    "Orbit achieved! You are now an official low-altitude satellite!",
+                    "Sent packing beyond the outer rim!"
+                };
+                return knockOutLines[Random.Range(0, knockOutLines.Length)];
+            }
 
-            return "You flew out.";
+            string[] selfYeetLines =
+            {
+                "You self-yeeted directly into the void... 10/10 diving form though!",
+                "Nobody pushed you, champion. That was purely self-directed aerial exploration!",
+                "Down you go! Next time remember the arena has boundaries!"
+            };
+            return selfYeetLines[Random.Range(0, selfYeetLines.Length)];
         }
 
         private void CacheKillerParts(BeyConfiguration enemyConfig)
@@ -300,6 +440,29 @@ namespace BladeSpinners.Gameplay
             lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.FusionWheel));
             lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.Track));
             lastEnemyAggressorParts.Add(enemyConfig.GetEquippedPart(PartType.Tip));
+        }
+
+        private Coroutine slowMoCoroutine;
+
+        public void TriggerSlowMoFinish(float slowTimeScale = 0.22f, float realDuration = 0.65f)
+        {
+            if (slowMoCoroutine != null) StopCoroutine(slowMoCoroutine);
+            slowMoCoroutine = StartCoroutine(SlowMoRoutine(slowTimeScale, realDuration));
+        }
+
+        private System.Collections.IEnumerator SlowMoRoutine(float scale, float duration)
+        {
+            Time.timeScale = scale;
+            Time.fixedDeltaTime = 0.02f * Time.timeScale;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
+            Time.timeScale = 1f;
+            Time.fixedDeltaTime = 0.02f;
+            slowMoCoroutine = null;
         }
 
         private void HandlePlayerBurst(PlayerDefeatReason reason, string message)
@@ -317,6 +480,9 @@ namespace BladeSpinners.Gameplay
                 burstEffect.TriggerBurst();
             }
 
+            TriggerSlowMoFinish(0.18f, 0.8f);
+            ThirdPersonCameraController.TriggerScreenShake(0.65f, 0.4f);
+
             lastPlayerDefeatReason = reason;
             lastPlayerDefeatMessage = string.IsNullOrWhiteSpace(message) ? "You were defeated." : message;
             OnPlayerDefeated?.Invoke(lastPlayerDefeatReason, lastPlayerDefeatMessage);
@@ -329,8 +495,14 @@ namespace BladeSpinners.Gameplay
         private void HandleEnemyBurst(EnemyBeyController enemy)
         {
             Debug.Log($"💥 {enemy.gameObject.name} BURST!");
+            if (playerManager != null && playerManager.BeyConfiguration?.ShrineState != null)
+            {
+                playerManager.BeyConfiguration.ShrineState.AddPoints(75);
+            }
             TryDropPartFromEnemy(enemy);
             enemy.OnBurst();
+            TriggerSlowMoFinish(0.22f, 0.6f);
+            ThirdPersonCameraController.TriggerScreenShake(0.55f, 0.35f);
         }
 
         private void TryDropPartFromEnemy(EnemyBeyController enemy)
@@ -438,6 +610,10 @@ namespace BladeSpinners.Gameplay
             if (playerManager != null && playerManager.BeyConfiguration != null)
             {
                 playerManager.BeyConfiguration.SetSpinDrainPaused(true);
+                if (playerManager.BeyConfiguration.ShrineState != null)
+                {
+                    playerManager.BeyConfiguration.ShrineState.AddPoints(200);
+                }
             }
 
             AutoCollectAllDroppedParts();
@@ -539,6 +715,9 @@ namespace BladeSpinners.Gameplay
         private void RestartMatch()
         {
             Debug.Log("[MatchManager] Restarting match...");
+            Time.timeScale = 1f;
+            Time.fixedDeltaTime = 0.02f;
+
             if (playerManager != null)
             {
                 BeyMovementController movement = playerManager.MovementController;
@@ -570,6 +749,12 @@ namespace BladeSpinners.Gameplay
             SetCombatControllersEnabled(false);
             SetState(MatchState.WaitingToStart);
             stateTimer = countdownDuration;
+        }
+
+        private void OnDestroy()
+        {
+            Time.timeScale = 1f;
+            Time.fixedDeltaTime = 0.02f;
         }
 
         private void OnDrawGizmos()

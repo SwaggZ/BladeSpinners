@@ -9,9 +9,9 @@ namespace BladeSpinners.Gameplay.Parts
     /// Assembles the visual Beyblade from equipped parts.
     /// 
     /// HOW TO USE:
-    ///   1. Generate a part set via "GameObject → Blade Spinners → Generate Part Set"
+    ///   1. Generate a part set via "GameObject -> Blade Spinners -> Generate Part Set"
     ///   2. Drag BeyPart assets into the 5 slots on this component in the Inspector
-    ///   3. The model updates live — change a slot and the mesh/hitbox rebuilds instantly
+    ///   3. The model updates live -- change a slot and the mesh/hitbox rebuilds instantly
     ///
     /// The assembler owns the part references. It pushes them into BeyConfiguration
     /// (which handles stats) and generates procedural meshes under BeyModel.
@@ -21,7 +21,7 @@ namespace BladeSpinners.Gameplay.Parts
     {
         private const float FaceBoltEmblemWorldSize = 0.07f;
 
-        [Header("Part Slots — drag BeyPart assets here")]
+        [Header("Part Slots -- drag BeyPart assets here")]
         [SerializeField] private BeyPart tipPart;
         [SerializeField] private BeyPart trackPart;
         [SerializeField] private BeyPart fusionWheelPart;
@@ -39,7 +39,7 @@ namespace BladeSpinners.Gameplay.Parts
 
         private Dictionary<PartType, GameObject> partObjects = new Dictionary<PartType, GameObject>();
 
-        // Change detection — tracks last-seen asset instances to detect inspector changes
+        // Change detection -- tracks last-seen asset instances to detect inspector changes
         private BeyPart lastTip, lastTrack, lastFusionWheel, lastEnergyRing, lastFaceBolt;
 
         private static Shader urpLitShader;
@@ -206,7 +206,7 @@ namespace BladeSpinners.Gameplay.Parts
         }
 
         // ================================================================
-        // ASSEMBLY — builds meshes from parts
+        // ASSEMBLY -- builds meshes from parts
         // ================================================================
 
         /// <summary>
@@ -295,63 +295,97 @@ namespace BladeSpinners.Gameplay.Parts
 
                 MeshRenderer mr = partObj.AddComponent<MeshRenderer>();
                 Shader shaderToUse = urpLitShader ?? ShaderProvider.URPLit;
-                if (shaderToUse == null)
+                if (shaderToUse != null)
+                {
+                    Material mat = new Material(shaderToUse);
+                    Color partColor = parts[i].PrimaryColor;
+
+                    // Material style per slot (Authentic Beyblade: Metal Fusion visual layers)
+                    switch (slots[i])
+                    {
+                        case PartType.FusionWheel:
+                            Color metalColor = GetFusionWheelMetalColor(partColor);
+                            mat.SetColor("_BaseColor", metalColor);
+                            mat.SetFloat("_Metallic", 0.98f);
+                            mat.SetFloat("_Smoothness", 0.88f);
+                            Texture2D normalMap = GetOrCreateDieCastNormalMap();
+                            if (normalMap != null)
+                            {
+                                mat.SetTexture("_BumpMap", normalMap);
+                                mat.EnableKeyword("_NORMALMAP");
+                            }
+                            Texture2D glossMap = GetOrCreateDieCastGlossMap();
+                            if (glossMap != null)
+                            {
+                                mat.SetTexture("_MetallicGlossMap", glossMap);
+                                mat.EnableKeyword("_METALLICSPECGLOSSMAP");
+                            }
+                            if (mat.HasProperty("_EnvironmentReflections")) mat.SetFloat("_EnvironmentReflections", 1f);
+                            if (mat.HasProperty("_SpecularHighlights")) mat.SetFloat("_SpecularHighlights", 1f);
+                            break;
+
+                        case PartType.EnergyRing:
+                            Color crystalColor = new Color(partColor.r, partColor.g, partColor.b, 0.55f);
+                            mat.SetColor("_BaseColor", crystalColor);
+                            mat.SetFloat("_Metallic", 0.08f);
+                            mat.SetFloat("_Smoothness", 0.96f);
+                            mat.SetColor("_EmissionColor", new Color(partColor.r * 0.35f, partColor.g * 0.35f, partColor.b * 0.35f, 1f));
+                            mat.EnableKeyword("_EMISSION");
+
+                            // Translucent crystal polycarbonate look
+                            if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1f);
+                            if (mat.HasProperty("_Blend")) mat.SetFloat("_Blend", 0f);
+                            if (mat.HasProperty("_ZWrite")) mat.SetFloat("_ZWrite", 0f);
+                            if (mat.HasProperty("_SrcBlend")) mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                            if (mat.HasProperty("_DstBlend")) mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                            mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                            break;
+
+                        case PartType.FaceBolt:
+                            mat.SetColor("_BaseColor", partColor);
+                            mat.SetFloat("_Metallic", 0.85f);
+                            mat.SetFloat("_Smoothness", 0.92f);
+                            break;
+
+                        case PartType.Track:
+                            mat.SetColor("_BaseColor", partColor);
+                            mat.SetFloat("_Metallic", 0.20f);
+                            mat.SetFloat("_Smoothness", 0.52f);
+                            break;
+
+                        case PartType.Tip:
+                            bool isMetalTip = parts[i].TipBehavior == TipBehaviorType.Spike || parts[i].TipBehavior == TipBehaviorType.Sharp;
+                            bool isRubberTip = (parts[i].PartName != null && (parts[i].PartName.Contains("Rubber") || parts[i].PartName.Contains("Grip")));
+                            if (isMetalTip)
+                            {
+                                mat.SetColor("_BaseColor", new Color(0.88f, 0.91f, 0.95f, 1f));
+                                mat.SetFloat("_Metallic", 1.0f);
+                                mat.SetFloat("_Smoothness", 0.94f);
+                            }
+                            else if (isRubberTip)
+                            {
+                                mat.SetColor("_BaseColor", new Color(0.12f, 0.14f, 0.16f, 1f));
+                                mat.SetFloat("_Metallic", 0.0f);
+                                mat.SetFloat("_Smoothness", 0.12f);
+                            }
+                            else
+                            {
+                                mat.SetColor("_BaseColor", partColor);
+                                mat.SetFloat("_Metallic", 0.25f);
+                                mat.SetFloat("_Smoothness", 0.65f);
+                            }
+                            break;
+                    }
+
+                    mr.sharedMaterial = mat;
+                }
+                else
                 {
                     Debug.LogWarning($"[BeyAssembler] No shader found for part {slots[i]}, skipping material.");
-                    partObjects[slots[i]] = partObj;
-                    currentY += meshBounds.size.y;
-                    continue;
-                }
-                Material mat = new Material(shaderToUse);
-
-                // URP Lit uses _BaseColor (not _Color), _Metallic, _Smoothness (not _Glossiness)
-                Color partColor = parts[i].PrimaryColor;
-                if (slots[i] == PartType.EnergyRing)
-                    partColor.a = 0.56f;
-                else
-                    partColor.a = 1f;
-                mat.SetColor("_BaseColor", partColor);
-
-                // Material style per slot
-                switch (slots[i])
-                {
-                    case PartType.FusionWheel:
-                        mat.SetColor("_BaseColor", GetFusionWheelMetalColor(partColor));
-                        mat.SetFloat("_Metallic", 1f);
-                        mat.SetFloat("_Smoothness", 1f);
-                        if (mat.HasProperty("_EnvironmentReflections")) mat.SetFloat("_EnvironmentReflections", 1f);
-                        if (mat.HasProperty("_SpecularHighlights")) mat.SetFloat("_SpecularHighlights", 1f);
-                        break;
-                    case PartType.EnergyRing:
-                        mat.SetFloat("_Metallic", 0.3f);
-                        mat.SetFloat("_Smoothness", 0.8f);
-
-                        // Semi-transparent plastic look for Energy Ring
-                        if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1f);
-                        if (mat.HasProperty("_Blend")) mat.SetFloat("_Blend", 0f);
-                        if (mat.HasProperty("_ZWrite")) mat.SetFloat("_ZWrite", 0f);
-                        if (mat.HasProperty("_SrcBlend")) mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-                        if (mat.HasProperty("_DstBlend")) mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-                        mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-                        mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-                        break;
-                    case PartType.FaceBolt:
-                        mat.SetFloat("_Metallic", 0.9f);
-                        mat.SetFloat("_Smoothness", 0.7f);
-                        break;
-                    case PartType.Tip:
-                        mat.SetFloat("_Metallic", 0.5f);
-                        mat.SetFloat("_Smoothness", 0.5f);
-                        break;
-                    case PartType.Track:
-                        mat.SetFloat("_Metallic", 0.6f);
-                        mat.SetFloat("_Smoothness", 0.4f);
-                        break;
                 }
 
-                mr.sharedMaterial = mat;
-
-                // MeshCollider — this is how the player and enemies physically hit parts
+                // MeshCollider -- this is how the player and enemies physically hit parts
                 MeshCollider mc = partObj.AddComponent<MeshCollider>();
                 mc.sharedMesh = partMesh;
                 mc.convex = true; // required for Rigidbody interaction
@@ -374,8 +408,6 @@ namespace BladeSpinners.Gameplay.Parts
                 currentY += meshBounds.size.y;
             }
         }
-
-
 
         // ================================================================
         // CLEANUP
@@ -432,12 +464,97 @@ namespace BladeSpinners.Gameplay.Parts
             emblemObject.layer = faceBoltTransform.gameObject.layer;
         }
 
+        private static Texture2D dieCastNormalMap;
+        private static Texture2D dieCastGlossMap;
+
         private static Color GetFusionWheelMetalColor(Color source)
         {
-            float luminance = source.grayscale;
-            Color neutral = new Color(luminance, luminance, luminance, 1f);
-            Color coated = Color.Lerp(neutral, new Color(source.r, source.g, source.b, 1f), 0.18f);
-            return Color.Lerp(coated, new Color(0.72f, 0.72f, 0.72f, 1f), 0.2f);
+            // Real Beyblade: Metal Fusion wheels are heavy die-cast zinc alloy (silver/titanium/gunmetal base)
+            // with subtle electroplated battle coating tint.
+            Color zincBase = new Color(0.82f, 0.85f, 0.89f, 1f);
+            Color coated = Color.Lerp(zincBase, new Color(source.r, source.g, source.b, 1f), 0.14f);
+            return coated;
+        }
+
+        private static Texture2D GetOrCreateDieCastNormalMap()
+        {
+            if (dieCastNormalMap != null)
+                return dieCastNormalMap;
+
+            int size = 256;
+            dieCastNormalMap = new Texture2D(size, size, TextureFormat.RGBA32, true);
+            dieCastNormalMap.name = "DieCastMetalNormalMap";
+            dieCastNormalMap.wrapMode = TextureWrapMode.Repeat;
+            dieCastNormalMap.filterMode = FilterMode.Trilinear;
+
+            Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
+            Color[] pixels = new Color[size * size];
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - center.x;
+                    float dy = y - center.y;
+                    float radius = Mathf.Sqrt(dx * dx + dy * dy);
+
+                    // 1. Concentric circular machining lathe micro-grooves (CNC lathe milling rings)
+                    float latheGroove = Mathf.Sin(radius * 0.85f) * 0.25f + Mathf.Sin(radius * 2.2f) * 0.12f;
+
+                    // 2. High-frequency brushed metal grain
+                    float radialGrain = Mathf.PerlinNoise(x * 0.15f, y * 0.15f) * 0.18f;
+                    float microScratch = (Mathf.Sin(x * 12.5f + y * 7.3f) + Mathf.Cos(x * 8.1f - y * 14.2f)) * 0.08f;
+
+                    float slopeX = latheGroove * (dx / Mathf.Max(1f, radius)) + microScratch;
+                    float slopeY = latheGroove * (dy / Mathf.Max(1f, radius)) + radialGrain;
+
+                    Vector3 normal = new Vector3(-slopeX * 1.5f, -slopeY * 1.5f, 1f).normalized;
+
+                    // Tangent space normal encoding
+                    pixels[y * size + x] = new Color(
+                        normal.x * 0.5f + 0.5f,
+                        normal.y * 0.5f + 0.5f,
+                        normal.z * 0.5f + 0.5f,
+                        1f);
+                }
+            }
+
+            dieCastNormalMap.SetPixels(pixels);
+            dieCastNormalMap.Apply(true, true);
+            return dieCastNormalMap;
+        }
+
+        private static Texture2D GetOrCreateDieCastGlossMap()
+        {
+            if (dieCastGlossMap != null)
+                return dieCastGlossMap;
+
+            int size = 256;
+            dieCastGlossMap = new Texture2D(size, size, TextureFormat.RGBA32, true);
+            dieCastGlossMap.name = "DieCastMetalGlossMap";
+            dieCastGlossMap.wrapMode = TextureWrapMode.Repeat;
+            dieCastGlossMap.filterMode = FilterMode.Trilinear;
+
+            Color[] pixels = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float noise = Mathf.PerlinNoise(x * 0.08f, y * 0.08f);
+                    float microScratches = Mathf.PerlinNoise(x * 0.35f, y * 0.35f) * 0.15f;
+
+                    float metallic = 0.98f;
+                    float occlusion = Mathf.Lerp(0.85f, 1.0f, noise);
+                    float detail = 1.0f;
+                    float smoothness = Mathf.Clamp01(0.88f + microScratches * 0.1f);
+
+                    pixels[y * size + x] = new Color(metallic, occlusion, detail, smoothness);
+                }
+            }
+
+            dieCastGlossMap.SetPixels(pixels);
+            dieCastGlossMap.Apply(true, true);
+            return dieCastGlossMap;
         }
 
         // ================================================================

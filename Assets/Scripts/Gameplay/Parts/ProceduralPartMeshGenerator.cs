@@ -726,100 +726,123 @@ namespace BladeSpinners.Gameplay.Parts
             // Enforce symmetry so blades are evenly mirrored
             EnforceSymmetry(outerRadii, profile.SymmetryPlanes);
 
-            // Fusion Wheels are solid metal cores (no center hole).
+            // Fusion Wheels are solid die-cast metal cores with beveled chamfers.
             return GenerateModulatedSolidDisc(outerRadii, height, RING_SEGMENTS);
         }
 
         private static Mesh GenerateModulatedSolidDisc(float[] outerRadii, float height, int segments)
         {
             Mesh mesh = new Mesh();
-            mesh.name = "ModulatedSolidDisc";
+            mesh.name = "DieCastFusionWheelMesh";
 
-            int vCount = (segments + 1) * 2 + 2; // side rings + top center + bottom center
-            Vector3[] vertices = new Vector3[vCount];
-            Vector3[] normals = new Vector3[vCount];
-            Vector2[] uvs = new Vector2[vCount];
+            // Multi-tiered die-cast metal wheel profile with 5 height levels:
+            // 0: Undercut base (y=0, 72% R)
+            // 1: Lower 45-deg chamfer (y=0.28h, 98% R)
+            // 2: Main contact attack edge (y=0.62h, 100% R)
+            // 3: Upper rim chamfer (y=0.82h, 94% R)
+            // 4: Recessed Energy Ring shelf (y=height, 65% R)
+            const int RINGS = 5;
+            int ringVerts = segments + 1;
+            int totalVerts = ringVerts * RINGS + 2; // + top center, bottom center
 
-            int topCenter = (segments + 1) * 2;
+            Vector3[] vertices = new Vector3[totalVerts];
+            Vector2[] uvs = new Vector2[totalVerts];
+
+            int topCenter = ringVerts * RINGS;
             int bottomCenter = topCenter + 1;
 
-            for (int i = 0; i <= segments; i++)
+            float[] ringHeights = new float[] { 0f, height * 0.28f, height * 0.62f, height * 0.82f, height };
+            float[] ringRadiusScales = new float[] { 0.72f, 0.98f, 1.00f, 0.94f, 0.65f };
+
+            float maxRadius = 0.001f;
+            for (int s = 0; s < segments; s++)
+                if (outerRadii[s] > maxRadius) maxRadius = outerRadii[s];
+
+            for (int r = 0; r < RINGS; r++)
             {
-                int seg = i % segments;
-                float angle = (Mathf.PI * 2f * i) / segments;
-                float cos = Mathf.Cos(angle);
-                float sin = Mathf.Sin(angle);
+                float y = ringHeights[r];
+                float rScale = ringRadiusScales[r];
 
-                float radius = outerRadii[seg];
+                for (int i = 0; i <= segments; i++)
+                {
+                    int seg = i % segments;
+                    float angle = (Mathf.PI * 2f * i) / segments;
+                    float cos = Mathf.Cos(angle);
+                    float sin = Mathf.Sin(angle);
 
-                int topOuter = i * 2;
-                int bottomOuter = topOuter + 1;
+                    float radius = outerRadii[seg] * rScale;
+                    int vIdx = r * ringVerts + i;
 
-                vertices[topOuter] = new Vector3(cos * radius, height, sin * radius);
-                vertices[bottomOuter] = new Vector3(cos * radius, 0f, sin * radius);
+                    vertices[vIdx] = new Vector3(cos * radius, y, sin * radius);
 
-                Vector3 radial = new Vector3(cos, 0f, sin);
-                normals[topOuter] = radial;
-                normals[bottomOuter] = radial;
-
-                uvs[topOuter] = new Vector2((float)i / segments, 1f);
-                uvs[bottomOuter] = new Vector2((float)i / segments, 0f);
+                    // Polar mapped UVs for circular concentric lathe machining grain
+                    uvs[vIdx] = new Vector2(
+                        (vertices[vIdx].x / (2f * maxRadius)) + 0.5f,
+                        (vertices[vIdx].z / (2f * maxRadius)) + 0.5f);
+                }
             }
 
-            vertices[topCenter] = new Vector3(0f, height, 0f);
+            vertices[topCenter] = new Vector3(0f, height * 0.90f, 0f);
             vertices[bottomCenter] = new Vector3(0f, 0f, 0f);
-            normals[topCenter] = Vector3.up;
-            normals[bottomCenter] = Vector3.down;
             uvs[topCenter] = new Vector2(0.5f, 0.5f);
             uvs[bottomCenter] = new Vector2(0.5f, 0.5f);
 
-            int[] triangles = new int[segments * 12]; // side (6) + top cap (3) + bottom cap (3)
+            int bandTriangles = (RINGS - 1) * segments * 6;
+            int capTriangles = segments * 3 * 2;
+            int[] triangles = new int[bandTriangles + capTriangles];
             int tri = 0;
 
-            // Side faces
-            for (int i = 0; i < segments; i++)
+            // 4 Side Chamfer Bands
+            for (int r = 0; r < RINGS - 1; r++)
             {
-                int currTop = i * 2;
-                int currBottom = currTop + 1;
-                int nextTop = (i + 1) * 2;
-                int nextBottom = nextTop + 1;
+                int lowerRingStart = r * ringVerts;
+                int upperRingStart = (r + 1) * ringVerts;
 
-                triangles[tri++] = currTop;
-                triangles[tri++] = nextTop;
-                triangles[tri++] = nextBottom;
+                for (int i = 0; i < segments; i++)
+                {
+                    int currBot = lowerRingStart + i;
+                    int nextBot = lowerRingStart + i + 1;
+                    int currTop = upperRingStart + i;
+                    int nextTop = upperRingStart + i + 1;
 
-                triangles[tri++] = currTop;
-                triangles[tri++] = nextBottom;
-                triangles[tri++] = currBottom;
+                    triangles[tri++] = currBot;
+                    triangles[tri++] = currTop;
+                    triangles[tri++] = nextTop;
+
+                    triangles[tri++] = currBot;
+                    triangles[tri++] = nextTop;
+                    triangles[tri++] = nextBot;
+                }
             }
 
-            // Top cap
+            // Top Cap (Ring 4 to Top Center Hub)
+            int topRingStart = (RINGS - 1) * ringVerts;
             for (int i = 0; i < segments; i++)
             {
-                int currTop = i * 2;
-                int nextTop = (i + 1) * 2;
+                int curr = topRingStart + i;
+                int next = topRingStart + i + 1;
 
                 triangles[tri++] = topCenter;
-                triangles[tri++] = nextTop;
-                triangles[tri++] = currTop;
+                triangles[tri++] = next;
+                triangles[tri++] = curr;
             }
 
-            // Bottom cap
+            // Bottom Cap (Ring 0 to Bottom Center)
             for (int i = 0; i < segments; i++)
             {
-                int currBottom = i * 2 + 1;
-                int nextBottom = (i + 1) * 2 + 1;
+                int curr = i;
+                int next = i + 1;
 
                 triangles[tri++] = bottomCenter;
-                triangles[tri++] = currBottom;
-                triangles[tri++] = nextBottom;
+                triangles[tri++] = curr;
+                triangles[tri++] = next;
             }
 
             mesh.vertices = vertices;
-            mesh.normals = normals;
             mesh.uv = uvs;
             mesh.triangles = triangles;
             mesh.RecalculateNormals();
+            mesh.RecalculateTangents();
             mesh.RecalculateBounds();
             return mesh;
         }
@@ -830,7 +853,7 @@ namespace BladeSpinners.Gameplay.Parts
 
         private static float GetEnergyRingHeight(BeyPart part)
         {
-            return 0.01f;
+            return 0.012f;
         }
 
         private static Mesh GenerateEnergyRingMesh(BeyPart part, System.Random rng,
@@ -1225,110 +1248,164 @@ namespace BladeSpinners.Gameplay.Parts
         private static Mesh GenerateModulatedRing(float[] outerRadii, float innerRadius, float height, int segments)
         {
             Mesh mesh = new Mesh();
-            mesh.name = "ModulatedRing";
+            mesh.name = "FacetedCrystalEnergyRing";
 
+            // Multi-faceted crystal polycarbonate Clear Wheel profile:
+            // 1. Bottom flat seat: inner to outer at y = 0
+            // 2. Inner vertical lock wall
+            // 3. Faceted top surface with mid-span aerodynamic crystal ridge crests
+            // 4. Beveled outer crystal rim
             int ringVerts = segments + 1;
-            // 4 side surfaces (outer bot/top, inner bot/top) + 2 cap surfaces (top/bottom)
-            int vertCount = ringVerts * 4  // outer + inner sides
-                          + ringVerts * 4; // top + bottom caps
-            Vector3[] verts = new Vector3[vertCount];
 
-            int triCount = segments * 6 * 2  // outer + inner sides
-                         + segments * 6 * 2; // top + bottom caps
-            int[] tris = new int[triCount];
+            // Vertices:
+            // 0: Bottom Outer (y=0)
+            // 1: Bottom Inner (y=0)
+            // 2: Top Inner (y=height*0.75)
+            // 3: Top Mid Ridge Crest (y=height*1.15)
+            // 4: Top Outer Chamfer (y=height*0.80)
+            const int RINGS = 5;
+            int totalVerts = ringVerts * RINGS;
+            Vector3[] verts = new Vector3[totalVerts];
+            Vector2[] uvs = new Vector2[totalVerts];
 
-            int v = 0, t = 0;
+            float maxRadius = 0.001f;
+            for (int s = 0; s < segments; s++)
+                if (outerRadii[s] > maxRadius) maxRadius = outerRadii[s];
 
-            // === OUTER SIDE ===
-            int outerStart = v;
             for (int i = 0; i <= segments; i++)
             {
                 int idx = i % segments;
                 float angle = (float)i / segments * Mathf.PI * 2f;
                 float cos = Mathf.Cos(angle);
                 float sin = Mathf.Sin(angle);
+
                 float outerR = outerRadii[idx];
+                float midR = Mathf.Lerp(innerRadius, outerR, 0.58f);
 
-                verts[v++] = new Vector3(cos * outerR, 0, sin * outerR);       // bottom
-                verts[v++] = new Vector3(cos * outerR, height, sin * outerR);   // top
+                // Wave crest factor along the perimeter
+                float waveFactor = Mathf.Clamp01((outerR - innerRadius) / Mathf.Max(0.001f, maxRadius - innerRadius));
+                float crestHeight = height * (0.85f + 0.45f * waveFactor);
+
+                // 0: Bottom Outer
+                verts[0 * ringVerts + i] = new Vector3(cos * outerR, 0f, sin * outerR);
+                // 1: Bottom Inner
+                verts[1 * ringVerts + i] = new Vector3(cos * innerRadius, 0f, sin * innerRadius);
+                // 2: Top Inner
+                verts[2 * ringVerts + i] = new Vector3(cos * innerRadius, height * 0.70f, sin * innerRadius);
+                // 3: Top Mid Ridge Crest
+                verts[3 * ringVerts + i] = new Vector3(cos * midR, crestHeight, sin * midR);
+                // 4: Top Outer Chamfer
+                verts[4 * ringVerts + i] = new Vector3(cos * outerR, height * 0.75f, sin * outerR);
+
+                for (int r = 0; r < RINGS; r++)
+                {
+                    int vIdx = r * ringVerts + i;
+                    uvs[vIdx] = new Vector2(
+                        (verts[vIdx].x / (2f * maxRadius)) + 0.5f,
+                        (verts[vIdx].z / (2f * maxRadius)) + 0.5f);
+                }
             }
 
-            // Outer side tris (outward-facing)
+            // Triangles:
+            // Band 1: Bottom Face (Ring 0 to Ring 1) -> 2 tris
+            // Band 2: Inner Wall (Ring 1 to Ring 2) -> 2 tris
+            // Band 3: Inner Top Facet (Ring 2 to Ring 3) -> 2 tris
+            // Band 4: Outer Top Facet (Ring 3 to Ring 4) -> 2 tris
+            // Band 5: Outer Wall (Ring 4 to Ring 0) -> 2 tris
+            const int BANDS = 5;
+            int[] triangles = new int[BANDS * segments * 6];
+            int tri = 0;
+
+            // Band 0: Bottom Face (Ring 0 to Ring 1, facing down)
             for (int i = 0; i < segments; i++)
             {
-                int b0 = outerStart + i * 2;
-                tris[t++] = b0;     tris[t++] = b0 + 1; tris[t++] = b0 + 2;
-                tris[t++] = b0 + 1; tris[t++] = b0 + 3; tris[t++] = b0 + 2;
+                int botOuter = 0 * ringVerts + i;
+                int botInner = 1 * ringVerts + i;
+                int botOuterNext = 0 * ringVerts + i + 1;
+                int botInnerNext = 1 * ringVerts + i + 1;
+
+                triangles[tri++] = botOuter;
+                triangles[tri++] = botInner;
+                triangles[tri++] = botInnerNext;
+
+                triangles[tri++] = botOuter;
+                triangles[tri++] = botInnerNext;
+                triangles[tri++] = botOuterNext;
             }
 
-            // === INNER SIDE ===
-            int innerStart = v;
-            for (int i = 0; i <= segments; i++)
-            {
-                float angle = (float)i / segments * Mathf.PI * 2f;
-                float cos = Mathf.Cos(angle);
-                float sin = Mathf.Sin(angle);
-
-                verts[v++] = new Vector3(cos * innerRadius, 0, sin * innerRadius);       // bottom
-                verts[v++] = new Vector3(cos * innerRadius, height, sin * innerRadius);   // top
-            }
-
-            // Inner side tris (inward-facing = reversed winding)
+            // Band 1: Inner Wall (Ring 1 to Ring 2, facing inward)
             for (int i = 0; i < segments; i++)
             {
-                int b0 = innerStart + i * 2;
-                tris[t++] = b0;     tris[t++] = b0 + 2; tris[t++] = b0 + 1;
-                tris[t++] = b0 + 1; tris[t++] = b0 + 2; tris[t++] = b0 + 3;
+                int botInner = 1 * ringVerts + i;
+                int topInner = 2 * ringVerts + i;
+                int botInnerNext = 1 * ringVerts + i + 1;
+                int topInnerNext = 2 * ringVerts + i + 1;
+
+                triangles[tri++] = botInner;
+                triangles[tri++] = botInnerNext;
+                triangles[tri++] = topInnerNext;
+
+                triangles[tri++] = botInner;
+                triangles[tri++] = topInnerNext;
+                triangles[tri++] = topInner;
             }
 
-            // === TOP CAP (upward-facing) ===
-            int topCapStart = v;
-            for (int i = 0; i <= segments; i++)
-            {
-                int idx = i % segments;
-                float angle = (float)i / segments * Mathf.PI * 2f;
-                float cos = Mathf.Cos(angle);
-                float sin = Mathf.Sin(angle);
-                float outerR = outerRadii[idx];
-
-                verts[v++] = new Vector3(cos * outerR, height, sin * outerR);       // outer
-                verts[v++] = new Vector3(cos * innerRadius, height, sin * innerRadius); // inner
-            }
-
+            // Band 2: Inner Top Crystal Facet (Ring 2 to Ring 3, facing up)
             for (int i = 0; i < segments; i++)
             {
-                int b0 = topCapStart + i * 2;
-                // outer[i], inner[i], outer[i+1] — upward normal
-                tris[t++] = b0;     tris[t++] = b0 + 1; tris[t++] = b0 + 2;
-                // inner[i], inner[i+1], outer[i+1] — upward normal
-                tris[t++] = b0 + 1; tris[t++] = b0 + 3; tris[t++] = b0 + 2;
+                int topInner = 2 * ringVerts + i;
+                int topMid = 3 * ringVerts + i;
+                int topInnerNext = 2 * ringVerts + i + 1;
+                int topMidNext = 3 * ringVerts + i + 1;
+
+                triangles[tri++] = topInner;
+                triangles[tri++] = topMid;
+                triangles[tri++] = topMidNext;
+
+                triangles[tri++] = topInner;
+                triangles[tri++] = topMidNext;
+                triangles[tri++] = topInnerNext;
             }
 
-            // === BOTTOM CAP (downward-facing) ===
-            int botCapStart = v;
-            for (int i = 0; i <= segments; i++)
-            {
-                int idx = i % segments;
-                float angle = (float)i / segments * Mathf.PI * 2f;
-                float cos = Mathf.Cos(angle);
-                float sin = Mathf.Sin(angle);
-                float outerR = outerRadii[idx];
-
-                verts[v++] = new Vector3(cos * outerR, 0, sin * outerR);       // outer
-                verts[v++] = new Vector3(cos * innerRadius, 0, sin * innerRadius); // inner
-            }
-
+            // Band 3: Outer Top Crystal Facet (Ring 3 to Ring 4, facing up)
             for (int i = 0; i < segments; i++)
             {
-                int b0 = botCapStart + i * 2;
-                // Reversed winding from top cap for downward normal
-                tris[t++] = b0;     tris[t++] = b0 + 2; tris[t++] = b0 + 1;
-                tris[t++] = b0 + 1; tris[t++] = b0 + 2; tris[t++] = b0 + 3;
+                int topMid = 3 * ringVerts + i;
+                int topOuter = 4 * ringVerts + i;
+                int topMidNext = 3 * ringVerts + i + 1;
+                int topOuterNext = 4 * ringVerts + i + 1;
+
+                triangles[tri++] = topMid;
+                triangles[tri++] = topOuter;
+                triangles[tri++] = topOuterNext;
+
+                triangles[tri++] = topMid;
+                triangles[tri++] = topOuterNext;
+                triangles[tri++] = topMidNext;
+            }
+
+            // Band 4: Outer Crystal Rim Wall (Ring 4 to Ring 0, facing outward)
+            for (int i = 0; i < segments; i++)
+            {
+                int topOuter = 4 * ringVerts + i;
+                int botOuter = 0 * ringVerts + i;
+                int topOuterNext = 4 * ringVerts + i + 1;
+                int botOuterNext = 0 * ringVerts + i + 1;
+
+                triangles[tri++] = topOuter;
+                triangles[tri++] = botOuter;
+                triangles[tri++] = botOuterNext;
+
+                triangles[tri++] = topOuter;
+                triangles[tri++] = botOuterNext;
+                triangles[tri++] = topOuterNext;
             }
 
             mesh.vertices = verts;
-            mesh.triangles = tris;
+            mesh.uv = uvs;
+            mesh.triangles = triangles;
             mesh.RecalculateNormals();
+            mesh.RecalculateTangents();
             mesh.RecalculateBounds();
             return mesh;
         }

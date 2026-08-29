@@ -103,8 +103,32 @@ namespace BladeSpinners.Gameplay
             public float CurrentAlpha = 1f;
         }
 
+        private static ThirdPersonCameraController instance;
+        private float screenShakeIntensity = 0f;
+        private float screenShakeDuration = 0f;
+        private float screenShakeTimer = 0f;
+
+        public static void TriggerScreenShake(float intensity, float duration)
+        {
+            if (instance == null)
+            {
+                instance = FindFirstObjectByType<ThirdPersonCameraController>();
+            }
+            if (instance == null) return;
+
+            instance.screenShakeIntensity = Mathf.Max(instance.screenShakeIntensity, intensity);
+            instance.screenShakeDuration = Mathf.Max(instance.screenShakeDuration, duration);
+            instance.screenShakeTimer = instance.screenShakeDuration;
+        }
+
+        private void Awake()
+        {
+            instance = this;
+        }
+
         private void Start()
         {
+            instance = this;
             // Auto-discover enemies at runtime so lock-on works
             // even if SetEnemyTransforms was never called manually.
             AutoDiscoverEnemies();
@@ -133,12 +157,45 @@ namespace BladeSpinners.Gameplay
             }
         }
 
+        private static bool isBladeLockFocusActive = false;
+        private static Vector3 bladeLockFocusPoint = Vector3.zero;
+
+        public static void SetBladeLockFocus(Vector3 clashPos, bool active)
+        {
+            isBladeLockFocusActive = active;
+            bladeLockFocusPoint = clashPos;
+        }
+
+        private void UpdateBladeLockCamera()
+        {
+            Vector3 lookTarget = bladeLockFocusPoint + Vector3.up * 0.35f;
+            Vector3 desiredPos = bladeLockFocusPoint + new Vector3(0f, 1.5f, -2.5f);
+
+            transform.position = Vector3.Lerp(transform.position, desiredPos, Time.unscaledDeltaTime * 14f);
+            Quaternion targetRot = Quaternion.LookRotation((lookTarget - transform.position).normalized, Vector3.up);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.unscaledDeltaTime * 16f);
+
+            if (controlledCamera != null)
+            {
+                controlledCamera.fieldOfView = Mathf.Lerp(controlledCamera.fieldOfView, 46f, Time.unscaledDeltaTime * 10f);
+            }
+        }
+
         private void LateUpdate()
         {
             if (beyTransform == null)
                 return;
 
             EnsureCameraReferences();
+
+            if (isBladeLockFocusActive)
+            {
+                UpdateBladeLockCamera();
+                UpdateFocusedArrow();
+                UpdateOccluderFading();
+                ApplyScreenShake();
+                return;
+            }
 
             if (IsPlayerLostStateActive())
             {
@@ -164,6 +221,24 @@ namespace BladeSpinners.Gameplay
             UpdateFocusedArrow();
             UpdateSpeedFeedback();
             UpdateOccluderFading();
+            ApplyScreenShake();
+        }
+
+        private void ApplyScreenShake()
+        {
+            if (screenShakeTimer > 0f)
+            {
+                screenShakeTimer -= Time.unscaledDeltaTime;
+                float t = Mathf.Clamp01(screenShakeTimer / Mathf.Max(0.01f, screenShakeDuration));
+                float currentIntensity = screenShakeIntensity * t;
+                Vector3 shake = Random.insideUnitSphere * currentIntensity;
+                transform.position += shake;
+                if (screenShakeTimer <= 0f)
+                {
+                    screenShakeIntensity = 0f;
+                    screenShakeDuration = 0f;
+                }
+            }
         }
 
         private void OnGUI()

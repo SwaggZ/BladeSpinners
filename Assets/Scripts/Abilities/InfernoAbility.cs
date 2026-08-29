@@ -1,5 +1,6 @@
 using UnityEngine;
 using BladeSpinners.Gameplay.Movement;
+using BladeSpinners.Gameplay;
 
 namespace BladeSpinners.Abilities
 {
@@ -43,6 +44,9 @@ namespace BladeSpinners.Abilities
             iz.timer = dur;
             iz.owner = own;
             SpawnVisual(zone.transform, rad, dur);
+            EpicAbilityVFXHelper.SpawnShockwaveRing(pos, new Color(1f, 0.6f, 0.1f, 1f), 0.5f, rad, 0.45f);
+            EpicAbilityVFXHelper.SpawnParticleBurst(zone.transform, pos + Vector3.up * 0.2f, new Color(1f, 0.85f, 0.2f), new Color(1f, 0.2f, 0.05f), 35, 6f, 0.8f, dur);
+            ThirdPersonCameraController.TriggerScreenShake(0.3f, 0.2f);
             Object.Destroy(zone, dur + 0.2f);
         }
 

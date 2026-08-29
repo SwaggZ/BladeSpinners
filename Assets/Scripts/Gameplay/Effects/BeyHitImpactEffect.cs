@@ -1,4 +1,5 @@
 using UnityEngine;
+using BladeSpinners.Abilities;
 
 namespace BladeSpinners.Gameplay.Effects
 {
@@ -16,6 +17,11 @@ namespace BladeSpinners.Gameplay.Effects
 
             sparks.Play();
             burst.Play();
+
+            if (relativeSpeed > 3.5f)
+            {
+                EpicAbilityVFXHelper.SpawnShockwaveRing(position, Color.Lerp(color, Color.white, 0.45f), 0.1f, 0.6f + intensity * 1.0f, 0.22f);
+            }
 
             Object.Destroy(root, 1.25f);
         }
@@ -67,6 +73,9 @@ namespace BladeSpinners.Gameplay.Effects
                     new GradientAlphaKey(0f, 1f)
                 });
             colorOverLifetime.color = new ParticleSystem.MinMaxGradient(gradient);
+
+            var rend = go.GetComponent<ParticleSystemRenderer>();
+            rend.material = EpicAbilityVFXHelper.CreateVFXMaterial(color, color * 3f, EpicAbilityVFXHelper.GetSparkFlareTexture(), true);
 
             return particleSystem;
         }
@@ -124,6 +133,9 @@ namespace BladeSpinners.Gameplay.Effects
                     new GradientAlphaKey(0f, 1f)
                 });
             colorOverLifetime.color = new ParticleSystem.MinMaxGradient(gradient);
+
+            var rend = go.GetComponent<ParticleSystemRenderer>();
+            rend.material = EpicAbilityVFXHelper.CreateVFXMaterial(Color.Lerp(color, Color.white, 0.4f), color * 3.5f, EpicAbilityVFXHelper.GetSoftGlowTexture(), true);
 
             return particleSystem;
         }

@@ -249,6 +249,11 @@ namespace BladeSpinners.Audio
                 Mathf.Clamp01(volumeScale));
         }
 
+        public static void PlayUiConfirm(float volumeScale = 1f)
+        {
+            PlayUi("UI/Confirm", volumeScale);
+        }
+
         public static void PlayMusic(string folderKey, bool restartIfPlaying = false)
         {
             SoundManager manager = GetInstance();

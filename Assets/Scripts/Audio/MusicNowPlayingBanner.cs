@@ -245,7 +245,7 @@ namespace BladeSpinners.Audio
             }
             else
             {
-                GUI.Label(icon, "♪", noteStyle);
+                GUI.Label(icon, ">", noteStyle);
             }
 
             float textX = icon.xMax + 14f * scale;

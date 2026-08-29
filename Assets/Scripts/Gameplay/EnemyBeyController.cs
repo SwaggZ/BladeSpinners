@@ -8,12 +8,8 @@ using BladeSpinners.Gameplay.Combat;
 namespace BladeSpinners.Gameplay
 {
     /// <summary>
-    /// Thin management shell for an enemy bey.
-    /// The enemy is built with the EXACT same components as the player:
-    ///   BeyMovementController, BeyTiltController, BeyCollisionDetector, BeyAssembler, BeyVisualSpin.
-    /// Instead of PlayerInputHandler, it uses AIInputHandler which simulates WASD/mouse input.
-    /// This class only handles burst/reset lifecycle and provides the BeyConfiguration reference
-    /// that MatchManager needs.
+    /// Management shell for an enemy bey.
+    /// Handles burst/reset lifecycle and passes difficulty progression scaling to AIInputHandler.
     /// </summary>
     public class EnemyBeyController : MonoBehaviour
     {
@@ -63,9 +59,6 @@ namespace BladeSpinners.Gameplay
 
         // ══════════════════════════════════════════════════════════════
         // Awake: re-wire all components.
-        // BeyConfiguration is a plain C# class (not [System.Serializable]),
-        // so Unity's serialization wipes it when entering Play mode.
-        // This mirrors what PlayerManager.WireComponents() does for the player.
         // ══════════════════════════════════════════════════════════════
         private void Awake()
         {
@@ -131,7 +124,7 @@ namespace BladeSpinners.Gameplay
         /// <summary>
         /// Called after all components are added and wired (edit-mode setup).
         /// </summary>
-        public void Initialize(BeyConfiguration config, Transform playerTarget)
+        public void Initialize(BeyConfiguration config, Transform playerTarget, float difficulty01 = 0.5f, int index = 0, int totalEnemies = 1)
         {
             beyConfiguration = config;
             beyConfiguration.IsEnemy = true;
@@ -142,7 +135,18 @@ namespace BladeSpinners.Gameplay
             isBurst = false;
 
             if (aiInput != null)
+            {
                 aiInput.SetTarget(playerTarget);
+                aiInput.SetDifficulty(difficulty01, index, totalEnemies);
+            }
+        }
+
+        /// <summary>
+        /// Backward-compatible overload.
+        /// </summary>
+        public void Initialize(BeyConfiguration config, Transform playerTarget)
+        {
+            Initialize(config, playerTarget, 0.5f, 0, 1);
         }
 
         /// <summary>Called by MatchManager when this bey's spin hits 0.</summary>

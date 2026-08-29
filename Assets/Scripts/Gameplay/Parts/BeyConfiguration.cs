@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using BladeSpinners.Core;
 using BladeSpinners.Abilities;
+using BladeSpinners.Gameplay.Shrine;
 
 namespace BladeSpinners.Gameplay.Parts
 {
@@ -28,6 +29,11 @@ namespace BladeSpinners.Gameplay.Parts
 
         public const float LifeStealDecayPerUse = 0.65f;
         public const float MaximumLifeStealBaseRatio = 0.50f;
+
+        public BladerShrineRunState ShrineState { get; set; }
+        public Transform OwnerTransform { get; set; }
+
+        public bool HasShrinePerk(ShrinePerkType perk) => ShrineState != null && ShrineState.HasPerk(perk);
 
         /// <summary>
         /// Event fired when spin value changes. Subscribers check spin thresholds.
@@ -239,6 +245,10 @@ namespace BladeSpinners.Gameplay.Parts
                 * BeyCombatStatCalculator.GetRetentionDrainMultiplier(
                     cachedStats.SpinRetention);
 
+            if (HasShrinePerk(ShrinePerkType.HeavyweightCore))
+            {
+                cachedStats.Weight += 35f;
+            }
         }
 
         /// <summary>
@@ -265,6 +275,20 @@ namespace BladeSpinners.Gameplay.Parts
         /// </summary>
         public void SetSpin(float value)
         {
+            // Phoenix Rebirth Resurrection Check
+            if (value <= 0f && HasShrinePerk(ShrinePerkType.PhoenixRebirth) && !IsEnemy && !ShrineState.PhoenixRebirthUsed)
+            {
+                ShrineState.ConsumePhoenixRebirth();
+                float reviveSpin = StartingSpin * 0.60f;
+                currentSpin = reviveSpin;
+                Vector3 spawnPos = OwnerTransform != null ? OwnerTransform.position : Vector3.zero;
+                BladeSpinners.Abilities.EpicAbilityVFXHelper.SpawnInfernoPillar(spawnPos, 2.0f);
+                BladeSpinners.Gameplay.ThirdPersonCameraController.TriggerScreenShake(0.7f, 0.5f);
+                Debug.Log("🔥 [BladerShrine] PHOENIX REBIRTH ACTIVATED! Resurrected with 60% Spin!");
+                OnSpinChanged?.Invoke(currentSpin);
+                return;
+            }
+
             float oldSpin = currentSpin;
             currentSpin = Mathf.Clamp(value, GameConstants.MIN_SPIN, GameConstants.MAX_SPIN);
 
@@ -275,6 +299,14 @@ namespace BladeSpinners.Gameplay.Parts
                     oldSpin, currentSpin);
                 OnSpinChanged?.Invoke(currentSpin);
             }
+        }
+
+        /// <summary>
+        /// Applies delta to current spin.
+        /// </summary>
+        public void ModifySpin(float delta)
+        {
+            SetSpin(currentSpin + delta);
         }
 
         /// <summary>
@@ -360,6 +392,8 @@ namespace BladeSpinners.Gameplay.Parts
             regen =
                 energyRingPassiveRuntime.ModifyManaRegeneration(
                     regen);
+            if (HasShrinePerk(ShrinePerkType.OverdriveCore))
+                regen *= 1.50f;
             SetMana(currentMana + regen);
         }
 
@@ -392,6 +426,16 @@ namespace BladeSpinners.Gameplay.Parts
             lifeStealUsesThisMatch = 0;
             manaRegenDelayRemaining = 0f;
             energyRingPassiveRuntime.ResetForMatch();
+        }
+
+        /// <summary>
+        /// Scales the starting spin based on rip-cord minigame timing (e.g. 1.25x for perfect launch).
+        /// </summary>
+        public void ApplyLaunchRipMultiplier(float multiplier)
+        {
+            float baseSpin = StartingSpin;
+            float finalSpin = Mathf.Clamp(baseSpin * multiplier, GameConstants.MIN_SPIN, GameConstants.MAX_SPIN);
+            SetSpin(finalSpin);
         }
 
         /// <summary>
@@ -455,6 +499,14 @@ namespace BladeSpinners.Gameplay.Parts
         {
             energyRingPassiveRuntime.NotifyCollision(
                 other, damageDealt, damageTaken);
+
+            if (HasShrinePerk(ShrinePerkType.VampiricSpin) && damageDealt > 0f && !IsEnemy)
+            {
+                float siphoned = damageDealt * 0.15f;
+                SetSpin(Mathf.Min(currentSpin + siphoned, GameConstants.MAX_SPIN));
+                Vector3 spawnPos = OwnerTransform != null ? OwnerTransform.position : Vector3.zero;
+                BladeSpinners.Abilities.EpicAbilityVFXHelper.SpawnSparkBurst(spawnPos, new Color(0.95f, 0.22f, 0.35f, 1f), 12);
+            }
         }
 
         public float ModifyPickupAmount(float amount)
@@ -548,8 +600,9 @@ namespace BladeSpinners.Gameplay.Parts
             if (abilityCooldownRemaining <= 0f || deltaTime <= 0f)
                 return;
 
+            float dt = HasShrinePerk(ShrinePerkType.OverdriveCore) ? deltaTime * 1.25f : deltaTime;
             abilityCooldownRemaining = Mathf.Max(
-                0f, abilityCooldownRemaining - deltaTime);
+                0f, abilityCooldownRemaining - dt);
         }
 
         public void ResetAbilityCooldown()

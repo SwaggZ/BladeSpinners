@@ -109,10 +109,19 @@ namespace BladeSpinners.Gameplay.Combat
             thisToOther.Normalize();
 
             float relativeVelocity = Vector3.Distance(thisVelocity, otherVelocity);
+            Vector3 hitPosition = (transform.position + otherBey.transform.position) * 0.5f;
+
+            // Check if this head-on collision triggers a dramatic Blade Lock Clash Duel
+            BladeLockDuelManager duelMgr = BladeLockDuelManager.EnsureInstance();
+            if (duelMgr != null && duelMgr.TryTriggerBladeLock(this, otherBey, hitPosition, thisToOther))
+            {
+                lastCollisionTime = Time.time;
+                otherBey.lastCollisionTime = Time.time;
+                return;
+            }
+
             if (relativeVelocity >= 2f)
             {
-                Vector3 hitPosition =
-                    (transform.position + otherBey.transform.position) * 0.5f;
                 float hitIntensity = Mathf.Lerp(
                     0.3f, 1f, Mathf.InverseLerp(2f, 22f, relativeVelocity));
                 SoundManager.PlayBeyHit(hitPosition, hitIntensity);
@@ -204,7 +213,44 @@ namespace BladeSpinners.Gameplay.Combat
             float knockbackOnOther = baseKnockback * (thisWeight / Mathf.Max(otherWeight, 1f))
                                    * (1f + relSpeed * 0.05f);
 
+            if (beyConfiguration != null && beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.HeavyweightCore) && !beyConfiguration.IsEnemy)
+            {
+                knockbackOnOther *= 1.25f;
+            }
+
             SpawnPlaceholderHitParticle(otherBey, relSpeed);
+
+            // Screen shake scaled by impact speed
+            ThirdPersonCameraController.TriggerScreenShake(Mathf.Clamp01(relSpeed / 20f) * 0.45f + 0.1f, 0.16f);
+
+            // Comic popup on heavy hits
+            if (relSpeed > 7f)
+            {
+                string[] clashPhrases = { "CLASH!", "CRITICAL RIP!", "SPIN IMPACT!", "SLAM!" };
+                Color clashColor = relSpeed > 14f ? new Color(1f, 0.2f, 0.1f, 1f) : new Color(1f, 0.85f, 0.2f, 1f);
+                float scale = relSpeed > 14f ? 1.4f : 1.0f;
+                BladeSpinners.Gameplay.UI.RuntimeGameUiController.SpawnComicPopup(clashPhrases[Random.Range(0, clashPhrases.Length)], clashColor, scale);
+            }
+
+            // Blader Shrine Static Overload: Chain Lightning on Heavy Impacts
+            if (relSpeed >= 6f && beyConfiguration != null && beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.StaticOverload) && !beyConfiguration.IsEnemy)
+            {
+                BeyMovementController[] allBeys = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
+                Vector3 myPos = transform.position;
+                foreach (var b in allBeys)
+                {
+                    if (b != null && b != movementController && b.BeyConfiguration != null && b.BeyConfiguration.IsEnemy && !b.BeyConfiguration.IsBurst)
+                    {
+                        float dist = Vector3.Distance(myPos, b.transform.position);
+                        if (dist <= 8.5f)
+                        {
+                            BladeSpinners.Abilities.EpicAbilityVFXHelper.SpawnLightningArc(myPos + Vector3.up * 0.3f, b.transform.position + Vector3.up * 0.3f, new Color(0.3f, 0.85f, 1f, 1f));
+                            b.BeyConfiguration.SetSpin(b.BeyConfiguration.CurrentSpin - 12f);
+                            BladeSpinners.Abilities.EpicAbilityVFXHelper.SpawnSparkBurst(b.transform.position, new Color(0.3f, 0.85f, 1f, 1f), 10);
+                        }
+                    }
+                }
+            }
 
             movementController.ApplyKnockback(knockDir, knockbackOnThis);
             otherBey.movementController.ApplyKnockback(-knockDir, knockbackOnOther);
@@ -230,6 +276,15 @@ namespace BladeSpinners.Gameplay.Combat
 
             // Immediately trigger burst if either bey just died from this hit.
             // Don't wait for MatchManager's next Update() — prevents ghost collisions.
+            if (beyConfiguration != null && beyConfiguration.IsBurst)
+            {
+                BladeSpinners.Gameplay.UI.RuntimeGameUiController.SpawnComicPopup("BURST FINISH!!", new Color(1f, 0.15f, 0.4f, 1f), 1.6f);
+            }
+            else if (otherBey.beyConfiguration != null && otherBey.beyConfiguration.IsBurst)
+            {
+                BladeSpinners.Gameplay.UI.RuntimeGameUiController.SpawnComicPopup("BURST FINISH!!", new Color(1f, 0.85f, 0.1f, 1f), 1.6f);
+            }
+
             TryImmediateBurst(beyConfiguration);
             TryImmediateBurst(otherBey.beyConfiguration);
         }

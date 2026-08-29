@@ -54,7 +54,7 @@ namespace BladeSpinners.Abilities
                 float falloff = Mathf.Lerp(1f, 0.5f, (float)chains / maxChains);
                 nearest.BeyConfiguration.SetSpin(nearest.BeyConfiguration.CurrentSpin - damagePerHit * falloff);
                 StunRuntime.Apply(nearest, stunDuration * falloff);
-                SpawnLightningVisual(lastPos, nearest.transform.position);
+                EpicAbilityVFXHelper.SpawnLightningArc(lastPos, nearest.transform.position, new Color(0.45f, 0.85f, 1f, 1f));
 
                 hit.Add(nearest);
                 lastPos = nearest.transform.position;
@@ -63,39 +63,6 @@ namespace BladeSpinners.Abilities
             }
 
             Debug.Log($"[Ability] Chain Lightning! Chained {chains} enemies.");
-        }
-
-        private void SpawnLightningVisual(Vector3 from, Vector3 to)
-        {
-            GameObject bolt = new GameObject("LightningBolt");
-            bolt.transform.position = (from + to) * 0.5f;
-
-            // Use a stretched cube as a simple lightning line
-            GameObject line = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            line.name = "LightningLine";
-            line.transform.SetParent(bolt.transform, false);
-
-            float dist = Vector3.Distance(from, to);
-            line.transform.localScale = new Vector3(0.06f, 0.06f, dist);
-            line.transform.LookAt(to);
-
-            Collider col = line.GetComponent<Collider>();
-            if (col != null) col.enabled = false;
-
-            Renderer rend = line.GetComponent<Renderer>();
-            if (rend != null)
-            {
-                Material mat = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Diffuse"));
-                mat.color = new Color(0.7f, 0.8f, 1f);
-                if (mat.HasProperty("_EmissionColor"))
-                {
-                    mat.EnableKeyword("_EMISSION");
-                    mat.SetColor("_EmissionColor", new Color(1f, 1.5f, 3f));
-                }
-                rend.material = mat;
-            }
-
-            Object.Destroy(bolt, 0.3f);
         }
     }
 

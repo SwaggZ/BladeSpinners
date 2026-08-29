@@ -39,6 +39,7 @@ namespace BladeSpinners.Abilities
                 FreezeRuntime.Apply(bey, freezeDuration);
             }
 
+            EpicAbilityVFXHelper.SpawnFrostNovaVFX(beyController.transform.position, radius);
             Debug.Log("[Ability] Freeze!");
         }
     }

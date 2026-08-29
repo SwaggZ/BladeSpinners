@@ -127,19 +127,33 @@ namespace BladeSpinners.Gameplay
                 statRingsUI = gameObject.AddComponent<BeyStatRingsUI>();
 
             statRingsUI.Initialize(beyConfiguration, movementController, transform);
+
+            if (beyConfiguration != null)
+            {
+                beyConfiguration.OwnerTransform = transform;
+            }
+
+            Effects.BeyGroundTrailEffect trailEffect = GetComponent<Effects.BeyGroundTrailEffect>();
+            if (trailEffect == null)
+                trailEffect = gameObject.AddComponent<Effects.BeyGroundTrailEffect>();
+            trailEffect.Initialize(beyConfiguration);
         }
 
-            /// <summary>
-            /// Re-initializes stat rings against the CURRENT beyConfiguration and
-            /// movementController. Must be called by RuntimeRunBuilder after all
-            /// reflection field-sets are complete, because Awake() fires synchronously
-            /// during AddComponent and captures a stale empty BeyConfiguration.
-            /// </summary>
-            public void RewireStatRings()
+        /// <summary>
+        /// Re-initializes stat rings against the CURRENT beyConfiguration and
+        /// movementController. Must be called by RuntimeRunBuilder after all
+        /// reflection field-sets are complete, because Awake() fires synchronously
+        /// during AddComponent and captures a stale empty BeyConfiguration.
+        /// </summary>
+        public void RewireStatRings()
+        {
+            if (beyConfiguration != null)
             {
-                if (statRingsUI == null) return;
-                statRingsUI.Initialize(beyConfiguration, movementController, transform);
+                beyConfiguration.OwnerTransform = transform;
             }
+            if (statRingsUI == null) return;
+            statRingsUI.Initialize(beyConfiguration, movementController, transform);
+        }
 
             private void InitializePlayerBey()
         {

@@ -150,7 +150,13 @@ namespace BladeSpinners.Gameplay.Movement
 
             if (beyConfiguration != null)
             {
+                beyConfiguration.OwnerTransform = transform;
                 beyConfiguration.OnSpinChanged += OnSpinChanged;
+            }
+
+            if (GetComponent<Effects.BeyGroundTrailEffect>() == null)
+            {
+                gameObject.AddComponent<Effects.BeyGroundTrailEffect>();
             }
         }
 
@@ -199,6 +205,42 @@ namespace BladeSpinners.Gameplay.Movement
                 Debug.LogWarning($"[BeyMovement] NOT GROUNDED - Position: {transform.position}");
         }
 
+        private void OnCollisionEnter(Collision collision)
+        {
+            if (collision == null || collision.contactCount == 0)
+                return;
+
+            // Check if hitting a steep obstacle / wall (normal.y < 0.45f)
+            for (int i = 0; i < collision.contactCount; i++)
+            {
+                ContactPoint contact = collision.GetContact(i);
+                if (contact.normal.y < 0.45f && rb != null)
+                {
+                    Vector3 wallNormal = contact.normal;
+                    wallNormal.y = 0f;
+                    if (wallNormal.sqrMagnitude > 0.01f)
+                    {
+                        wallNormal.Normalize();
+                        float closingSpeed = -Vector3.Dot(rb.linearVelocity, wallNormal);
+                        if (closingSpeed > 0.4f)
+                        {
+                            // Rebound / ricochet impulse away from wall
+                            float bounceFactor = 1.35f * (beyConfiguration != null && beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.HeavyweightCore) ? 1.40f : 1.0f);
+                            Vector3 rebound = wallNormal * (closingSpeed * bounceFactor);
+                            rb.AddForce(rebound, ForceMode.VelocityChange);
+
+                            // Screen shake on heavy wall impact for player
+                            if (!isEnemy && closingSpeed > 3.5f)
+                            {
+                                ThirdPersonCameraController.TriggerScreenShake(Mathf.Clamp01(closingSpeed / 20f) * 0.35f, 0.15f);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         private void OnCollisionStay(Collision collision)
         {
             // Don't re-ground during jump grace period
@@ -208,22 +250,39 @@ namespace BladeSpinners.Gameplay.Movement
             if (!IsGroundCollision(collision))
                 return;
 
-            // Average every upward-facing arena contact. Selecting only the flattest
-            // triangle made movement snap between faceted normals around bowl curves.
-            Vector3 normalSum = Vector3.zero;
-            int normalCount = 0;
-            foreach (ContactPoint contact in collision.contacts)
+            // Only consider surfaces that are genuine floors / slopes (normal.y >= 0.45f, ~63 degrees max).
+            // Steep walls, obstacles, and vertical pillars (normal.y < 0.45f) are NOT ground and must not
+            // bias the ground normal or cause downward suction into the wall!
+            Vector3 floorNormalSum = Vector3.zero;
+            int floorCount = 0;
+            for (int i = 0; i < collision.contactCount; i++)
             {
-                if (contact.normal.y > 0.12f)
+                ContactPoint contact = collision.GetContact(i);
+                if (contact.normal.y >= 0.45f)
                 {
-                    normalSum += contact.normal;
-                    normalCount++;
+                    floorNormalSum += contact.normal;
+                    floorCount++;
+                }
+                else if (rb != null)
+                {
+                    // For wall / obstacle side contacts: push gently away from the wall to prevent snagging/sticking
+                    Vector3 wallNormal = contact.normal;
+                    wallNormal.y = 0f;
+                    if (wallNormal.sqrMagnitude > 0.01f)
+                    {
+                        wallNormal.Normalize();
+                        float intoWallSpeed = -Vector3.Dot(rb.linearVelocity, wallNormal);
+                        if (intoWallSpeed > 0.1f)
+                        {
+                            rb.AddForce(wallNormal * (intoWallSpeed * 1.2f + 2.5f), ForceMode.Acceleration);
+                        }
+                    }
                 }
             }
 
-            if (normalCount > 0)
+            if (floorCount > 0)
             {
-                Vector3 groundNormal = normalSum.normalized;
+                Vector3 groundNormal = floorNormalSum.normalized;
                 isGrounded = true;
                 lastGroundNormal = Vector3.Slerp(
                     lastGroundNormal,
@@ -235,10 +294,11 @@ namespace BladeSpinners.Gameplay.Movement
                     Vector3 velocity = rb.linearVelocity;
                     float separatingSpeed =
                         Vector3.Dot(velocity, lastGroundNormal);
-                    if (separatingSpeed > 0.35f)
+                    // Only dampen micro-bounces that are moving upward off the floor dish
+                    if (separatingSpeed > 0.8f && lastGroundNormal.y >= 0.45f)
                     {
                         velocity -= lastGroundNormal
-                            * (separatingSpeed - 0.35f);
+                            * (separatingSpeed - 0.8f) * 0.7f;
                         rb.linearVelocity = velocity;
                     }
                 }
@@ -298,16 +358,30 @@ namespace BladeSpinners.Gameplay.Movement
             if (knockbackStunTimer > 0f)
                 knockbackStunTimer -= Time.fixedDeltaTime;
 
-            // Keep Bey grounded with strong downward force (like a spinning top).
-            // On steep slopes, push along the surface normal instead of straight down
-            // so the bey doesn't wedge into polygon edges.
-            if (isGrounded)
+            // Keep Bey grounded with downward force on the bowl floor (like a spinning top).
+            // Only apply dish-holding force when grounded on a genuine floor (normal.y >= 0.45f).
+            if (isGrounded && lastGroundNormal.y >= 0.45f)
             {
-                // Hold toward the actual contacted surface. Straight world-down force
-                // shoves a moving Bey into faceted curve edges and then launches it.
                 rb.AddForce(
-                    -lastGroundNormal * 42f,
+                    -lastGroundNormal * 38f,
                     ForceMode.Acceleration);
+            }
+
+            // Blader Shrine Magneto Ring: gravitationally pull pickups towards the player
+            if (beyConfiguration != null && beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.MagnetoRing) && !isEnemy)
+            {
+                Collider[] nearby = Physics.OverlapSphere(transform.position, 7.5f);
+                for (int i = 0; i < nearby.Length; i++)
+                {
+                    if (nearby[i].GetComponent<BladeSpinners.World.PickupPlaceholder>() != null || nearby[i].GetComponent<BladeSpinners.World.PartDropPickup>() != null)
+                    {
+                        Vector3 toBey = transform.position - nearby[i].transform.position;
+                        if (toBey.sqrMagnitude > 0.1f)
+                        {
+                            nearby[i].transform.position += toBey.normalized * (14f * Time.fixedDeltaTime);
+                        }
+                    }
+                }
             }
 
             // --- Stuck / edge-catch detection and recovery ---
@@ -471,8 +545,9 @@ namespace BladeSpinners.Gameplay.Movement
 
             // --- Apply force in camera direction, scaled by ramped momentum ---
             float gmSpeed = GameManager.GetForBey(isEnemy, g => g.speedMultiplier, g => g.enemySpeedMultiplier);
+            float tipDriftBonus = (beyConfiguration != null && beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.TitaniumTip)) ? 1.20f : 1.0f;
             Vector3 appliedForce = forceDirection * GameConstants.BASE_FORWARD_FORCE * tipScale
-                * momentumStrength * directionEffectiveness * boost * uphillMultiplier * gmSpeed;
+                * momentumStrength * directionEffectiveness * boost * uphillMultiplier * gmSpeed * tipDriftBonus;
             rb.AddForce(appliedForce, ForceMode.Force);
 
             lastAppliedForce = appliedForce;
@@ -480,7 +555,8 @@ namespace BladeSpinners.Gameplay.Movement
 
             // --- Add extra damping to bleed off velocity in the old direction ---
             // This is the key to the ice-skating redirect: old velocity fades while new builds
-            rb.linearDamping = Mathf.Max(rb.linearDamping, rb.linearDamping + ICE_SKATE_DAMPING_BONUS * (1f - Mathf.Max(0f, Vector3.Dot(currentHorizontalVel.normalized, forceDirection))));
+            float dampingBonus = ICE_SKATE_DAMPING_BONUS * (beyConfiguration != null && beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.TitaniumTip) ? 0.60f : 1.0f);
+            rb.linearDamping = Mathf.Max(rb.linearDamping, rb.linearDamping + dampingBonus * (1f - Mathf.Max(0f, Vector3.Dot(currentHorizontalVel.normalized, forceDirection))));
 
             if (debugMovement)
                 Debug.Log($"[BeyMovement] MOMENTUM: strength={momentumStrength:F2}, dir={forceDirection}, effectiveness={directionEffectiveness:F2}, force={appliedForce.magnitude:F1}, vel={speed:F1}");
@@ -915,12 +991,11 @@ namespace BladeSpinners.Gameplay.Movement
                 stuckTimer = 0f;
             }
 
-            // Clamp motion away from the ground normal, preserving legitimate
-            // along-curve vertical velocity on the bowl wall.
-            if (isGrounded && separatingSpeed > 0.35f)
+            // Clamp micro-bounce away from the floor ground normal without trapping against walls
+            if (isGrounded && lastGroundNormal.y >= 0.45f && separatingSpeed > 0.8f)
             {
                 currentVel -= lastGroundNormal
-                    * (separatingSpeed - 0.35f);
+                    * (separatingSpeed - 0.8f) * 0.7f;
                 rb.linearVelocity = currentVel;
             }
 
@@ -951,6 +1026,7 @@ namespace BladeSpinners.Gameplay.Movement
         public bool IsGrounded => isGrounded;
         public Vector3 GroundNormal => lastGroundNormal;
         public Vector3 CurrentVelocity => rb != null ? rb.linearVelocity : Vector3.zero;
+        public Vector3 GetVelocity() => CurrentVelocity;
         public float CurrentHorizontalSpeed => rb != null
             ? new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z).magnitude
             : 0f;

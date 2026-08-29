@@ -7,6 +7,7 @@ using BladeSpinners.Core;
 using BladeSpinners.Gameplay.Combat;
 using BladeSpinners.Gameplay.Movement;
 using BladeSpinners.Gameplay.Parts;
+using BladeSpinners.Gameplay.Shrine;
 using BladeSpinners.World;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -65,6 +66,7 @@ namespace BladeSpinners.Gameplay.UI
             public MatchManager Match;
             public ThirdPersonCameraController CameraController;
             public RunProgression Progression;
+            public BladerShrineRunState ShrineState;
             public int ArenaSeed;
             public int DepthIndex;
         }
@@ -78,7 +80,8 @@ namespace BladeSpinners.Gameplay.UI
             int seed,
             int enemyCount,
             RunProgression progression = null,
-            List<BeyPart> carriedInventory = null)
+            List<BeyPart> carriedInventory = null,
+            BladerShrineRunState carriedShrineState = null)
         {
             ClearSceneForRun();
 
@@ -89,7 +92,6 @@ namespace BladeSpinners.Gameplay.UI
             int depthScaledEnemyCount = Mathf.Clamp(enemyCount + depthIndex / 2, 2, GameConstants.ENEMY_MAX_PER_COMBAT_ROOM);
 
             EnsureGameManager();
-
             int spinPickupCount = Mathf.Max(depthScaledEnemyCount + 1, 3);
             int staminaPickupCount = Mathf.Max(1, depthScaledEnemyCount / 2);
             GameObject arena = ProceduralArenaGenerator.Generate(
@@ -103,6 +105,13 @@ namespace BladeSpinners.Gameplay.UI
 
             GameObject playerObj = CreatePlayerBey(selectedLoadout);
             PlayerManager playerManager = playerObj.GetComponent<PlayerManager>();
+
+            BladerShrineRunState activeShrineState = carriedShrineState ?? new BladerShrineRunState();
+            if (playerManager != null && playerManager.BeyConfiguration != null)
+            {
+                playerManager.BeyConfiguration.ShrineState = activeShrineState;
+            }
+            activeShrineState.RefreshOfferingsForArena(depthIndex, activeProgression.RunSeed);
 
             ThirdPersonCameraController camController = CreateCamera(playerObj);
             MatchManager match = CreateMatchManager();
@@ -163,6 +172,7 @@ namespace BladeSpinners.Gameplay.UI
                 Match = match,
                 CameraController = camController,
                 Progression = activeProgression,
+                ShrineState = activeShrineState,
                 ArenaSeed = arenaSeed,
                 DepthIndex = depthIndex
             };
@@ -180,6 +190,7 @@ namespace BladeSpinners.Gameplay.UI
 
         private static void ClearSceneForRun()
         {
+            ThirdPersonCameraController.SetBladeLockFocus(Vector3.zero, false);
             GameObject[] roots = UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
             for (int i = 0; i < roots.Length; i++)
             {
@@ -260,6 +271,7 @@ namespace BladeSpinners.Gameplay.UI
             BeyVisualSpin visualSpin = root.AddComponent<BeyVisualSpin>();
             BeyAssembler assembler = root.AddComponent<BeyAssembler>();
             root.AddComponent<Effects.BeyBurstEffect>();
+            root.AddComponent<Effects.BeyGroundTrailEffect>();
             PlayerManager manager = root.AddComponent<PlayerManager>();
 
             typeof(BeyMovementController).GetField("beyConfiguration", Flags)?.SetValue(movement, config);
@@ -339,6 +351,7 @@ namespace BladeSpinners.Gameplay.UI
             BeyVisualSpin visualSpin = root.AddComponent<BeyVisualSpin>();
             BeyAssembler assembler = root.AddComponent<BeyAssembler>();
             root.AddComponent<Effects.BeyBurstEffect>();
+            root.AddComponent<Effects.BeyGroundTrailEffect>();
             EnemyBeyController enemy = root.AddComponent<EnemyBeyController>();
 
             typeof(BeyMovementController).GetField("beyConfiguration", Flags)?.SetValue(movement, config);
@@ -361,7 +374,8 @@ namespace BladeSpinners.Gameplay.UI
             assembler.SetConfiguration(config);
             int enemySeed = ComputeArenaSeed(runSeed, 9000 + index * 97 + depthIndex * 211);
             ApplyLoadoutToAssembler(assembler, GetRandomLoadout(catalog, enemySeed, depthIndex, totalArenaCount));
-            enemy.Initialize(config, playerTarget);
+            float depth01 = Mathf.Clamp01(totalArenaCount <= 1 ? 1f : (float)depthIndex / (totalArenaCount - 1));
+            enemy.Initialize(config, playerTarget, depth01, index, totalEnemies);
             SetLayerRecursive(root, GetRequiredLayer("Bey"));
 
             return root;

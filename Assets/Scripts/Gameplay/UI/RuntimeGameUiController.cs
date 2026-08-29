@@ -10,6 +10,8 @@ using BladeSpinners.Gameplay;
 using BladeSpinners.Abilities;
 using BladeSpinners.Audio;
 using BladeSpinners.Gameplay.Parts;
+using BladeSpinners.Gameplay.Shrine;
+using BladeSpinners.Gameplay.Combat;
 
 namespace BladeSpinners.Gameplay.UI
 {
@@ -32,7 +34,8 @@ namespace BladeSpinners.Gameplay.UI
             Inventory,
             Records,
             Settings,
-            Keybinds
+            Keybinds,
+            Shrine
         }
 
         // ── Singleton ────────────────────────────────────────────────────────────
@@ -153,6 +156,7 @@ namespace BladeSpinners.Gameplay.UI
         private static readonly Color PANEL_GLASS = new Color(0.06f, 0.07f, 0.10f, 0.86f);
         private static readonly Color PANEL_STEEL = new Color(0.10f, 0.11f, 0.15f, 0.95f);
         private static readonly Color ACCENT_YEL = new Color(1f, 0.87f, 0.00f, 1f);
+        private static readonly Color ACCENT_GOLD = new Color(1f, 0.85f, 0.20f, 1f);
         private static readonly Color ACCENT_ORANGE = new Color(1f, 0.44f, 0.12f, 1f);
         private static readonly Color ACCENT_CYAN = new Color(0.12f, 0.82f, 1f, 1f);
         private static readonly Color ACCENT_MAGENTA = new Color(1f, 0.23f, 0.56f, 1f);
@@ -386,304 +390,220 @@ namespace BladeSpinners.Gameplay.UI
 
         private void DrawStartScreen()
         {
-            Rect screen = new Rect(
-                0f,
-                0f,
-                Screen.width,
-                Screen.height);
-            DrawVerticalGradient(
-                screen,
-                new Color(0.008f, 0.025f, 0.070f, 1f),
-                new Color(0.002f, 0.003f, 0.014f, 1f),
-                24);
+            Rect screen = new Rect(0f, 0f, Screen.width, Screen.height);
+            // Deep gradient from dark sci-fi navy to obsidian
+            DrawVerticalGradient(screen, new Color(0.006f, 0.018f, 0.055f, 1f), new Color(0.001f, 0.003f, 0.010f, 1f), 32);
 
             float now = Time.unscaledTime;
-            float exitProgress =
-                startScreenExitStartedAt < 0f
-                    ? 0f
-                    : Mathf.Clamp01(
-                        (now - startScreenExitStartedAt)
-                        / StartScreenExitDuration);
-            float easedExit =
-                exitProgress * exitProgress
-                * (3f - 2f * exitProgress);
+            float exitProgress = startScreenExitStartedAt < 0f
+                ? 0f
+                : Mathf.Clamp01((now - startScreenExitStartedAt) / StartScreenExitDuration);
+            float easedExit = exitProgress * exitProgress * (3f - 2f * exitProgress);
 
-            DrawStartScreenStars(
-                screen,
-                now,
-                easedExit);
-            DrawArenaBurstMotif(
-                new Rect(
-                    screen.x,
-                    screen.y + screen.height * 0.13f,
-                    screen.width,
-                    screen.height * 0.54f));
+            // 1. Perspective Cyber-Grid on the lower arena floor
+            DrawStartScreenGrid(screen, now, easedExit);
 
-            float logoWidth = Mathf.Clamp(
-                screen.width * 0.56f,
-                420f,
-                960f);
-            float logoHeight = Mathf.Clamp(
-                screen.height * 0.28f,
-                170f,
-                360f);
-            float logoScale =
-                1f + easedExit * 0.22f;
+            // 2. Ambient Rising Stardust & Anime Embers
+            DrawStartScreenStars(screen, now, easedExit);
+
+            // 3. Central Arena Stadium Hologram Ring
+            DrawArenaBurstMotif(new Rect(screen.x, screen.y + screen.height * 0.10f, screen.width, screen.height * 0.58f));
+
+            // 4. Top Tech Metadata Headers
+            float metaAlpha = (1f - easedExit) * 0.85f;
+            GUIStyle techMetaStyle = new GUIStyle(bodyLabelStyle)
+            {
+                fontSize = Mathf.Clamp(Mathf.RoundToInt(11f * GetUiScale()), 9, 16),
+                alignment = TextAnchor.MiddleLeft,
+                fontStyle = FontStyle.Bold
+            };
+            techMetaStyle.normal.textColor = new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, metaAlpha);
+            GUI.Label(new Rect(24f, 16f, 420f, 22f), "⬢ SYSTEM: ONLINE // HYPER-SPIN PROTOCOL", techMetaStyle);
+
+            GUIStyle techRightStyle = new GUIStyle(techMetaStyle) { alignment = TextAnchor.MiddleRight };
+            techRightStyle.normal.textColor = new Color(ACCENT_YEL.r, ACCENT_YEL.g, ACCENT_YEL.b, metaAlpha);
+            GUI.Label(new Rect(screen.width - 444f, 16f, 420f, 22f), "ENGINE: UNIVERSAL URP // 60 FPS HI-FI", techRightStyle);
+
+            // 5. Hero Logo
+            float logoWidth = Mathf.Clamp(screen.width * 0.58f, 440f, 1020f);
+            float logoHeight = Mathf.Clamp(screen.height * 0.32f, 190f, 390f);
+            float logoScale = 1f + easedExit * 0.22f;
             Rect logoRect = new Rect(
-                screen.center.x
-                    - logoWidth * logoScale * 0.5f,
-                screen.height * 0.24f
-                    - logoHeight * (logoScale - 1f) * 0.5f,
+                screen.center.x - logoWidth * logoScale * 0.5f,
+                screen.height * 0.22f - logoHeight * (logoScale - 1f) * 0.5f,
                 logoWidth * logoScale,
                 logoHeight * logoScale);
 
             Color previousColor = GUI.color;
-            GUI.color = new Color(
-                1f,
-                1f,
-                1f,
-                1f - easedExit);
+            GUI.color = new Color(1f, 1f, 1f, 1f - easedExit);
             if (startScreenLogo != null)
             {
-                GUI.DrawTexture(
-                    logoRect,
-                    startScreenLogo,
-                    ScaleMode.ScaleToFit,
-                    true);
+                GUI.DrawTexture(logoRect, startScreenLogo, ScaleMode.ScaleToFit, true);
             }
             else
             {
-                DrawPlaceholderStartLogo(
-                    logoRect,
-                    now);
+                DrawPlaceholderStartLogo(logoRect, now);
             }
 
-            GUIStyle catchphraseStyle =
-                new GUIStyle(sectionLabelStyle)
-                {
-                    alignment = TextAnchor.MiddleCenter,
-                    fontSize = Mathf.Clamp(
-                        Mathf.RoundToInt(
-                            24f * GetUiScale()),
-                        16,
-                        42)
-                };
-            DrawFittedLabel(
-                new Rect(
-                    screen.width * 0.18f,
-                    screen.height * 0.57f,
-                    screen.width * 0.64f,
-                    Mathf.Clamp(
-                        screen.height * 0.08f,
-                        46f,
-                        86f)),
-                StartScreenCatchphrase,
-                catchphraseStyle,
-                new Color(
-                    0.72f,
-                    0.90f,
-                    1f,
-                    1f - easedExit),
-                12);
+            // 6. Anime Subtitle Badge
+            GUIStyle catchphraseStyle = new GUIStyle(sectionLabelStyle)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold,
+                fontSize = Mathf.Clamp(Mathf.RoundToInt(22f * GetUiScale()), 15, 36)
+            };
+            Rect phraseRect = new Rect(screen.width * 0.20f, screen.height * 0.58f, screen.width * 0.60f, Mathf.Clamp(screen.height * 0.06f, 36f, 60f));
+            DrawPanelFrame(phraseRect, new Color(0.02f, 0.06f, 0.12f, 0.85f * (1f - easedExit)), new Color(0.04f, 0.10f, 0.20f, 0.90f * (1f - easedExit)), new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.75f * (1f - easedExit)), 2f);
+            DrawFrameCorners(phraseRect, new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 1f - easedExit), 14f, 1.5f);
+            DrawFittedLabel(phraseRect, "爆転ブレード // EXTREME BURST ARENA", catchphraseStyle, new Color(0.78f, 0.92f, 1f, 1f - easedExit), 12);
 
+            // 7. Interactive Breathing "PRESS TO START" Prompt
             if (startScreenExitStartedAt < 0f)
             {
-                float breath =
-                    0.58f
-                    + 0.42f
-                    * (0.5f
-                        + 0.5f
-                        * Mathf.Sin(now * 2.4f));
-                GUIStyle promptStyle =
-                    new GUIStyle(bodyLabelStyle)
-                    {
-                        alignment =
-                            TextAnchor.MiddleCenter,
-                        fontStyle = FontStyle.Bold,
-                        fontSize = Mathf.Clamp(
-                            Mathf.RoundToInt(
-                                21f * GetUiScale()),
-                            15,
-                            38)
-                    };
-                DrawFittedLabel(
-                    new Rect(
-                        screen.width * 0.25f,
-                        screen.height * 0.76f,
-                        screen.width * 0.50f,
-                        Mathf.Clamp(
-                            screen.height * 0.08f,
-                            48f,
-                            88f)),
-                    "CLICK ANYWHERE OR PRESS ANY BUTTON",
-                    promptStyle,
-                    new Color(
-                        1f,
-                        1f,
-                        1f,
-                        breath),
-                    12);
+                float breath = 0.60f + 0.40f * (0.5f + 0.5f * Mathf.Sin(now * 3.2f));
+                float promptW = Mathf.Clamp(screen.width * 0.44f, 380f, 640f);
+                float promptH = Mathf.Clamp(screen.height * 0.08f, 52f, 74f);
+                Rect promptRect = new Rect((screen.width - promptW) * 0.5f, screen.height * 0.74f, promptW, promptH);
+
+                Color promptBorder = new Color(ACCENT_YEL.r, ACCENT_YEL.g, ACCENT_YEL.b, breath);
+                DrawPanelFrame(promptRect, new Color(0.02f, 0.05f, 0.10f, 0.92f * breath), new Color(0.05f, 0.09f, 0.18f, 0.95f * breath), promptBorder, 2.5f);
+                DrawFrameCorners(promptRect, promptBorder, 20f, 2f);
+                DrawMotionBandClipped(new Rect(promptRect.x + promptRect.width * 0.55f, promptRect.y, promptRect.width * 0.35f, promptRect.height), promptBorder, 8f, 12f, 0.10f * breath);
+
+                GUIStyle promptStyle = new GUIStyle(bodyLabelStyle)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontStyle = FontStyle.Bold,
+                    fontSize = Mathf.Clamp(Mathf.RoundToInt(20f * GetUiScale()), 14, 32)
+                };
+                promptStyle.normal.textColor = new Color(1f, 0.92f, 0.35f, breath);
+                GUI.Label(promptRect, "PRESS ANY KEY OR CLICK TO ENTER", promptStyle);
             }
             GUI.color = previousColor;
 
+            // 8. Bottom Cyber Footer
+            GUIStyle footerStyle = new GUIStyle(bodyLabelStyle)
+            {
+                fontSize = Mathf.Clamp(Mathf.RoundToInt(11f * GetUiScale()), 9, 15),
+                alignment = TextAnchor.MiddleCenter
+            };
+            footerStyle.normal.textColor = new Color(0.45f, 0.60f, 0.75f, (1f - easedExit) * 0.75f);
+            GUI.Label(new Rect(0f, screen.height - 32f, screen.width, 24f), "© 2026 BLADE SPINNERS ARCADE // ALL SYSTEMS OPERATIONAL", footerStyle);
+
             if (exitProgress > 0f)
             {
-                float ringSize =
-                    Mathf.Lerp(
-                        screen.height * 0.12f,
-                        screen.width * 1.10f,
-                        easedExit);
-                Rect ring = new Rect(
-                    screen.center.x - ringSize * 0.5f,
-                    screen.center.y - ringSize * 0.5f,
-                    ringSize,
-                    ringSize);
-                DrawFrameCorners(
-                    ring,
-                    new Color(
-                        ACCENT_CYAN.r,
-                        ACCENT_CYAN.g,
-                        ACCENT_CYAN.b,
-                        (1f - easedExit) * 0.85f),
-                    ringSize * 0.12f,
-                    Mathf.Clamp(
-                        5f * (1f - easedExit),
-                        1f,
-                        5f));
-                float flashAlpha =
-                    Mathf.Clamp01(
-                        (exitProgress - 0.68f)
-                        / 0.32f);
-                DrawRect(
-                    screen,
-                    new Color(
-                        0.55f,
-                        0.88f,
-                        1f,
-                        flashAlpha));
+                float ringSize = Mathf.Lerp(screen.height * 0.12f, screen.width * 1.10f, easedExit);
+                Rect ring = new Rect(screen.center.x - ringSize * 0.5f, screen.center.y - ringSize * 0.5f, ringSize, ringSize);
+                DrawFrameCorners(ring, new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, (1f - easedExit) * 0.85f), ringSize * 0.12f, Mathf.Clamp(5f * (1f - easedExit), 1f, 5f));
+                float flashAlpha = Mathf.Clamp01((exitProgress - 0.68f) / 0.32f);
+                DrawRect(screen, new Color(0.55f, 0.88f, 1f, flashAlpha));
             }
         }
 
-        private static void DrawStartScreenStars(
-            Rect screen,
-            float time,
-            float launchProgress)
+        private static void DrawStartScreenGrid(Rect screen, float time, float launchProgress)
+        {
+            float horizonY = screen.height * 0.52f;
+            float gridAlpha = (1f - launchProgress) * 0.35f;
+            if (gridAlpha <= 0.01f) return;
+
+            // Radiating perspective lines toward vanishing point at (screen.center.x, horizonY)
+            Vector2 vanishPoint = new Vector2(screen.center.x, horizonY);
+            const int lineCount = 18;
+            for (int i = 0; i <= lineCount; i++)
+            {
+                float bottomX = Mathf.Lerp(-screen.width * 0.2f, screen.width * 1.2f, (float)i / lineCount);
+                DrawLine(vanishPoint, new Vector2(bottomX, screen.height), new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, gridAlpha * 0.6f), 1.2f);
+            }
+
+            // Scrolling horizontal perspective grid lines
+            const int horizCount = 9;
+            float scroll = Mathf.Repeat(time * 0.45f, 1f / horizCount);
+            for (int i = 0; i < horizCount; i++)
+            {
+                float t = Mathf.Pow((float)i / horizCount + scroll, 2.2f);
+                if (t > 1f) continue;
+                float lineY = Mathf.Lerp(horizonY, screen.height, t);
+                float lineAlpha = gridAlpha * t;
+                DrawRect(new Rect(screen.x, lineY, screen.width, 1.5f), new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, lineAlpha));
+            }
+
+            // Horizon Glow Line
+            DrawRect(new Rect(screen.x, horizonY - 1f, screen.width, 2.5f), new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, gridAlpha * 1.5f));
+        }
+
+        private static void DrawLine(Vector2 pointA, Vector2 pointB, Color color, float width)
+        {
+            Vector2 delta = pointB - pointA;
+            float angle = Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg;
+            float length = delta.magnitude;
+
+            GUIUtility.RotateAroundPivot(angle, pointA);
+            DrawRect(new Rect(pointA.x, pointA.y - width * 0.5f, length, width), color);
+            GUIUtility.RotateAroundPivot(-angle, pointA);
+        }
+
+        private static void DrawStartScreenStars(Rect screen, float time, float launchProgress)
         {
             const int StarCount = 110;
             for (int i = 0; i < StarCount; i++)
             {
-                float x = StartScreenHash01(
-                    i * 92821 + 17);
-                float ySeed = StartScreenHash01(
-                    i * 68917 + 71);
-                float speed =
-                    Mathf.Lerp(
-                        4f,
-                        18f,
-                        StartScreenHash01(
-                            i * 31337 + 29));
-                float y = Mathf.Repeat(
-                    ySeed * screen.height
-                        + time * speed,
-                    screen.height);
-                float twinkle =
-                    0.35f
-                    + 0.65f
-                    * (0.5f
-                        + 0.5f
-                        * Mathf.Sin(
-                            time
-                                * (1.1f + speed * 0.08f)
-                            + i));
-                float size =
-                    Mathf.Lerp(
-                        1f,
-                        3.2f,
-                        StartScreenHash01(
-                            i * 47293 + 43));
-                float streak =
-                    launchProgress
-                    * Mathf.Lerp(
-                        18f,
-                        105f,
-                        speed / 18f);
-                DrawRect(
-                    new Rect(
-                        screen.x + x * screen.width,
-                        screen.y + y,
-                        size,
-                        size + streak),
-                    new Color(
-                        0.58f,
-                        0.84f,
-                        1f,
-                        twinkle
-                            * (1f - launchProgress * 0.55f)));
+                float x = StartScreenHash01(i * 92821 + 17);
+                float ySeed = StartScreenHash01(i * 68917 + 71);
+                float speed = Mathf.Lerp(4f, 18f, StartScreenHash01(i * 31337 + 29));
+                float y = Mathf.Repeat(ySeed * screen.height + time * speed, screen.height);
+                float twinkle = 0.35f + 0.65f * (0.5f + 0.5f * Mathf.Sin(time * (1.1f + speed * 0.08f) + i));
+                float size = Mathf.Lerp(1.2f, 3.8f, StartScreenHash01(i * 47293 + 43));
+                float streak = launchProgress * Mathf.Lerp(18f, 105f, speed / 18f);
+
+                Color starColor = i % 3 == 0
+                    ? new Color(1f, 0.85f, 0.3f, twinkle * (1f - launchProgress * 0.55f))
+                    : new Color(0.48f, 0.88f, 1f, twinkle * (1f - launchProgress * 0.55f));
+
+                DrawRect(new Rect(screen.x + x * screen.width, screen.y + y, size, size + streak), starColor);
             }
         }
 
-        private void DrawPlaceholderStartLogo(
-            Rect rect,
-            float time)
+        private void DrawPlaceholderStartLogo(Rect rect, float time)
         {
-            float pulse =
-                0.78f
-                + 0.22f
-                * (0.5f
-                    + 0.5f
-                    * Mathf.Sin(time * 1.4f));
-            Rect core = new Rect(
-                rect.center.x - rect.height * 0.34f,
-                rect.y + rect.height * 0.02f,
-                rect.height * 0.68f,
-                rect.height * 0.68f);
-            DrawFrameCorners(
-                core,
-                new Color(
-                    ACCENT_CYAN.r,
-                    ACCENT_CYAN.g,
-                    ACCENT_CYAN.b,
-                    pulse),
-                core.width * 0.32f,
-                Mathf.Clamp(
-                    rect.height * 0.012f,
-                    2f,
-                    5f));
-            DrawRect(
-                new Rect(
-                    core.x + core.width * 0.16f,
-                    core.center.y - 2f,
-                    core.width * 0.68f,
-                    4f),
-                ACCENT_CYAN);
-            DrawRect(
-                new Rect(
-                    core.center.x - 2f,
-                    core.y + core.height * 0.16f,
-                    4f,
-                    core.height * 0.68f),
-                ACCENT_ORANGE);
+            float pulse = 0.78f + 0.22f * (0.5f + 0.5f * Mathf.Sin(time * 1.4f));
 
-            GUIStyle logoStyle =
-                new GUIStyle(titleBarStyle)
-                {
-                    alignment = TextAnchor.MiddleCenter,
-                    fontSize = Mathf.Clamp(
-                        Mathf.RoundToInt(
-                            62f * GetUiScale()),
-                        34,
-                        112)
-                };
-            DrawFittedLabel(
-                new Rect(
-                    rect.x,
-                    rect.y + rect.height * 0.63f,
-                    rect.width,
-                    rect.height * 0.34f),
-                "BLADE SPINNERS",
-                logoStyle,
-                Color.white,
-                20);
+            // Stylized Cyber Blade Emblem Icon
+            float emblemSize = Mathf.Min(rect.height * 0.48f, 130f);
+            Rect emblemRect = new Rect(rect.center.x - emblemSize * 0.5f, rect.y + 4f, emblemSize, emblemSize);
+
+            // Rotating cyber blade icon
+            DrawFrameCorners(emblemRect, new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, pulse), emblemSize * 0.35f, 3f);
+            DrawRect(new Rect(emblemRect.x + emblemSize * 0.15f, emblemRect.center.y - 2f, emblemSize * 0.70f, 4f), ACCENT_CYAN);
+            DrawRect(new Rect(emblemRect.center.x - 2f, emblemRect.y + emblemSize * 0.15f, 4f, emblemSize * 0.70f), ACCENT_ORANGE);
+            DrawRect(new Rect(emblemRect.center.x - 8f, emblemRect.center.y - 8f, 16f, 16f), ACCENT_YEL);
+
+            // Double-Layered 3D Metallic Title
+            Rect titleRect = new Rect(rect.x, rect.y + emblemSize + 8f, rect.width, rect.height - emblemSize - 8f);
+
+            GUIStyle shadowStyle = new GUIStyle(titleBarStyle)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold,
+                fontSize = Mathf.Clamp(Mathf.RoundToInt(60f * GetUiScale()), 32, 108)
+            };
+            shadowStyle.normal.textColor = new Color(0f, 0.05f, 0.12f, 0.95f);
+
+            GUIStyle titleStyle = new GUIStyle(shadowStyle);
+            titleStyle.normal.textColor = Color.white;
+
+            // Drop shadow offsets
+            GUI.Label(new Rect(titleRect.x + 4f, titleRect.y + 4f, titleRect.width, titleRect.height), "BLADE SPINNERS", shadowStyle);
+            GUI.Label(new Rect(titleRect.x - 2f, titleRect.y, titleRect.width, titleRect.height), "BLADE SPINNERS", shadowStyle);
+            GUI.Label(titleRect, "BLADE SPINNERS", titleStyle);
+
+            // Sliding laser gleam sweep
+            float gleamCycle = Mathf.Repeat(time * 0.35f, 1f);
+            if (gleamCycle < 0.35f)
+            {
+                float gleam01 = gleamCycle / 0.35f;
+                float gleamX = Mathf.Lerp(titleRect.x + titleRect.width * 0.15f, titleRect.x + titleRect.width * 0.85f, gleam01);
+                DrawRect(new Rect(gleamX, titleRect.y + titleRect.height * 0.25f, 18f, titleRect.height * 0.55f), new Color(1f, 1f, 1f, 0.35f * Mathf.Sin(gleam01 * Mathf.PI)));
+            }
         }
 
         private static float StartScreenHash01(
@@ -754,12 +674,17 @@ namespace BladeSpinners.Gameplay.UI
 
             DrawRunDepthOverlay();
             DrawEnergyRingPassiveOverlay();
+            DrawActiveShrinePerksOverlay();
+            DrawBladeLockOverlay();
+            DrawInGameCombatHud();
 
             if (match.CurrentState == MatchManager.MatchState.WaitingToStart)
                 DrawStartCountdownOverlay(match);
 
             if (match.CurrentState == MatchManager.MatchState.PlayerLost)
                 DrawDeathOverlay(match);
+
+            DrawComicPopups();
         }
 
         private void DrawEnergyRingPassiveOverlay()
@@ -843,6 +768,126 @@ namespace BladeSpinners.Gameplay.UI
                 passiveProcStyle);
         }
 
+        private void DrawActiveShrinePerksOverlay()
+        {
+            BladerShrineRunState shrine = runContext.ShrineState;
+            if (shrine == null || shrine.ActivePerks.Count == 0)
+                return;
+
+            float uiScale = GetUiScale();
+            float startX = Mathf.Clamp(Screen.width * 0.008f, 14f, 28f);
+            float startY = Mathf.Clamp(Screen.height * 0.170f, 155f, 250f);
+            float badgeH = Mathf.Clamp(24f * uiScale, 20f, 32f);
+            float badgeW = Mathf.Clamp(180f * uiScale, 150f, 230f);
+
+            int idx = 0;
+            foreach (ShrinePerkType perkType in shrine.ActivePerks)
+            {
+                ShrinePerkData data = ShrinePerkCatalog.GetPerk(perkType);
+                if (data == null) continue;
+
+                Rect bRect = new Rect(startX, startY + (badgeH + 4f) * idx, badgeW, badgeH);
+                DrawRect(bRect, new Color(0.02f, 0.05f, 0.10f, 0.85f));
+                DrawFrameCorners(bRect, data.ThemeColor, 6f, 1.2f);
+                DrawFittedLabel(new Rect(bRect.x + 6f, bRect.y + 2f, bRect.width - 12f, bRect.height - 4f), $"{data.IconSymbol} {data.Name}", bodyLabelStyle, data.ThemeColor, 9);
+                idx++;
+            }
+        }
+
+        private void DrawBladeLockOverlay()
+        {
+            BladeLockDuelManager duel = BladeLockDuelManager.Instance;
+            if (duel == null || !duel.IsInBladeLock)
+                return;
+
+            float uiScale = GetUiScale();
+            float meter = duel.ClashMeter; // 0 (Enemy) to 1 (Player)
+            float timeLeft = Mathf.Max(0f, duel.DurationRemaining);
+            float totalTime = Mathf.Max(0.1f, duel.TotalDuration);
+            float timeRatio = Mathf.Clamp01(timeLeft / totalTime);
+
+            int sw = Screen.width;
+            int sh = Screen.height;
+
+            float panelW = Mathf.Clamp(580f * uiScale, 460f, 780f);
+            float panelH = Mathf.Clamp(190f * uiScale, 160f, 250f);
+            Rect panel = new Rect(sw * 0.5f - panelW * 0.5f, sh * 0.36f - panelH * 0.5f, panelW, panelH);
+
+            Color frameColor = meter >= 0.5f
+                ? Color.Lerp(ACCENT_GOLD, ACCENT_CYAN, (meter - 0.5f) * 2f)
+                : Color.Lerp(ACCENT_GOLD, ACCENT_RED, (0.5f - meter) * 2f);
+
+            // Background & Border
+            DrawPanelFrame(panel, new Color(0.02f, 0.04f, 0.09f, 0.94f), new Color(0.04f, 0.08f, 0.16f, 0.98f), frameColor, 3f);
+            DrawFrameCorners(panel, frameColor, 18f, 3f);
+
+            float pad = Mathf.Clamp(12f * uiScale, 10f, 20f);
+
+            // 1. Header Title
+            float headerH = Mathf.Clamp(36f * uiScale, 30f, 48f);
+            Rect headerRect = new Rect(panel.x + pad, panel.y + 6f, panel.width - pad * 2f, headerH);
+            DrawFittedLabel(headerRect, "BLADE LOCK CLASH // 激突ブレードロック", titleBarStyle, frameColor, 13);
+
+            // 2. Tug-Of-War Gauge Bar
+            float barY = headerRect.yMax + 8f;
+            float barH = Mathf.Clamp(32f * uiScale, 26f, 42f);
+            Rect gaugeRect = new Rect(panel.x + pad, barY, panel.width - pad * 2f, barH);
+
+            // Gauge Frame
+            DrawRect(gaugeRect, new Color(0.05f, 0.05f, 0.08f, 0.9f));
+            DrawPanelFrame(gaugeRect, new Color(0f, 0f, 0f, 0.8f), new Color(0.05f, 0.05f, 0.08f, 0.9f), new Color(0.4f, 0.5f, 0.6f, 0.6f), 1.5f);
+
+            // Player Fill (Left side)
+            float playerFillW = gaugeRect.width * meter;
+            if (playerFillW > 1f)
+            {
+                Rect playerFillRect = new Rect(gaugeRect.x, gaugeRect.y, playerFillW, gaugeRect.height);
+                Color pCol = Color.Lerp(new Color(0.1f, 0.6f, 1f, 0.85f), new Color(0.2f, 1f, 0.6f, 0.95f), meter);
+                DrawRect(playerFillRect, pCol);
+            }
+
+            // Enemy Fill (Right side)
+            float enemyFillW = gaugeRect.width * (1f - meter);
+            if (enemyFillW > 1f)
+            {
+                Rect enemyFillRect = new Rect(gaugeRect.x + playerFillW, gaugeRect.y, enemyFillW, gaugeRect.height);
+                Color eCol = Color.Lerp(new Color(0.9f, 0.2f, 0.2f, 0.85f), new Color(0.7f, 0.1f, 0.8f, 0.95f), 1f - meter);
+                DrawRect(enemyFillRect, eCol);
+            }
+
+            // Center Target Notch
+            float centerNotchX = gaugeRect.x + gaugeRect.width * 0.5f;
+            DrawRect(new Rect(centerNotchX - 1.5f, gaugeRect.y - 3f, 3f, gaugeRect.height + 6f), new Color(1f, 1f, 1f, 0.75f));
+
+            // Sliding Clash Diamond Reticle
+            float reticleX = gaugeRect.x + gaugeRect.width * meter;
+            float reticleSize = Mathf.Clamp(36f * uiScale, 28f, 48f);
+            Rect reticleRect = new Rect(reticleX - reticleSize * 0.5f, gaugeRect.center.y - reticleSize * 0.5f, reticleSize, reticleSize);
+            DrawRect(reticleRect, new Color(0.05f, 0.05f, 0.08f, 0.85f));
+            DrawFrameCorners(reticleRect, frameColor, 8f, 2f);
+            GUIStyle diamondStyle = new GUIStyle(titleBarStyle)
+            {
+                fontSize = Mathf.RoundToInt(18f * uiScale),
+                alignment = TextAnchor.MiddleCenter
+            };
+            GUI.Label(reticleRect, "◆", diamondStyle);
+
+            // 3. Action Prompt (Pulsing mash callout)
+            float promptY = gaugeRect.yMax + 10f;
+            float promptH = Mathf.Clamp(38f * uiScale, 32f, 50f);
+            Rect promptRect = new Rect(panel.x + pad, promptY, panel.width - pad * 2f, promptH);
+
+            float pulse = 0.85f + Mathf.Abs(Mathf.Sin(Time.unscaledTime * 10f)) * 0.35f;
+            Color promptColor = new Color(frameColor.r, frameColor.g, frameColor.b, pulse);
+            string mashText = "MASH [SPACE] OR [CLICK] RAPIDLY TO OVERPOWER!";
+            DrawFittedLabel(promptRect, mashText, sectionLabelStyle, promptColor, 12);
+
+            // 4. Timer Depletion Bar
+            float timerH = Mathf.Clamp(6f * uiScale, 4f, 8f);
+            Rect timerRect = new Rect(panel.x + pad, panel.yMax - timerH - 8f, (panel.width - pad * 2f) * timeRatio, timerH);
+            DrawRect(timerRect, frameColor);
+        }
+
         private void DrawRunDepthOverlay()
         {
             RuntimeRunBuilder.RunProgression progression = runContext.Progression;
@@ -889,44 +934,362 @@ namespace BladeSpinners.Gameplay.UI
                 infoStyle);
         }
 
+        public struct ComicPopup
+        {
+            public string text;
+            public Color color;
+            public float startTime;
+            public float duration;
+            public Vector2 screenPos;
+            public float scale;
+        }
+        private static readonly List<ComicPopup> activeComicPopups = new List<ComicPopup>();
+
+        public static void SpawnComicPopup(string text, Color color, float scale = 1f)
+        {
+            activeComicPopups.Add(new ComicPopup
+            {
+                text = text,
+                color = color,
+                startTime = Time.unscaledTime,
+                duration = 1.15f * scale,
+                screenPos = new Vector2(Screen.width * 0.5f + UnityEngine.Random.Range(-120f, 120f), Screen.height * 0.38f + UnityEngine.Random.Range(-40f, 40f)),
+                scale = scale
+            });
+        }
+
+        public static void SpawnGlobalComicPopup(string text, Color color, float scale = 1f) => SpawnComicPopup(text, color, scale);
+
+        private void DrawComicPopups()
+        {
+            if (activeComicPopups.Count == 0) return;
+
+            float now = Time.unscaledTime;
+            for (int i = activeComicPopups.Count - 1; i >= 0; i--)
+            {
+                ComicPopup popup = activeComicPopups[i];
+                float elapsed = now - popup.startTime;
+                if (elapsed >= popup.duration)
+                {
+                    activeComicPopups.RemoveAt(i);
+                    continue;
+                }
+
+                float norm = elapsed / popup.duration;
+                float alpha = 1f - Mathf.Pow(norm, 2.5f);
+                float bounce = Mathf.Sin(norm * Mathf.PI * 0.5f) * 45f;
+                float popScale = (1f + Mathf.Sin(norm * Mathf.PI) * 0.35f) * popup.scale;
+
+                int fontSize = Mathf.RoundToInt(Mathf.Clamp(Screen.height * 0.045f * popScale, 24f, 72f));
+                GUIStyle style = new GUIStyle(titleBarStyle)
+                {
+                    fontSize = fontSize,
+                    alignment = TextAnchor.MiddleCenter,
+                    fontStyle = FontStyle.Bold
+                };
+
+                Vector2 pos = popup.screenPos - new Vector2(0f, bounce);
+                Rect r = new Rect(pos.x - 200f, pos.y - 40f, 400f, 80f);
+
+                // Shadow
+                style.normal.textColor = new Color(0f, 0f, 0f, alpha * 0.85f);
+                GUI.Label(new Rect(r.x + 3f, r.y + 3f, r.width, r.height), popup.text, style);
+
+                // Main text
+                Color c = popup.color;
+                c.a *= alpha;
+                style.normal.textColor = c;
+                GUI.Label(r, popup.text, style);
+            }
+        }
+
         private void DrawStartCountdownOverlay(MatchManager match)
         {
             int sw = Screen.width;
             int sh = Screen.height;
 
             float remaining = match.CountdownRemaining;
-            int seconds = Mathf.Max(1, Mathf.CeilToInt(remaining));
+            float total = Mathf.Max(0.1f, match.CountdownDuration);
 
-            string label = remaining <= 0.05f ? "GO!" : seconds.ToString();
+            // Calculate needle position 0..1 (oscillates faster as countdown nears 0)
+            float speedMultiplier = Mathf.Lerp(3.2f, 1.8f, remaining / total);
+            float needlePos01 = Mathf.PingPong(Time.unscaledTime * speedMultiplier, 1f);
 
-            float panelW = Mathf.Clamp(sw * 0.2f, 180f, 320f);
-            float panelH = Mathf.Clamp(sh * 0.14f, 110f, 180f);
-            Rect panel = new Rect((sw - panelW) * 0.5f, sh * 0.1f, panelW, panelH);
+            // Handle Input
+            if (!match.HasPlayerRipped)
+            {
+                if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Return) || (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame))
+                {
+                    match.ExecuteRipCord(needlePos01);
+                }
+            }
 
-            DrawPanelFrame(panel, new Color(0.02f, 0.06f, 0.12f, 0.94f), new Color(0.03f, 0.09f, 0.17f, 0.97f), ACCENT_CYAN, 3f);
-            DrawFrameCorners(panel, new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.55f), panel.width * 0.14f, 2f);
-            DrawMotionBandClipped(new Rect(panel.x + panel.width * 0.55f, panel.y, panel.width * 0.38f, panel.height), ACCENT_CYAN, 8f, 14f, 0.08f);
+            // ── TOP ANIME COUNTDOWN BANNER ──────────────────────────────────────────
+            string mainText;
+            string subText;
+            Color textColor;
+            Color borderColor;
+
+            if (remaining > 2.0f)
+            {
+                mainText = "3";
+                subText = "READY... CHARGE LAUNCHER!";
+                textColor = new Color(1f, 0.9f, 0.2f, 1f);
+                borderColor = ACCENT_YEL;
+            }
+            else if (remaining > 1.0f)
+            {
+                mainText = "2";
+                subText = "SET... TENSION PEAK!";
+                textColor = ACCENT_CYAN;
+                borderColor = ACCENT_CYAN;
+            }
+            else if (remaining > 0.08f)
+            {
+                mainText = "1";
+                subText = "撃ち込め！ LET IT RIP!!!";
+                textColor = new Color(1f, 0.4f, 0.1f, 1f);
+                borderColor = new Color(1f, 0.5f, 0.1f, 1f);
+            }
+            else
+            {
+                mainText = "CLASH!!";
+                subText = "BURST DRIVE ENGAGED";
+                textColor = Color.white;
+                borderColor = ACCENT_MAGENTA;
+            }
+
+            float pulse = 1f + Mathf.Sin(Time.unscaledTime * 14f) * 0.03f;
+            float topW = Mathf.Clamp(sw * 0.28f, 280f, 460f) * pulse;
+            float topH = Mathf.Clamp(sh * 0.14f, 100f, 170f) * pulse;
+            Rect topPanel = new Rect((sw - topW) * 0.5f, sh * 0.05f, topW, topH);
+
+            DrawPanelFrame(topPanel, new Color(0.02f, 0.04f, 0.08f, 0.95f), new Color(0.04f, 0.07f, 0.14f, 0.98f), borderColor, 3.5f);
+            DrawFrameCorners(topPanel, borderColor, topPanel.width * 0.16f, 2f);
+            DrawMotionBandClipped(new Rect(topPanel.x + topPanel.width * 0.5f, topPanel.y, topPanel.width * 0.45f, topPanel.height), borderColor, 8f, 14f, 0.12f);
 
             GUIStyle countdownStyle = new GUIStyle(titleBarStyle)
             {
-                fontSize = Mathf.RoundToInt(Mathf.Clamp(Screen.height * 0.085f, 48f, 96f)),
-                alignment = TextAnchor.MiddleCenter
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(Screen.height * 0.075f, 44f, 96f)),
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold
             };
-            countdownStyle.normal.textColor = Color.white;
+            countdownStyle.normal.textColor = textColor;
 
             GUIStyle countdownSubStyle = new GUIStyle(bodyLabelStyle)
             {
                 alignment = TextAnchor.MiddleCenter,
-                fontSize = Mathf.RoundToInt(Mathf.Clamp(Screen.height * 0.022f, 14f, 24f))
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(Screen.height * 0.022f, 14f, 26f)),
+                fontStyle = FontStyle.Bold
             };
-            countdownSubStyle.normal.textColor = ACCENT_CYAN;
+            countdownSubStyle.normal.textColor = borderColor;
 
-            GUILayout.BeginArea(panel);
+            GUILayout.BeginArea(topPanel);
             GUILayout.FlexibleSpace();
-            GUILayout.Label(label, countdownStyle);
-            GUILayout.Label("MATCH START", countdownSubStyle);
+            GUILayout.Label(mainText, countdownStyle);
+            GUILayout.Label(subText, countdownSubStyle);
             GUILayout.FlexibleSpace();
             GUILayout.EndArea();
+
+            // ── RIP-CORD LAUNCHER TACHOMETER GAUGE ───────────────────────────────────
+            float meterW = Mathf.Clamp(sw * 0.46f, 460f, 800f);
+            float meterH = Mathf.Clamp(sh * 0.22f, 160f, 240f);
+            Rect meterPanel = new Rect((sw - meterW) * 0.5f, sh * 0.68f, meterW, meterH);
+
+            Color meterBorder = match.HasPlayerRipped
+                ? (match.RipRating == BladeSpinners.Abilities.LaunchRating.Perfect ? ACCENT_YEL : (match.RipRating == BladeSpinners.Abilities.LaunchRating.Great ? ACCENT_CYAN : ACCENT_ORANGE))
+                : ACCENT_CYAN;
+
+            DrawPanelFrame(meterPanel, new Color(0.02f, 0.05f, 0.10f, 0.95f), new Color(0.04f, 0.08f, 0.16f, 0.98f), meterBorder, 3f);
+            DrawFrameCorners(meterPanel, meterBorder, 32f, 2f);
+
+            // Title
+            GUIStyle gaugeTitleStyle = new GUIStyle(sectionLabelStyle)
+            {
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(sh * 0.022f, 15f, 25f)),
+                alignment = TextAnchor.MiddleCenter
+            };
+            GUI.Label(new Rect(meterPanel.x, meterPanel.y + 10f, meterPanel.width, 26f), "RIP-CORD LAUNCHER // POWER TENSION METER", gaugeTitleStyle);
+
+            // Gauge Bar Background Track
+            float trackPad = 36f;
+            float trackX = meterPanel.x + trackPad;
+            float trackY = meterPanel.y + 46f;
+            float trackW = meterPanel.width - trackPad * 2f;
+            float trackH = 34f;
+            Rect trackRect = new Rect(trackX, trackY, trackW, trackH);
+
+            DrawRect(trackRect, new Color(0.05f, 0.07f, 0.12f, 1f));
+
+            // Color gradient zones along the track:
+            // 0..0.45: Gray/Orange (Mishap/Good)
+            // 0.45..0.78: Cyan (Great)
+            // 0.78..0.98: Glowing Gold (SWEET SPOT // 125% SPIN)
+            DrawRect(new Rect(trackX, trackY, trackW * 0.45f, trackH), new Color(0.35f, 0.35f, 0.4f, 0.65f));
+            DrawRect(new Rect(trackX + trackW * 0.45f, trackY, trackW * 0.33f, trackH), new Color(0.12f, 0.75f, 0.95f, 0.75f));
+
+            // Sweet Spot Zone (Glowing Pulse)
+            float sweetSpotAlpha = 0.75f + Mathf.Sin(Time.unscaledTime * 12f) * 0.2f;
+            Rect sweetSpotRect = new Rect(trackX + trackW * 0.78f, trackY - 2f, trackW * 0.20f, trackH + 4f);
+            DrawRect(sweetSpotRect, new Color(1f, 0.85f, 0.1f, sweetSpotAlpha));
+            DrawFrameCorners(sweetSpotRect, Color.white, 8f, 1.5f);
+
+            // Track Border
+            DrawPanelFrame(trackRect, Color.clear, Color.clear, new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.5f), 1.5f);
+
+            // Needle Indicator
+            float displayedNeedle = match.HasPlayerRipped
+                ? (match.RipRating == BladeSpinners.Abilities.LaunchRating.Perfect ? 0.88f : (match.RipRating == BladeSpinners.Abilities.LaunchRating.Great ? 0.65f : (match.RipRating == BladeSpinners.Abilities.LaunchRating.Good ? 0.35f : 0.15f)))
+                : needlePos01;
+            float needleX = trackX + trackW * displayedNeedle;
+            Rect needleRect = new Rect(needleX - 4f, trackY - 8f, 8f, trackH + 16f);
+
+            // Needle Glow + Body
+            Color needleColor = match.HasPlayerRipped
+                ? (match.RipRating == BladeSpinners.Abilities.LaunchRating.Perfect ? new Color(1f, 0.9f, 0.2f, 1f) : Color.white)
+                : Color.white;
+            DrawRect(new Rect(needleX - 6f, trackY - 10f, 12f, trackH + 20f), new Color(needleColor.r, needleColor.g, needleColor.b, 0.35f));
+            DrawRect(needleRect, needleColor);
+
+            // Zone Labels
+            GUIStyle zoneStyle = new GUIStyle(bodyLabelStyle)
+            {
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(sh * 0.016f, 11f, 18f)),
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold
+            };
+            zoneStyle.normal.textColor = Color.black;
+            GUI.Label(sweetSpotRect, "SWEET SPOT (125%)", zoneStyle);
+
+            // Subtitle Prompt / Rating Result
+            GUIStyle promptStyle = new GUIStyle(bodyLabelStyle)
+            {
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(sh * 0.024f, 16f, 28f)),
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold
+            };
+
+            if (!match.HasPlayerRipped)
+            {
+                promptStyle.normal.textColor = ACCENT_YEL;
+                GUI.Label(
+                    new Rect(meterPanel.x, trackY + trackH + 12f, meterPanel.width, 36f),
+                    "PRESS [SPACE] OR [LEFT CLICK] TO RIP THE CORD",
+                    promptStyle);
+            }
+            else
+            {
+                promptStyle.normal.textColor = match.RipRating switch
+                {
+                    BladeSpinners.Abilities.LaunchRating.Perfect => ACCENT_YEL,
+                    BladeSpinners.Abilities.LaunchRating.Great => ACCENT_CYAN,
+                    BladeSpinners.Abilities.LaunchRating.Good => ACCENT_ORANGE,
+                    _ => Color.gray
+                };
+                string ratingMsg = match.RipRating switch
+                {
+                    BladeSpinners.Abilities.LaunchRating.Perfect => $"PERFECT RIP! ({Mathf.RoundToInt(match.RipMultiplier * 100)}% STARTING SPIN)",
+                    BladeSpinners.Abilities.LaunchRating.Great => $"GREAT RIP! ({Mathf.RoundToInt(match.RipMultiplier * 100)}% STARTING SPIN)",
+                    BladeSpinners.Abilities.LaunchRating.Good => $"GOOD RIP ({Mathf.RoundToInt(match.RipMultiplier * 100)}% STARTING SPIN)",
+                    _ => $"MISHAP RIP ({Mathf.RoundToInt(match.RipMultiplier * 100)}% STARTING SPIN)"
+                };
+                GUI.Label(new Rect(meterPanel.x, trackY + trackH + 12f, meterPanel.width, 36f), ratingMsg, promptStyle);
+            }
+        }
+
+        private void DrawInGameCombatHud()
+        {
+            PlayerManager player = runContext.Player;
+            if (player == null || player.BeyConfiguration == null)
+                return;
+
+            BeyConfiguration config = player.BeyConfiguration;
+            int sw = Screen.width;
+            int sh = Screen.height;
+
+            // ── BOTTOM-CENTER COMBAT CHASSIS ────────────────────────────
+            float chassisW = Mathf.Clamp(sw * 0.44f, 440f, 680f);
+            float chassisH = Mathf.Clamp(sh * 0.11f, 84f, 130f);
+            Rect chassis = new Rect((sw - chassisW) * 0.5f, sh - chassisH - 16f, chassisW, chassisH);
+
+            DrawPanelFrame(chassis, new Color(0.02f, 0.05f, 0.10f, 0.88f), new Color(0.04f, 0.08f, 0.16f, 0.94f), new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.75f), 2.5f);
+            DrawFrameCorners(chassis, ACCENT_CYAN, 20f, 1.5f);
+
+            float padX = 18f;
+            float barW = chassis.width - padX * 2f;
+
+            // 1. Spin / Stamina (Health) Bar
+            float spinNorm = Mathf.Clamp01(config.CurrentSpin / GameConstants.MAX_SPIN);
+            float spinPct = (config.CurrentSpin / GameConstants.DEFAULT_STARTING_SPIN) * 100f;
+
+            Rect spinBarRect = new Rect(chassis.x + padX, chassis.y + 16f, barW, 26f);
+            DrawRect(spinBarRect, new Color(0.06f, 0.08f, 0.12f, 1f));
+
+            Color spinFillColor = spinPct > 100f
+                ? Color.Lerp(ACCENT_YEL, new Color(1f, 0.4f, 0.1f), Mathf.PingPong(Time.unscaledTime * 4f, 1f))
+                : (spinPct < 25f
+                    ? (Mathf.Sin(Time.unscaledTime * 10f) > 0 ? RED_DANGER : new Color(0.4f, 0.05f, 0.05f))
+                    : (spinPct < 50f ? ACCENT_ORANGE : ACCENT_CYAN));
+
+            DrawRect(new Rect(spinBarRect.x, spinBarRect.y, spinBarRect.width * spinNorm, spinBarRect.height), spinFillColor);
+
+            // Subtle segmented dividers on the spin bar
+            for (int i = 1; i < 10; i++)
+            {
+                float divX = spinBarRect.x + spinBarRect.width * (i / 10f);
+                DrawRect(new Rect(divX, spinBarRect.y, 2f, spinBarRect.height), new Color(0f, 0f, 0f, 0.45f));
+            }
+            DrawPanelFrame(spinBarRect, Color.clear, Color.clear, new Color(spinFillColor.r, spinFillColor.g, spinFillColor.b, 0.6f), 1.5f);
+
+            // Spin text
+            GUIStyle spinStyle = new GUIStyle(sectionLabelStyle)
+            {
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(sh * 0.019f, 13f, 22f)),
+                alignment = TextAnchor.MiddleLeft
+            };
+            GUI.Label(new Rect(spinBarRect.x + 8f, spinBarRect.y - 1f, spinBarRect.width * 0.5f, spinBarRect.height), "SPIN STAMINA", spinStyle);
+
+            GUIStyle spinValStyle = new GUIStyle(sectionLabelStyle)
+            {
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(sh * 0.021f, 14f, 25f)),
+                alignment = TextAnchor.MiddleRight,
+                fontStyle = FontStyle.Bold
+            };
+            spinValStyle.normal.textColor = spinFillColor;
+            GUI.Label(new Rect(spinBarRect.x + spinBarRect.width * 0.5f, spinBarRect.y - 1f, spinBarRect.width * 0.5f - 8f, spinBarRect.height), $"{Mathf.RoundToInt(config.CurrentSpin)} / {Mathf.RoundToInt(GameConstants.MAX_SPIN)} ({Mathf.RoundToInt(spinPct)}%)", spinValStyle);
+
+            // 2. Mana Bar
+            float manaNorm = Mathf.Clamp01(config.CurrentMana / config.MaxMana);
+            Rect manaBarRect = new Rect(chassis.x + padX, chassis.y + 48f, barW * 0.62f, 18f);
+            DrawRect(manaBarRect, new Color(0.06f, 0.08f, 0.12f, 1f));
+            DrawRect(new Rect(manaBarRect.x, manaBarRect.y, manaBarRect.width * manaNorm, manaBarRect.height), new Color(0.1f, 0.65f, 1f, 0.9f));
+            DrawPanelFrame(manaBarRect, Color.clear, Color.clear, new Color(0.1f, 0.65f, 1f, 0.5f), 1f);
+
+            GUIStyle manaStyle = new GUIStyle(bodyLabelStyle)
+            {
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(sh * 0.015f, 10f, 17f)),
+                alignment = TextAnchor.MiddleLeft
+            };
+            manaStyle.normal.textColor = Color.white;
+            GUI.Label(new Rect(manaBarRect.x + 6f, manaBarRect.y - 1f, manaBarRect.width, manaBarRect.height), $"MANA  {Mathf.RoundToInt(config.CurrentMana)} / {Mathf.RoundToInt(config.MaxMana)}", manaStyle);
+
+            // 3. Ability Card / Ready Indicator
+            BladeSpinners.Abilities.BeyAbility ability = config.GetStatBlock().EquippedAbility;
+            string abilityName = ability != null ? ability.AbilityName.ToUpperInvariant() : "NO ABILITY";
+            bool isReady = config.IsAbilityReady && config.CurrentMana >= (ability != null ? config.GetEffectiveAbilityCost(ability) : 999f);
+
+            Rect abilityRect = new Rect(chassis.x + padX + barW * 0.64f, chassis.y + 48f, barW * 0.36f, 18f);
+            Color abilityBorder = isReady ? ACCENT_YEL : (config.IsAbilityReady ? ACCENT_CYAN : new Color(0.4f, 0.4f, 0.4f, 0.6f));
+            DrawPanelFrame(abilityRect, new Color(0.04f, 0.06f, 0.10f, 0.9f), new Color(0.04f, 0.06f, 0.10f, 0.9f), abilityBorder, 1f);
+
+            GUIStyle abilityStyle = new GUIStyle(bodyLabelStyle)
+            {
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(sh * 0.014f, 10f, 16f)),
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold
+            };
+            abilityStyle.normal.textColor = isReady ? ACCENT_YEL : (config.IsAbilityReady ? Color.white : new Color(0.6f, 0.6f, 0.6f));
+            GUI.Label(abilityRect, isReady ? $"[F] {abilityName} (READY)" : (config.IsAbilityReady ? $"[F] {abilityName}" : $"[F] {abilityName} ({config.AbilityCooldownRemaining:F1}s)"), abilityStyle);
         }
 
         private void DrawDeathOverlay(MatchManager match)
@@ -2050,25 +2413,22 @@ namespace BladeSpinners.Gameplay.UI
 
         private void DrawMainTopBar(Rect rect)
         {
-            DrawPanelFrame(rect, new Color(0.02f, 0.05f, 0.11f, 0.94f), new Color(0.03f, 0.09f, 0.16f, 0.96f), ACCENT_CYAN, 3f);
-            DrawMotionBandClipped(new Rect(rect.x + rect.width * 0.62f, rect.y, rect.width * 0.30f, rect.height), ACCENT_CYAN, 8f, 16f, 0.10f);
+            DrawPanelFrame(rect, new Color(0.02f, 0.05f, 0.10f, 0.94f), new Color(0.04f, 0.08f, 0.16f, 0.96f), ACCENT_CYAN, 3f);
+            DrawFrameCorners(rect, ACCENT_CYAN, 24f, 2f);
+            DrawMotionBandClipped(new Rect(rect.x + rect.width * 0.60f, rect.y, rect.width * 0.32f, rect.height), ACCENT_CYAN, 8f, 16f, 0.08f);
 
             float pad = Mathf.Clamp(12f * GetUiScale(), 12f, 24f);
-            float logoW = Mathf.Clamp(rect.width * 0.28f, 260f, 440f);
-            float tabsW = Mathf.Clamp(
-                rect.width * 0.48f,
-                420f,
-                760f);
-            Rect brandRect = new Rect(rect.x + pad, rect.y + pad * 0.6f, logoW, rect.height - pad * 1.2f);
-            Rect tabsRect = new Rect(
-                rect.xMax - pad - tabsW,
-                rect.y + pad * 0.55f,
-                tabsW,
-                rect.height - pad * 1.1f);
+            float logoW = Mathf.Clamp(rect.width * 0.26f, 240f, 400f);
+            float tabsW = Mathf.Clamp(rect.width * 0.44f, 380f, 680f);
+            float badgeW = Mathf.Clamp(rect.width * 0.22f, 180f, 280f);
+
+            Rect brandRect = new Rect(rect.x + pad, rect.y + pad * 0.5f, logoW, rect.height - pad);
+            Rect tabsRect = new Rect(brandRect.xMax + pad, rect.y + pad * 0.5f, tabsW, rect.height - pad);
+            Rect badgeRect = new Rect(rect.xMax - pad - badgeW, rect.y + pad * 0.5f, badgeW, rect.height - pad);
 
             DrawBrandLockup(brandRect);
 
-            float gap = Mathf.Clamp(10f * GetUiScale(), 8f, 18f);
+            float gap = Mathf.Clamp(8f * GetUiScale(), 6f, 14f);
             float tabW = (tabsRect.width - gap * 3f) / 4f;
             if (TopTabBtn("GARAGE", new Rect(tabsRect.x, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Home))
                 SetMainMenuPanel(MenuPanel.Home);
@@ -2078,62 +2438,89 @@ namespace BladeSpinners.Gameplay.UI
                 SetMainMenuPanel(MenuPanel.Records);
             if (TopTabBtn("SETTINGS", new Rect(tabsRect.x + (tabW + gap) * 3f, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Settings))
                 SetMainMenuPanel(MenuPanel.Settings);
+
+            // Blader Rank / Status badge on the right
+            DrawPanelFrame(badgeRect, new Color(0.03f, 0.07f, 0.14f, 0.85f), new Color(0.04f, 0.10f, 0.20f, 0.90f), new Color(ACCENT_YEL.r, ACCENT_YEL.g, ACCENT_YEL.b, 0.6f), 1.5f);
+            DrawFrameCorners(badgeRect, ACCENT_YEL, 10f, 1f);
+
+            GUIStyle rankStyle = new GUIStyle(sectionLabelStyle)
+            {
+                fontSize = Mathf.Clamp(Mathf.RoundToInt(13f * GetUiScale()), 10, 18),
+                alignment = TextAnchor.MiddleLeft,
+                fontStyle = FontStyle.Bold
+            };
+            rankStyle.normal.textColor = ACCENT_YEL;
+            GUI.Label(new Rect(badgeRect.x + 10f, badgeRect.y + 2f, badgeRect.width - 20f, badgeRect.height * 0.5f), "RANK: MASTER BLADER", rankStyle);
+
+            GUIStyle ptsStyle = new GUIStyle(bodyLabelStyle)
+            {
+                fontSize = Mathf.Clamp(Mathf.RoundToInt(11f * GetUiScale()), 9, 15),
+                alignment = TextAnchor.MiddleLeft
+            };
+            ptsStyle.normal.textColor = ACCENT_CYAN;
+            GUI.Label(new Rect(badgeRect.x + 10f, badgeRect.y + badgeRect.height * 0.48f, badgeRect.width - 20f, badgeRect.height * 0.48f), "2,500 PTS // READY", ptsStyle);
         }
 
         private void DrawBrandLockup(Rect rect)
         {
-            Rect iconRect = new Rect(rect.x, rect.y + rect.height * 0.18f, rect.height * 0.64f, rect.height * 0.64f);
-            DrawRect(iconRect, new Color(0.04f, 0.12f, 0.20f, 0.90f));
-            DrawFrameCorners(iconRect, ACCENT_CYAN, iconRect.width * 0.40f, 2f);
-            DrawRect(new Rect(iconRect.x + iconRect.width * 0.16f, iconRect.y + iconRect.height * 0.24f, iconRect.width * 0.52f, 3f), ACCENT_CYAN);
-            DrawRect(new Rect(iconRect.x + iconRect.width * 0.24f, iconRect.y + iconRect.height * 0.43f, iconRect.width * 0.42f, 3f), ACCENT_CYAN);
-            DrawRect(new Rect(iconRect.x + iconRect.width * 0.10f, iconRect.y + iconRect.height * 0.62f, iconRect.width * 0.60f, 3f), ACCENT_CYAN);
+            float iconSize = rect.height * 0.85f;
+            Rect iconRect = new Rect(rect.x, rect.y + (rect.height - iconSize) * 0.5f, iconSize, iconSize);
+            DrawRect(iconRect, new Color(0.03f, 0.09f, 0.18f, 0.92f));
+            DrawFrameCorners(iconRect, ACCENT_CYAN, iconRect.width * 0.35f, 2f);
 
-            Rect labelRect = new Rect(iconRect.xMax + 12f, rect.y, rect.width - iconRect.width - 12f, rect.height);
-            DrawFittedLabel(new Rect(labelRect.x, labelRect.y + labelRect.height * 0.08f, labelRect.width, labelRect.height * 0.68f), "BLADE SPINNERS", titleBarStyle, Color.white, 14);
-            GUIStyle subStyle = FitLabelStyle(bodyLabelStyle, "PLACEHOLDER LOGO / RUNTIME GARAGE", labelRect.width, 10, labelRect.height * 0.3f);
-            Color prev = GUI.contentColor;
-            GUI.contentColor = new Color(0.62f, 0.82f, 0.95f, 0.8f);
-            GUI.Label(new Rect(labelRect.x, labelRect.y + labelRect.height * 0.62f, labelRect.width, labelRect.height * 0.3f), "PLACEHOLDER LOGO / RUNTIME GARAGE", subStyle);
-            GUI.contentColor = prev;
+            // Rotating Blade Cross
+            float angle = Time.unscaledTime * 45f;
+            GUIUtility.RotateAroundPivot(angle, iconRect.center);
+            DrawRect(new Rect(iconRect.x + iconRect.width * 0.15f, iconRect.center.y - 2f, iconRect.width * 0.70f, 4f), ACCENT_CYAN);
+            DrawRect(new Rect(iconRect.center.x - 2f, iconRect.y + iconRect.height * 0.15f, 4f, iconRect.height * 0.70f), ACCENT_ORANGE);
+            GUIUtility.RotateAroundPivot(-angle, iconRect.center);
+
+            DrawRect(new Rect(iconRect.center.x - 4f, iconRect.center.y - 4f, 8f, 8f), ACCENT_YEL);
+
+            Rect labelRect = new Rect(iconRect.xMax + 10f, rect.y, rect.width - iconRect.width - 10f, rect.height);
+            GUIStyle brandStyle = new GUIStyle(titleBarStyle)
+            {
+                fontSize = Mathf.Clamp(Mathf.RoundToInt(18f * GetUiScale()), 13, 26),
+                alignment = TextAnchor.MiddleLeft,
+                fontStyle = FontStyle.Bold
+            };
+            brandStyle.normal.textColor = Color.white;
+            GUI.Label(new Rect(labelRect.x, labelRect.y + 2f, labelRect.width, labelRect.height * 0.55f), "BLADE SPINNERS", brandStyle);
+
+            GUIStyle subStyle = new GUIStyle(bodyLabelStyle)
+            {
+                fontSize = Mathf.Clamp(Mathf.RoundToInt(10f * GetUiScale()), 8, 14),
+                alignment = TextAnchor.MiddleLeft
+            };
+            subStyle.normal.textColor = new Color(0.55f, 0.82f, 1f, 0.85f);
+            GUI.Label(new Rect(labelRect.x, labelRect.y + labelRect.height * 0.52f, labelRect.width, labelRect.height * 0.45f), "NEXT-GEN BEYBLADE GARAGE", subStyle);
         }
 
         private void DrawMainBottomBar(Rect rect)
         {
-            DrawPanelFrame(rect, new Color(0.02f, 0.05f, 0.09f, 0.94f), new Color(0.03f, 0.08f, 0.14f, 0.96f), ACCENT_CYAN, 3f);
+            DrawPanelFrame(rect, new Color(0.02f, 0.05f, 0.10f, 0.94f), new Color(0.03f, 0.08f, 0.15f, 0.96f), ACCENT_CYAN, 3f);
+            DrawFrameCorners(rect, ACCENT_CYAN, 24f, 2f);
+
             float pad = Mathf.Clamp(10f * GetUiScale(), 10f, 18f);
             float gap = Mathf.Clamp(12f * GetUiScale(), 10f, 18f);
             float buttonH = rect.height - pad * 2f;
-            float autoW = Mathf.Clamp(rect.width * 0.20f, 180f, 280f);
-            float saveW = Mathf.Clamp(rect.width * 0.20f, 180f, 280f);
-            float nextSongW = Mathf.Clamp(
-                rect.width * 0.15f,
-                140f,
-                220f);
-            float startW = Mathf.Clamp(rect.width * 0.28f, 220f, 360f);
+            float autoW = Mathf.Clamp(rect.width * 0.18f, 160f, 260f);
+            float saveW = Mathf.Clamp(rect.width * 0.18f, 160f, 260f);
+            float nextSongW = Mathf.Clamp(rect.width * 0.15f, 130f, 200f);
+            float startW = Mathf.Clamp(rect.width * 0.32f, 260f, 440f);
 
             Rect autoRect = new Rect(rect.x + pad, rect.y + pad, autoW, buttonH);
             Rect saveRect = new Rect(autoRect.xMax + gap, rect.y + pad, saveW, buttonH);
             Rect startRect = new Rect(rect.xMax - pad - startW, rect.y + pad, startW, buttonH);
-            Rect nextSongRect = new Rect(
-                startRect.x - gap - nextSongW,
-                rect.y + pad,
-                nextSongW,
-                buttonH);
+            Rect nextSongRect = new Rect(startRect.x - gap - nextSongW, rect.y + pad, nextSongW, buttonH);
 
             if (ActionBtn("AUTO OPTIMIZE", autoRect, ACCENT_CYAN, false))
                 AutoOptimizeCurrentBuild();
             if (ActionBtn("SAVE BUILD", saveRect, new Color(0.18f, 0.62f, 1f, 1f), false))
                 buildSlotPickerOpen = !buildSlotPickerOpen;
-            if (ActionBtn(
-                    "NEXT SONG",
-                    nextSongRect,
-                    ACCENT_MAGENTA,
-                    false))
-            {
+            if (ActionBtn("NEXT SONG", nextSongRect, ACCENT_MAGENTA, false))
                 SoundManager.SkipToNextMusic();
-            }
-            if (ActionBtn("START RUN", startRect, ACCENT_ORANGE, false))
+            if (ActionBtn("START RUN // 出撃", startRect, ACCENT_ORANGE, false))
                 StartRun();
 
             if (!buildSlotPickerOpen)
@@ -2206,9 +2593,25 @@ namespace BladeSpinners.Gameplay.UI
 
             float tabY = topRect.yMax + gutter;
             float tabH = Mathf.Clamp(50f * uiScale, 44f, 64f);
-            Rect garageTab = new Rect(shell.x + gutter, tabY, 180f * uiScale, tabH);
-            Rect inventoryTab = new Rect(garageTab.xMax + gutter, tabY, 180f * uiScale, tabH);
-            Rect settingsTab = new Rect(inventoryTab.xMax + gutter, tabY, 180f * uiScale, tabH);
+            float tabW = Mathf.Clamp(170f * uiScale, 140f, 220f);
+
+            bool isIntermission = rootState == RootUiState.BetweenArenas;
+            float curX = shell.x + gutter;
+
+            if (isIntermission)
+            {
+                Rect shrineTab = new Rect(curX, tabY, tabW, tabH);
+                if (TopTabBtn("BLADER SHRINE", shrineTab, pausePanel == MenuPanel.Shrine))
+                    SetPausePanel(MenuPanel.Shrine);
+                curX = shrineTab.xMax + gutter;
+            }
+
+            Rect garageTab = new Rect(curX, tabY, tabW, tabH);
+            curX = garageTab.xMax + gutter;
+            Rect inventoryTab = new Rect(curX, tabY, tabW, tabH);
+            curX = inventoryTab.xMax + gutter;
+            Rect settingsTab = new Rect(curX, tabY, tabW, tabH);
+
             if (TopTabBtn("GARAGE", garageTab, pausePanel == MenuPanel.Home))
                 SetPausePanel(MenuPanel.Home);
             if (TopTabBtn("INVENTORY", inventoryTab, pausePanel == MenuPanel.Inventory))
@@ -2219,6 +2622,10 @@ namespace BladeSpinners.Gameplay.UI
             Rect contentRect = new Rect(shell.x + gutter, garageTab.yMax + gutter, shell.width - gutter * 2f, shell.yMax - garageTab.yMax - gutter * 2f);
             switch (pausePanel)
             {
+                case MenuPanel.Shrine:
+                    DrawBladerShrinePanel(contentRect);
+                    break;
+
                 case MenuPanel.Inventory:
                     DrawInventoryWorkspace(
                         contentRect,
@@ -2247,6 +2654,204 @@ namespace BladeSpinners.Gameplay.UI
             GUILayout.BeginArea(new Rect(area.x + pad, area.y + headerH + 8f, area.width - pad * 2f, area.height - headerH - pad - 8f));
             drawContent?.Invoke();
             GUILayout.EndArea();
+        }
+
+        private void DrawBladerShrinePanel(Rect area)
+        {
+            float uiScale = GetUiScale();
+            BladerShrineRunState shrine = runContext.ShrineState;
+            if (shrine == null)
+            {
+                DrawFramedContentPanel(area, "BLADER SHRINE", () =>
+                {
+                    GUILayout.Label("No active shrine available for this run.", bodyLabelStyle);
+                });
+                return;
+            }
+
+            DrawPanelFrame(area, new Color(0.02f, 0.04f, 0.09f, 0.96f), new Color(0.04f, 0.07f, 0.14f, 0.98f), ACCENT_GOLD, 2.5f);
+
+            float pad = Mathf.Clamp(14f * uiScale, 12f, 24f);
+
+            // 1. Shrine Header Bar
+            float headerH = Mathf.Clamp(56f * uiScale, 50f, 74f);
+            Rect headerRect = new Rect(area.x + pad, area.y + pad * 0.7f, area.width - pad * 2f, headerH);
+            DrawRect(headerRect, new Color(0.03f, 0.06f, 0.12f, 0.85f));
+            DrawFrameCorners(headerRect, ACCENT_GOLD, 12f, 2f);
+
+            DrawFittedLabel(
+                new Rect(headerRect.x + 16f, headerRect.y + 4f, headerRect.width * 0.55f, headerRect.height * 0.52f),
+                "THE BLADER SHRINE // 試練の社",
+                titleBarStyle,
+                ACCENT_GOLD,
+                14);
+
+            DrawFittedLabel(
+                new Rect(headerRect.x + 16f, headerRect.y + headerRect.height * 0.54f, headerRect.width * 0.55f, headerRect.height * 0.40f),
+                "Spend combat-earned Blader Points to invoke powerful spirit blessings for your run.",
+                bodyLabelStyle,
+                new Color(0.7f, 0.82f, 0.92f, 0.85f),
+                10);
+
+            // Points Balance Badge on right
+            float balanceW = Mathf.Clamp(230f * uiScale, 200f, 320f);
+            Rect balanceRect = new Rect(headerRect.xMax - balanceW - 10f, headerRect.center.y - (headerH * 0.38f), balanceW, headerH * 0.76f);
+            DrawPanelFrame(balanceRect, new Color(0.08f, 0.06f, 0.02f, 0.95f), new Color(0.16f, 0.12f, 0.03f, 0.98f), ACCENT_GOLD, 2f);
+            DrawFittedLabel(
+                new Rect(balanceRect.x + 8f, balanceRect.y + 2f, balanceRect.width - 16f, balanceRect.height - 4f),
+                $"{shrine.BladerPoints:N0} BLADER PTS",
+                sectionLabelStyle,
+                ACCENT_GOLD,
+                12);
+
+            // 2. Offerings Section (3 cards)
+            float contentTop = headerRect.yMax + pad * 0.7f;
+            float activeShelfH = Mathf.Clamp(95f * uiScale, 85f, 130f);
+            float rerollH = Mathf.Clamp(38f * uiScale, 34f, 48f);
+            float cardsH = area.yMax - contentTop - activeShelfH - rerollH - pad * 2.2f;
+
+            IReadOnlyList<ShrinePerkData> offerings = shrine.CurrentOfferings;
+            if (offerings == null || offerings.Count == 0)
+            {
+                Rect emptyRect = new Rect(area.x + pad, contentTop, area.width - pad * 2f, cardsH);
+                DrawRect(emptyRect, new Color(0f, 0f, 0f, 0.4f));
+                DrawFittedLabel(emptyRect, "ALL SHRINE BLESSINGS IN THE REALM HAVE BEEN CLAIMED", sectionLabelStyle, ACCENT_GOLD, 14);
+            }
+            else
+            {
+                int count = offerings.Count;
+                float gap = Mathf.Clamp(12f * uiScale, 10f, 20f);
+                float cardW = (area.width - pad * 2f - gap * (count - 1)) / count;
+
+                for (int i = 0; i < count; i++)
+                {
+                    ShrinePerkData perk = offerings[i];
+                    Rect cardRect = new Rect(area.x + pad + (cardW + gap) * i, contentTop, cardW, cardsH);
+                    DrawOfferingCard(cardRect, perk, shrine, uiScale);
+                }
+            }
+
+            // 3. Reroll & Utilities Row
+            float rerollY = contentTop + cardsH + pad * 0.5f;
+            float rerollW = Mathf.Clamp(280f * uiScale, 240f, 360f);
+            Rect rerollRect = new Rect(area.center.x - rerollW * 0.5f, rerollY, rerollW, rerollH);
+            bool canReroll = shrine.BladerPoints >= 50;
+            if (ActionBtn("REROLL OFFERINGS (50 PTS)", rerollRect, canReroll ? ACCENT_CYAN : new Color(0.4f, 0.4f, 0.4f, 0.6f), false, canReroll))
+            {
+                shrine.TryReroll(50);
+            }
+
+            // 4. Active Run Perks Shelf
+            float shelfY = rerollY + rerollH + pad * 0.5f;
+            Rect shelfRect = new Rect(area.x + pad, shelfY, area.width - pad * 2f, activeShelfH);
+            DrawActivePerksShelf(shelfRect, shrine, uiScale);
+        }
+
+        private void DrawOfferingCard(Rect rect, ShrinePerkData perk, BladerShrineRunState shrine, float uiScale)
+        {
+            Color rarityColor = perk.Rarity switch
+            {
+                PerkRarity.Common => ACCENT_CYAN,
+                PerkRarity.Rare => new Color(0.25f, 0.65f, 1f, 1f),
+                PerkRarity.Epic => new Color(0.82f, 0.35f, 1f, 1f),
+                PerkRarity.Legendary => ACCENT_GOLD,
+                _ => Color.white
+            };
+
+            bool isOwned = shrine.HasPerk(perk.Type);
+            bool canAfford = shrine.BladerPoints >= perk.BaseCost;
+
+            DrawPanelFrame(rect, new Color(0.03f, 0.05f, 0.10f, 0.95f), new Color(0.04f, 0.08f, 0.15f, 0.98f), rarityColor, 2f);
+            DrawFrameCorners(rect, rarityColor, 14f, 2.5f);
+
+            float pad = Mathf.Clamp(10f * uiScale, 8f, 16f);
+
+            // Rarity / Category Tag Header
+            Rect tagRect = new Rect(rect.x + pad, rect.y + pad * 0.8f, rect.width - pad * 2f, 22f * uiScale);
+            DrawRect(tagRect, new Color(rarityColor.r * 0.2f, rarityColor.g * 0.2f, rarityColor.b * 0.2f, 0.7f));
+            DrawFittedLabel(tagRect, $"{perk.Rarity.ToString().ToUpperInvariant()} BLESSING // {perk.Category.ToString().ToUpperInvariant()}", bodyLabelStyle, rarityColor, 9);
+
+            // Icon + Japanese Subtitle + Name
+            float iconSize = Mathf.Clamp(44f * uiScale, 38f, 58f);
+            Rect iconRect = new Rect(rect.x + pad, tagRect.yMax + 8f, iconSize, iconSize);
+            DrawRect(iconRect, new Color(0f, 0f, 0f, 0.4f));
+            DrawFrameCorners(iconRect, rarityColor, 6f, 1.5f);
+            GUIStyle iconStyle = new GUIStyle(titleBarStyle) { fontSize = Mathf.RoundToInt(22f * uiScale), alignment = TextAnchor.MiddleCenter };
+            GUI.Label(iconRect, perk.IconSymbol, iconStyle);
+
+            Rect titleRect = new Rect(iconRect.xMax + 10f, iconRect.y, rect.width - iconSize - pad * 2f - 10f, iconSize);
+            DrawFittedLabel(new Rect(titleRect.x, titleRect.y, titleRect.width, titleRect.height * 0.48f), perk.JapaneseName, bodyLabelStyle, new Color(0.7f, 0.8f, 0.9f, 0.75f), 9);
+            DrawFittedLabel(new Rect(titleRect.x, titleRect.y + titleRect.height * 0.48f, titleRect.width, titleRect.height * 0.52f), perk.Name, sectionLabelStyle, Color.white, 11);
+
+            // Description Box
+            float btnH = Mathf.Clamp(40f * uiScale, 36f, 52f);
+            float descY = iconRect.yMax + 8f;
+            float descH = rect.yMax - descY - btnH - pad * 1.4f;
+            Rect descRect = new Rect(rect.x + pad, descY, rect.width - pad * 2f, descH);
+            DrawRect(descRect, new Color(0.01f, 0.02f, 0.05f, 0.5f));
+
+            GUIStyle descStyle = new GUIStyle(bodyLabelStyle)
+            {
+                wordWrap = true,
+                fontSize = Mathf.Clamp(Mathf.RoundToInt(12f * uiScale), 10, 16),
+                alignment = TextAnchor.UpperLeft
+            };
+            descStyle.normal.textColor = new Color(0.85f, 0.92f, 1f, 0.9f);
+            GUI.Label(new Rect(descRect.x + 8f, descRect.y + 6f, descRect.width - 16f, descRect.height - 12f), perk.Description, descStyle);
+
+            // Buy Button
+            Rect btnRect = new Rect(rect.x + pad, rect.yMax - btnH - pad, rect.width - pad * 2f, btnH);
+            if (isOwned)
+            {
+                ActionBtn("ACQUIRED", btnRect, new Color(0.2f, 0.7f, 0.4f, 0.4f), false, false);
+            }
+            else
+            {
+                string btnLabel = canAfford ? $"INVOKE ({perk.BaseCost} PTS)" : $"LOCKED ({perk.BaseCost} PTS)";
+                Color btnColor = canAfford ? rarityColor : new Color(0.4f, 0.4f, 0.4f, 0.5f);
+                if (ActionBtn(btnLabel, btnRect, btnColor, false, canAfford))
+                {
+                    if (shrine.TryPurchasePerk(perk.Type))
+                    {
+                        SpawnComicPopup($"{perk.Name} ACQUIRED!", rarityColor, 1.4f);
+                        SoundManager.PlayUiConfirm();
+                    }
+                }
+            }
+        }
+
+        private void DrawActivePerksShelf(Rect rect, BladerShrineRunState shrine, float uiScale)
+        {
+            DrawPanelFrame(rect, new Color(0.02f, 0.04f, 0.08f, 0.9f), new Color(0.03f, 0.06f, 0.12f, 0.95f), new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.5f), 1.5f);
+            float pad = Mathf.Clamp(8f * uiScale, 6f, 14f);
+
+            var active = shrine.ActivePerks;
+            string headerText = $"ACTIVE SPIRIT BLESSINGS ({active.Count})";
+            DrawFittedLabel(new Rect(rect.x + pad, rect.y + 4f, rect.width - pad * 2f, 22f), headerText, sectionLabelStyle, ACCENT_CYAN, 10);
+
+            if (active.Count == 0)
+            {
+                DrawFittedLabel(new Rect(rect.x + pad, rect.y + 28f, rect.width - pad * 2f, rect.height - 34f), "No shrine blessings acquired yet. Select an offering above to empower your Bey for the run.", bodyLabelStyle, new Color(0.6f, 0.7f, 0.8f, 0.6f), 10);
+                return;
+            }
+
+            float badgeW = Mathf.Clamp(190f * uiScale, 160f, 260f);
+            float badgeH = rect.height - 36f;
+            int idx = 0;
+            foreach (ShrinePerkType perkType in active)
+            {
+                ShrinePerkData data = ShrinePerkCatalog.GetPerk(perkType);
+                if (data == null) continue;
+                Rect bRect = new Rect(rect.x + pad + (badgeW + 8f) * idx, rect.y + 28f, badgeW, badgeH);
+                if (bRect.xMax > rect.xMax - pad) break;
+
+                DrawRect(bRect, new Color(0.04f, 0.08f, 0.15f, 0.8f));
+                DrawFrameCorners(bRect, data.ThemeColor, 8f, 1.2f);
+
+                DrawFittedLabel(new Rect(bRect.x + 6f, bRect.y + 4f, bRect.width - 12f, bRect.height * 0.45f), $"{data.IconSymbol} {data.Name}", sectionLabelStyle, data.ThemeColor, 9);
+                DrawFittedLabel(new Rect(bRect.x + 6f, bRect.y + bRect.height * 0.45f, bRect.width - 12f, bRect.height * 0.50f), data.JapaneseName, bodyLabelStyle, new Color(0.7f, 0.8f, 0.9f, 0.7f), 8);
+                idx++;
+            }
         }
 
         private void DrawGarageOverview(Rect area, PlayerManager runPlayer, bool showBuildManagement)
@@ -3275,7 +3880,7 @@ namespace BladeSpinners.Gameplay.UI
             }
 
             rootState = RootUiState.BetweenArenas;
-            pausePanel = MenuPanel.Home;
+            pausePanel = MenuPanel.Shrine;
             Time.timeScale = 0f;
             ResetPreviewRotationState();
             UpdateCursorState();
@@ -3301,6 +3906,7 @@ namespace BladeSpinners.Gameplay.UI
 
             Dictionary<PartType, BeyPart> nextLoadout = GetCurrentRunLoadout(runContext.Player);
             List<BeyPart> carriedInventory = runContext.Player?.GetRunInventory()?.GetAllParts() ?? new List<BeyPart>();
+            BladerShrineRunState carriedShrine = runContext.ShrineState;
             int enemyCount = UnityEngine.Random.Range(2, 5);
             Time.timeScale = 1f;
 
@@ -3311,7 +3917,8 @@ namespace BladeSpinners.Gameplay.UI
                 progression.RunSeed,
                 enemyCount,
                 progression,
-                carriedInventory);
+                carriedInventory,
+                carriedShrine);
 
             arenaElapsedSeconds = 0f;
             rootState = RootUiState.InRun;
