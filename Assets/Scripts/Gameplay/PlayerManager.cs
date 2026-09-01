@@ -174,10 +174,13 @@ namespace BladeSpinners.Gameplay
         /// </summary>
         public void EquipPart(BeyPart part)
         {
-            if (beyConfiguration == null)
+            if (beyConfiguration == null || part == null)
                 return;
 
             beyConfiguration.EquipPart(part);
+            BeyAssembler assembler = GetComponent<BeyAssembler>();
+            if (assembler != null)
+                assembler.EquipPart(part);
         }
 
         /// <summary>
@@ -189,6 +192,18 @@ namespace BladeSpinners.Gameplay
                 return;
 
             beyConfiguration.UnequipPart(slotType);
+            BeyAssembler assembler = GetComponent<BeyAssembler>();
+            if (assembler != null)
+            {
+                switch (slotType)
+                {
+                    case Core.PartType.Tip: assembler.EquipPart(null); break;
+                    case Core.PartType.Track: assembler.EquipPart(null); break;
+                    case Core.PartType.FusionWheel: assembler.EquipPart(null); break;
+                    case Core.PartType.EnergyRing: assembler.EquipPart(null); break;
+                    case Core.PartType.FaceBolt: assembler.EquipPart(null); break;
+                }
+            }
         }
 
         /// <summary>

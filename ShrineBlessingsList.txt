@@ -1,0 +1,2037 @@
+========================================================================================================================
+                                      BLADER SHRINE: COMPLETE BLESSINGS COMPENDIUM (335 BLESSINGS)
+========================================================================================================================
+
+[ RARITY COLOR TIERS & TARGET TOTALS ]
+  COMMON     : #007DCC (Bright Teal Blue)  — 200 Blessings (175 to 265 PTS)
+  UNCOMMON   : #4BCC00 (Lime Green)        — 100 Blessings (380 to 485 PTS)
+  RARE       : #DF0000 (Racing Red)        — 20 Blessings  (680 to 790 PTS)
+  EPIC       : #B0008A (Raspberry Plum)    — 10 Blessings  (980 to 1180 PTS)
+  LEGENDARY  : #FFB900 (Amber Flame)       — 5 Blessings   (1600 to 1800 PTS)
+  TOTAL      : 335 BLESSINGS
+
+========================================================================================================================
+1. COMMON BLESSINGS (200 BLESSINGS — #007DCC Bright Teal Blue)
+========================================================================================================================
+1. TITANIUM TIP [TT]
+   - Category    : Mobility
+   - Japanese    : チタン製軸先
+   - Cost        : 220 PTS
+   - Description : 35% reduced friction decay on bowl slopes. Enhanced drift acceleration.
+
+2. HEAVYWEIGHT CORE [HC]
+   - Category    : Defense
+   - Japanese    : 重装甲コア
+   - Cost        : 240 PTS
+   - Description : +25 Mass Weight. Increases wall-bounce elastic reflection force by 30%.
+
+3. BLADE SHARPENING [BS]
+   - Category    : Combat
+   - Japanese    : 刃先研磨
+   - Cost        : 230 PTS
+   - Description : Honed contact points deliver +14% flat bonus spin damage on all collisions.
+
+4. RUBBER DAMPENER [RD]
+   - Category    : Defense
+   - Japanese    : 衝撃吸収護謨
+   - Cost        : 200 PTS
+   - Description : Absorbs incoming collision recoil by 35%, preventing outward knockback displacement.
+
+5. MANA SIPHON [MS]
+   - Category    : Energy
+   - Japanese    : 霊力吸収
+   - Cost        : 220 PTS
+   - Description : Every 1 second of spinning naturally siphons +3 bonus Mana from the stadium atmosphere.
+
+6. APEX TRACTION [AT]
+   - Category    : Mobility
+   - Japanese    : 頂点摩擦力
+   - Cost        : 210 PTS
+   - Description : Prevents slipping on arena rim edges and increases uphill climbing torque by +30%.
+
+7. HYPER DRIFT [HD]
+   - Category    : Mobility
+   - Japanese    : 超機動滑走
+   - Cost        : 220 PTS
+   - Description : Steering into curved bowl slopes grants 25% bonus speed and +40% drift momentum.
+
+8. QUICKSTEP LAUNCH [QL]
+   - Category    : Mobility
+   - Japanese    : 瞬速発進
+   - Cost        : 190 PTS
+   - Description : +25% initial burst launch speed and 40% faster acceleration recovery from stops.
+
+9. STAMINA CONSERVATION [SC]
+   - Category    : Defense
+   - Japanese    : 持久保全
+   - Cost        : 230 PTS
+   - Description : Aerodynamic balancing reduces passive baseline spin stamina friction decay by 20%.
+
+10. SPIKE TREAD [ST]
+   - Category    : Combat
+   - Japanese    : 突起踏面
+   - Cost        : 210 PTS
+   - Description : Micro-toothed perimeter scratches opponents during glancing contacts, shaving 6 spin.
+
+11. KINETIC BATTERY [KB]
+   - Category    : Energy
+   - Japanese    : 運動電池
+   - Cost        : 200 PTS
+   - Description : Hard wall rebounds and dish impacts convert kinetic energy directly into +5 instant Mana.
+
+12. BALANCED GYRO [BG]
+   - Category    : Defense
+   - Japanese    : 平衡独楽
+   - Cost        : 210 PTS
+   - Description : Internal gyroscopic stabilizers reduce destabilizing wobble and tilt by 45%.
+
+13. STREAMLINED CHASSIS [Sl]
+   - Category    : Mobility
+   - Japanese    : 流線型胴体
+   - Cost        : 190 PTS
+   - Description : Reduces aerodynamic dish drag, increasing flat cruising top speed by +15%.
+
+14. SPARK IGNITION [SI]
+   - Category    : Combat
+   - Japanese    : 火花点火
+   - Cost        : 240 PTS
+   - Description : Contact friction ignites blinding sparks on opponents, disorienting their steering for 0.4s.
+
+15. LIGHT ALLOY WEIGHT [LW]
+   - Category    : Defense
+   - Japanese    : 軽量合金錘
+   - Cost        : 200 PTS
+   - Description : +12 Mass Weight with zero penalty to acceleration.
+
+16. FRICTION PAD [FP]
+   - Category    : Mobility
+   - Japanese    : 摩擦受板
+   - Cost        : 185 PTS
+   - Description : Increases braking grip force by +40% when pulling back steering.
+
+17. STEEL BUMPER [SB]
+   - Category    : Defense
+   - Japanese    : 鋼鉄緩衝器
+   - Cost        : 215 PTS
+   - Description : +15 Base Defense against perimeter wall impacts.
+
+18. EDGE POLISHING [EP]
+   - Category    : Combat
+   - Japanese    : 刃縁研磨
+   - Cost        : 225 PTS
+   - Description : +11% damage dealt when striking opponents at high velocity.
+
+19. MANA CAPACITOR [MC]
+   - Category    : Energy
+   - Japanese    : 小型蓄電器
+   - Cost        : 235 PTS
+   - Description : Increases maximum Mana capacity pool by +16.
+
+20. TRACTION GRIP [TG]
+   - Category    : Mobility
+   - Japanese    : 高摩擦保持
+   - Cost        : 195 PTS
+   - Description : 30% reduced slide slip when turning sharply on dish incline.
+
+21. BRONZE STRIKER [BS]
+   - Category    : Combat
+   - Japanese    : 青銅の強襲刃
+   - Cost        : 200 PTS
+   - Description : Deals +8% bonus damage on direct contact smashes.
+
+22. BRONZE GUARD [BG]
+   - Category    : Defense
+   - Japanese    : 青銅の防護甲
+   - Cost        : 190 PTS
+   - Description : +10 Base Defense against incoming collision strikes.
+
+23. BRONZE SPRINTER [BS]
+   - Category    : Mobility
+   - Japanese    : 青銅の疾走機
+   - Cost        : 185 PTS
+   - Description : +10% throttle acceleration across the arena bowl.
+
+24. BRONZE BATTERY [BB]
+   - Category    : Energy
+   - Japanese    : 青銅の蓄電器
+   - Cost        : 190 PTS
+   - Description : Restores +3 Mana upon making contact with stadium perimeter walls.
+
+25. BRONZE GYRO [BG]
+   - Category    : Defense
+   - Japanese    : 青銅の平衡独楽
+   - Cost        : 215 PTS
+   - Description : Reduces tilt wobble by 29% after sustaining heavy impacts.
+
+26. BRONZE EDGE [BE]
+   - Category    : Combat
+   - Japanese    : 青銅の鋭刃
+   - Cost        : 225 PTS
+   - Description : +10% damage when striking opponent while moving faster than them.
+
+27. BRONZE TREAD [BT]
+   - Category    : Mobility
+   - Japanese    : 青銅の接地爪
+   - Cost        : 190 PTS
+   - Description : +20% uphill grip when ascending steep stadium walls.
+
+28. BRONZE SHIELD [BS]
+   - Category    : Defense
+   - Japanese    : 青銅の防壁
+   - Cost        : 210 PTS
+   - Description : Reduces damage taken from glancing scrapes by 20%.
+
+29. BRONZE CELL [BC]
+   - Category    : Energy
+   - Japanese    : 青銅の魔力管
+   - Cost        : 210 PTS
+   - Description : Increases maximum Mana capacity pool by +15.
+
+30. BRONZE FIN [BF]
+   - Category    : Mobility
+   - Japanese    : 青銅の整流翼
+   - Cost        : 210 PTS
+   - Description : +25% drift recovery torque when exiting sharp turns.
+
+31. BRONZE SCRAPER [BS]
+   - Category    : Combat
+   - Japanese    : 青銅の削剥刃
+   - Cost        : 225 PTS
+   - Description : Glancing side hits shave off +6 extra spin from opponents.
+
+32. BRONZE ANCHOR [BA]
+   - Category    : Defense
+   - Japanese    : 青銅の重碇
+   - Cost        : 235 PTS
+   - Description : +16 Mass Weight, increasing center bowl stability.
+
+33. STEEL STRIKER [SS]
+   - Category    : Combat
+   - Japanese    : 鋼鉄の強襲刃
+   - Cost        : 235 PTS
+   - Description : Deals +14% bonus damage on direct contact smashes.
+
+34. STEEL GUARD [SG]
+   - Category    : Defense
+   - Japanese    : 鋼鉄の防護甲
+   - Cost        : 225 PTS
+   - Description : +19 Base Defense against incoming collision strikes.
+
+35. STEEL SPRINTER [SS]
+   - Category    : Mobility
+   - Japanese    : 鋼鉄の疾走機
+   - Cost        : 220 PTS
+   - Description : +17% throttle acceleration across the arena bowl.
+
+36. STEEL BATTERY [SB]
+   - Category    : Energy
+   - Japanese    : 鋼鉄の蓄電器
+   - Cost        : 220 PTS
+   - Description : Restores +6 Mana upon making contact with stadium perimeter walls.
+
+37. STEEL GYRO [SG]
+   - Category    : Defense
+   - Japanese    : 鋼鉄の平衡独楽
+   - Cost        : 245 PTS
+   - Description : Reduces tilt wobble by 43% after sustaining heavy impacts.
+
+38. STEEL EDGE [SE]
+   - Category    : Combat
+   - Japanese    : 鋼鉄の鋭刃
+   - Cost        : 255 PTS
+   - Description : +17% damage when striking opponent while moving faster than them.
+
+39. STEEL TREAD [ST]
+   - Category    : Mobility
+   - Japanese    : 鋼鉄の接地爪
+   - Cost        : 225 PTS
+   - Description : +31% uphill grip when ascending steep stadium walls.
+
+40. STEEL SHIELD [SS]
+   - Category    : Defense
+   - Japanese    : 鋼鉄の防壁
+   - Cost        : 240 PTS
+   - Description : Reduces damage taken from glancing scrapes by 31%.
+
+41. STEEL CELL [SC]
+   - Category    : Energy
+   - Japanese    : 鋼鉄の魔力管
+   - Cost        : 190 PTS
+   - Description : Increases maximum Mana capacity pool by +10.
+
+42. STEEL FIN [SF]
+   - Category    : Mobility
+   - Japanese    : 鋼鉄の整流翼
+   - Cost        : 185 PTS
+   - Description : +17% drift recovery torque when exiting sharp turns.
+
+43. STEEL SCRAPER [SS]
+   - Category    : Combat
+   - Japanese    : 鋼鉄の削剥刃
+   - Cost        : 205 PTS
+   - Description : Glancing side hits shave off +4 extra spin from opponents.
+
+44. STEEL ANCHOR [SA]
+   - Category    : Defense
+   - Japanese    : 鋼鉄の重碇
+   - Cost        : 215 PTS
+   - Description : +11 Mass Weight, increasing center bowl stability.
+
+45. COPPER STRIKER [CS]
+   - Category    : Combat
+   - Japanese    : 銅製の強襲刃
+   - Cost        : 210 PTS
+   - Description : Deals +10% bonus damage on direct contact smashes.
+
+46. COPPER GUARD [CG]
+   - Category    : Defense
+   - Japanese    : 銅製の防護甲
+   - Cost        : 205 PTS
+   - Description : +13 Base Defense against incoming collision strikes.
+
+47. COPPER SPRINTER [CS]
+   - Category    : Mobility
+   - Japanese    : 銅製の疾走機
+   - Cost        : 195 PTS
+   - Description : +12% throttle acceleration across the arena bowl.
+
+48. COPPER BATTERY [CB]
+   - Category    : Energy
+   - Japanese    : 銅製の蓄電器
+   - Cost        : 200 PTS
+   - Description : Restores +4 Mana upon making contact with stadium perimeter walls.
+
+49. COPPER GYRO [CG]
+   - Category    : Defense
+   - Japanese    : 銅製の平衡独楽
+   - Cost        : 225 PTS
+   - Description : Reduces tilt wobble by 34% after sustaining heavy impacts.
+
+50. COPPER EDGE [CE]
+   - Category    : Combat
+   - Japanese    : 銅製の鋭刃
+   - Cost        : 235 PTS
+   - Description : +12% damage when striking opponent while moving faster than them.
+
+51. COPPER TREAD [CT]
+   - Category    : Mobility
+   - Japanese    : 銅製の接地爪
+   - Cost        : 205 PTS
+   - Description : +24% uphill grip when ascending steep stadium walls.
+
+52. COPPER SHIELD [CS]
+   - Category    : Defense
+   - Japanese    : 銅製の防壁
+   - Cost        : 220 PTS
+   - Description : Reduces damage taken from glancing scrapes by 23%.
+
+53. COPPER CELL [CC]
+   - Category    : Energy
+   - Japanese    : 銅製の魔力管
+   - Cost        : 225 PTS
+   - Description : Increases maximum Mana capacity pool by +18.
+
+54. COPPER FIN [CF]
+   - Category    : Mobility
+   - Japanese    : 銅製の整流翼
+   - Cost        : 220 PTS
+   - Description : +29% drift recovery torque when exiting sharp turns.
+
+55. COPPER SCRAPER [CS]
+   - Category    : Combat
+   - Japanese    : 銅製の削剥刃
+   - Cost        : 235 PTS
+   - Description : Glancing side hits shave off +7 extra spin from opponents.
+
+56. COPPER ANCHOR [CA]
+   - Category    : Defense
+   - Japanese    : 銅製の重碇
+   - Cost        : 245 PTS
+   - Description : +19 Mass Weight, increasing center bowl stability.
+
+57. IRON STRIKER [IS]
+   - Category    : Combat
+   - Japanese    : 鉄製の強襲刃
+   - Cost        : 245 PTS
+   - Description : Deals +16% bonus damage on direct contact smashes.
+
+58. IRON GUARD [IG]
+   - Category    : Defense
+   - Japanese    : 鉄製の防護甲
+   - Cost        : 240 PTS
+   - Description : +21 Base Defense against incoming collision strikes.
+
+59. IRON SPRINTER [IS]
+   - Category    : Mobility
+   - Japanese    : 鉄製の疾走機
+   - Cost        : 230 PTS
+   - Description : +19% throttle acceleration across the arena bowl.
+
+60. IRON BATTERY [IB]
+   - Category    : Energy
+   - Japanese    : 鉄製の蓄電器
+   - Cost        : 230 PTS
+   - Description : Restores +6 Mana upon making contact with stadium perimeter walls.
+
+61. IRON GYRO [IG]
+   - Category    : Defense
+   - Japanese    : 鉄製の平衡独楽
+   - Cost        : 205 PTS
+   - Description : Reduces tilt wobble by 25% after sustaining heavy impacts.
+
+62. IRON EDGE [IE]
+   - Category    : Combat
+   - Japanese    : 鉄製の鋭刃
+   - Cost        : 215 PTS
+   - Description : +7% damage when striking opponent while moving faster than them.
+
+63. IRON TREAD [IT]
+   - Category    : Mobility
+   - Japanese    : 鉄製の接地爪
+   - Cost        : 180 PTS
+   - Description : +16% uphill grip when ascending steep stadium walls.
+
+64. IRON SHIELD [IS]
+   - Category    : Defense
+   - Japanese    : 鉄製の防壁
+   - Cost        : 200 PTS
+   - Description : Reduces damage taken from glancing scrapes by 16%.
+
+65. IRON CELL [IC]
+   - Category    : Energy
+   - Japanese    : 鉄製の魔力管
+   - Cost        : 200 PTS
+   - Description : Increases maximum Mana capacity pool by +12.
+
+66. IRON FIN [IF]
+   - Category    : Mobility
+   - Japanese    : 鉄製の整流翼
+   - Cost        : 200 PTS
+   - Description : +21% drift recovery torque when exiting sharp turns.
+
+67. IRON SCRAPER [IS]
+   - Category    : Combat
+   - Japanese    : 鉄製の削剥刃
+   - Cost        : 215 PTS
+   - Description : Glancing side hits shave off +5 extra spin from opponents.
+
+68. IRON ANCHOR [IA]
+   - Category    : Defense
+   - Japanese    : 鉄製の重碇
+   - Cost        : 225 PTS
+   - Description : +14 Mass Weight, increasing center bowl stability.
+
+69. CARBON STRIKER [CS]
+   - Category    : Combat
+   - Japanese    : 炭素の強襲刃
+   - Cost        : 220 PTS
+   - Description : Deals +12% bonus damage on direct contact smashes.
+
+70. CARBON GUARD [CG]
+   - Category    : Defense
+   - Japanese    : 炭素の防護甲
+   - Cost        : 215 PTS
+   - Description : +16 Base Defense against incoming collision strikes.
+
+71. CARBON SPRINTER [CS]
+   - Category    : Mobility
+   - Japanese    : 炭素の疾走機
+   - Cost        : 210 PTS
+   - Description : +15% throttle acceleration across the arena bowl.
+
+72. CARBON BATTERY [CB]
+   - Category    : Energy
+   - Japanese    : 炭素の蓄電器
+   - Cost        : 210 PTS
+   - Description : Restores +5 Mana upon making contact with stadium perimeter walls.
+
+73. CARBON GYRO [CG]
+   - Category    : Defense
+   - Japanese    : 炭素の平衡独楽
+   - Cost        : 235 PTS
+   - Description : Reduces tilt wobble by 38% after sustaining heavy impacts.
+
+74. CARBON EDGE [CE]
+   - Category    : Combat
+   - Japanese    : 炭素の鋭刃
+   - Cost        : 245 PTS
+   - Description : +14% damage when striking opponent while moving faster than them.
+
+75. CARBON TREAD [CT]
+   - Category    : Mobility
+   - Japanese    : 炭素の接地爪
+   - Cost        : 215 PTS
+   - Description : +27% uphill grip when ascending steep stadium walls.
+
+76. CARBON SHIELD [CS]
+   - Category    : Defense
+   - Japanese    : 炭素の防壁
+   - Cost        : 230 PTS
+   - Description : Reduces damage taken from glancing scrapes by 27%.
+
+77. CARBON CELL [CC]
+   - Category    : Energy
+   - Japanese    : 炭素の魔力管
+   - Cost        : 235 PTS
+   - Description : Increases maximum Mana capacity pool by +21.
+
+78. CARBON FIN [CF]
+   - Category    : Mobility
+   - Japanese    : 炭素の整流翼
+   - Cost        : 235 PTS
+   - Description : +33% drift recovery torque when exiting sharp turns.
+
+79. CARBON SCRAPER [CS]
+   - Category    : Combat
+   - Japanese    : 炭素の削剥刃
+   - Cost        : 245 PTS
+   - Description : Glancing side hits shave off +8 extra spin from opponents.
+
+80. CARBON ANCHOR [CA]
+   - Category    : Defense
+   - Japanese    : 炭素の重碇
+   - Cost        : 255 PTS
+   - Description : +21 Mass Weight, increasing center bowl stability.
+
+81. ALLOY STRIKER [AS]
+   - Category    : Combat
+   - Japanese    : 合金の強襲刃
+   - Cost        : 200 PTS
+   - Description : Deals +8% bonus damage on direct contact smashes.
+
+82. ALLOY GUARD [AG]
+   - Category    : Defense
+   - Japanese    : 合金の防護甲
+   - Cost        : 190 PTS
+   - Description : +10 Base Defense against incoming collision strikes.
+
+83. ALLOY SPRINTER [AS]
+   - Category    : Mobility
+   - Japanese    : 合金の疾走機
+   - Cost        : 185 PTS
+   - Description : +10% throttle acceleration across the arena bowl.
+
+84. ALLOY BATTERY [AB]
+   - Category    : Energy
+   - Japanese    : 合金の蓄電器
+   - Cost        : 190 PTS
+   - Description : Restores +3 Mana upon making contact with stadium perimeter walls.
+
+85. ALLOY GYRO [AG]
+   - Category    : Defense
+   - Japanese    : 合金の平衡独楽
+   - Cost        : 215 PTS
+   - Description : Reduces tilt wobble by 29% after sustaining heavy impacts.
+
+86. ALLOY EDGE [AE]
+   - Category    : Combat
+   - Japanese    : 合金の鋭刃
+   - Cost        : 225 PTS
+   - Description : +10% damage when striking opponent while moving faster than them.
+
+87. ALLOY TREAD [AT]
+   - Category    : Mobility
+   - Japanese    : 合金の接地爪
+   - Cost        : 190 PTS
+   - Description : +20% uphill grip when ascending steep stadium walls.
+
+88. ALLOY SHIELD [AS]
+   - Category    : Defense
+   - Japanese    : 合金の防壁
+   - Cost        : 210 PTS
+   - Description : Reduces damage taken from glancing scrapes by 20%.
+
+89. ALLOY CELL [AC]
+   - Category    : Energy
+   - Japanese    : 合金の魔力管
+   - Cost        : 210 PTS
+   - Description : Increases maximum Mana capacity pool by +15.
+
+90. ALLOY FIN [AF]
+   - Category    : Mobility
+   - Japanese    : 合金の整流翼
+   - Cost        : 210 PTS
+   - Description : +25% drift recovery torque when exiting sharp turns.
+
+91. ALLOY SCRAPER [AS]
+   - Category    : Combat
+   - Japanese    : 合金の削剥刃
+   - Cost        : 225 PTS
+   - Description : Glancing side hits shave off +6 extra spin from opponents.
+
+92. ALLOY ANCHOR [AA]
+   - Category    : Defense
+   - Japanese    : 合金の重碇
+   - Cost        : 235 PTS
+   - Description : +16 Mass Weight, increasing center bowl stability.
+
+93. QUICK STRIKER [QS]
+   - Category    : Combat
+   - Japanese    : 迅速の強襲刃
+   - Cost        : 235 PTS
+   - Description : Deals +14% bonus damage on direct contact smashes.
+
+94. QUICK GUARD [QG]
+   - Category    : Defense
+   - Japanese    : 迅速の防護甲
+   - Cost        : 225 PTS
+   - Description : +19 Base Defense against incoming collision strikes.
+
+95. QUICK SPRINTER [QS]
+   - Category    : Mobility
+   - Japanese    : 迅速の疾走機
+   - Cost        : 220 PTS
+   - Description : +17% throttle acceleration across the arena bowl.
+
+96. QUICK BATTERY [QB]
+   - Category    : Energy
+   - Japanese    : 迅速の蓄電器
+   - Cost        : 220 PTS
+   - Description : Restores +6 Mana upon making contact with stadium perimeter walls.
+
+97. QUICK GYRO [QG]
+   - Category    : Defense
+   - Japanese    : 迅速の平衡独楽
+   - Cost        : 245 PTS
+   - Description : Reduces tilt wobble by 43% after sustaining heavy impacts.
+
+98. QUICK EDGE [QE]
+   - Category    : Combat
+   - Japanese    : 迅速の鋭刃
+   - Cost        : 255 PTS
+   - Description : +17% damage when striking opponent while moving faster than them.
+
+99. QUICK TREAD [QT]
+   - Category    : Mobility
+   - Japanese    : 迅速の接地爪
+   - Cost        : 225 PTS
+   - Description : +31% uphill grip when ascending steep stadium walls.
+
+100. QUICK SHIELD [QS]
+   - Category    : Defense
+   - Japanese    : 迅速の防壁
+   - Cost        : 240 PTS
+   - Description : Reduces damage taken from glancing scrapes by 31%.
+
+101. QUICK CELL [QC]
+   - Category    : Energy
+   - Japanese    : 迅速の魔力管
+   - Cost        : 190 PTS
+   - Description : Increases maximum Mana capacity pool by +10.
+
+102. QUICK FIN [QF]
+   - Category    : Mobility
+   - Japanese    : 迅速の整流翼
+   - Cost        : 185 PTS
+   - Description : +17% drift recovery torque when exiting sharp turns.
+
+103. QUICK SCRAPER [QS]
+   - Category    : Combat
+   - Japanese    : 迅速の削剥刃
+   - Cost        : 205 PTS
+   - Description : Glancing side hits shave off +4 extra spin from opponents.
+
+104. QUICK ANCHOR [QA]
+   - Category    : Defense
+   - Japanese    : 迅速の重碇
+   - Cost        : 215 PTS
+   - Description : +11 Mass Weight, increasing center bowl stability.
+
+105. STOUT STRIKER [SS]
+   - Category    : Combat
+   - Japanese    : 堅牢の強襲刃
+   - Cost        : 210 PTS
+   - Description : Deals +10% bonus damage on direct contact smashes.
+
+106. STOUT GUARD [SG]
+   - Category    : Defense
+   - Japanese    : 堅牢の防護甲
+   - Cost        : 205 PTS
+   - Description : +13 Base Defense against incoming collision strikes.
+
+107. STOUT SPRINTER [SS]
+   - Category    : Mobility
+   - Japanese    : 堅牢の疾走機
+   - Cost        : 195 PTS
+   - Description : +12% throttle acceleration across the arena bowl.
+
+108. STOUT BATTERY [SB]
+   - Category    : Energy
+   - Japanese    : 堅牢の蓄電器
+   - Cost        : 200 PTS
+   - Description : Restores +4 Mana upon making contact with stadium perimeter walls.
+
+109. STOUT GYRO [SG]
+   - Category    : Defense
+   - Japanese    : 堅牢の平衡独楽
+   - Cost        : 225 PTS
+   - Description : Reduces tilt wobble by 34% after sustaining heavy impacts.
+
+110. STOUT EDGE [SE]
+   - Category    : Combat
+   - Japanese    : 堅牢の鋭刃
+   - Cost        : 235 PTS
+   - Description : +12% damage when striking opponent while moving faster than them.
+
+111. STOUT TREAD [ST]
+   - Category    : Mobility
+   - Japanese    : 堅牢の接地爪
+   - Cost        : 205 PTS
+   - Description : +24% uphill grip when ascending steep stadium walls.
+
+112. STOUT SHIELD [SS]
+   - Category    : Defense
+   - Japanese    : 堅牢の防壁
+   - Cost        : 220 PTS
+   - Description : Reduces damage taken from glancing scrapes by 23%.
+
+113. STOUT CELL [SC]
+   - Category    : Energy
+   - Japanese    : 堅牢の魔力管
+   - Cost        : 225 PTS
+   - Description : Increases maximum Mana capacity pool by +18.
+
+114. STOUT FIN [SF]
+   - Category    : Mobility
+   - Japanese    : 堅牢の整流翼
+   - Cost        : 220 PTS
+   - Description : +29% drift recovery torque when exiting sharp turns.
+
+115. STOUT SCRAPER [SS]
+   - Category    : Combat
+   - Japanese    : 堅牢の削剥刃
+   - Cost        : 235 PTS
+   - Description : Glancing side hits shave off +7 extra spin from opponents.
+
+116. STOUT ANCHOR [SA]
+   - Category    : Defense
+   - Japanese    : 堅牢の重碇
+   - Cost        : 245 PTS
+   - Description : +19 Mass Weight, increasing center bowl stability.
+
+117. SHARP STRIKER [SS]
+   - Category    : Combat
+   - Japanese    : 鋭利の強襲刃
+   - Cost        : 245 PTS
+   - Description : Deals +16% bonus damage on direct contact smashes.
+
+118. SHARP GUARD [SG]
+   - Category    : Defense
+   - Japanese    : 鋭利の防護甲
+   - Cost        : 240 PTS
+   - Description : +21 Base Defense against incoming collision strikes.
+
+119. SHARP SPRINTER [SS]
+   - Category    : Mobility
+   - Japanese    : 鋭利の疾走機
+   - Cost        : 230 PTS
+   - Description : +19% throttle acceleration across the arena bowl.
+
+120. SHARP BATTERY [SB]
+   - Category    : Energy
+   - Japanese    : 鋭利の蓄電器
+   - Cost        : 230 PTS
+   - Description : Restores +6 Mana upon making contact with stadium perimeter walls.
+
+121. SHARP GYRO [SG]
+   - Category    : Defense
+   - Japanese    : 鋭利の平衡独楽
+   - Cost        : 205 PTS
+   - Description : Reduces tilt wobble by 25% after sustaining heavy impacts.
+
+122. SHARP EDGE [SE]
+   - Category    : Combat
+   - Japanese    : 鋭利の鋭刃
+   - Cost        : 215 PTS
+   - Description : +7% damage when striking opponent while moving faster than them.
+
+123. SHARP TREAD [ST]
+   - Category    : Mobility
+   - Japanese    : 鋭利の接地爪
+   - Cost        : 180 PTS
+   - Description : +16% uphill grip when ascending steep stadium walls.
+
+124. SHARP SHIELD [SS]
+   - Category    : Defense
+   - Japanese    : 鋭利の防壁
+   - Cost        : 200 PTS
+   - Description : Reduces damage taken from glancing scrapes by 16%.
+
+125. SHARP CELL [SC]
+   - Category    : Energy
+   - Japanese    : 鋭利の魔力管
+   - Cost        : 200 PTS
+   - Description : Increases maximum Mana capacity pool by +12.
+
+126. SHARP FIN [SF]
+   - Category    : Mobility
+   - Japanese    : 鋭利の整流翼
+   - Cost        : 200 PTS
+   - Description : +21% drift recovery torque when exiting sharp turns.
+
+127. SHARP SCRAPER [SS]
+   - Category    : Combat
+   - Japanese    : 鋭利の削剥刃
+   - Cost        : 215 PTS
+   - Description : Glancing side hits shave off +5 extra spin from opponents.
+
+128. SHARP ANCHOR [SA]
+   - Category    : Defense
+   - Japanese    : 鋭利の重碇
+   - Cost        : 225 PTS
+   - Description : +14 Mass Weight, increasing center bowl stability.
+
+129. AGILE STRIKER [AS]
+   - Category    : Combat
+   - Japanese    : 敏捷の強襲刃
+   - Cost        : 220 PTS
+   - Description : Deals +12% bonus damage on direct contact smashes.
+
+130. AGILE GUARD [AG]
+   - Category    : Defense
+   - Japanese    : 敏捷の防護甲
+   - Cost        : 215 PTS
+   - Description : +16 Base Defense against incoming collision strikes.
+
+131. AGILE SPRINTER [AS]
+   - Category    : Mobility
+   - Japanese    : 敏捷の疾走機
+   - Cost        : 210 PTS
+   - Description : +15% throttle acceleration across the arena bowl.
+
+132. AGILE BATTERY [AB]
+   - Category    : Energy
+   - Japanese    : 敏捷の蓄電器
+   - Cost        : 210 PTS
+   - Description : Restores +5 Mana upon making contact with stadium perimeter walls.
+
+133. AGILE GYRO [AG]
+   - Category    : Defense
+   - Japanese    : 敏捷の平衡独楽
+   - Cost        : 235 PTS
+   - Description : Reduces tilt wobble by 38% after sustaining heavy impacts.
+
+134. AGILE EDGE [AE]
+   - Category    : Combat
+   - Japanese    : 敏捷の鋭刃
+   - Cost        : 245 PTS
+   - Description : +14% damage when striking opponent while moving faster than them.
+
+135. AGILE TREAD [AT]
+   - Category    : Mobility
+   - Japanese    : 敏捷の接地爪
+   - Cost        : 215 PTS
+   - Description : +27% uphill grip when ascending steep stadium walls.
+
+136. AGILE SHIELD [AS]
+   - Category    : Defense
+   - Japanese    : 敏捷の防壁
+   - Cost        : 230 PTS
+   - Description : Reduces damage taken from glancing scrapes by 27%.
+
+137. AGILE CELL [AC]
+   - Category    : Energy
+   - Japanese    : 敏捷の魔力管
+   - Cost        : 235 PTS
+   - Description : Increases maximum Mana capacity pool by +21.
+
+138. AGILE FIN [AF]
+   - Category    : Mobility
+   - Japanese    : 敏捷の整流翼
+   - Cost        : 235 PTS
+   - Description : +33% drift recovery torque when exiting sharp turns.
+
+139. AGILE SCRAPER [AS]
+   - Category    : Combat
+   - Japanese    : 敏捷の削剥刃
+   - Cost        : 245 PTS
+   - Description : Glancing side hits shave off +8 extra spin from opponents.
+
+140. AGILE ANCHOR [AA]
+   - Category    : Defense
+   - Japanese    : 敏捷の重碇
+   - Cost        : 255 PTS
+   - Description : +21 Mass Weight, increasing center bowl stability.
+
+141. FIRM STRIKER [FS]
+   - Category    : Combat
+   - Japanese    : 強固の強襲刃
+   - Cost        : 200 PTS
+   - Description : Deals +8% bonus damage on direct contact smashes.
+
+142. FIRM GUARD [FG]
+   - Category    : Defense
+   - Japanese    : 強固の防護甲
+   - Cost        : 190 PTS
+   - Description : +10 Base Defense against incoming collision strikes.
+
+143. FIRM SPRINTER [FS]
+   - Category    : Mobility
+   - Japanese    : 強固の疾走機
+   - Cost        : 185 PTS
+   - Description : +10% throttle acceleration across the arena bowl.
+
+144. FIRM BATTERY [FB]
+   - Category    : Energy
+   - Japanese    : 強固の蓄電器
+   - Cost        : 190 PTS
+   - Description : Restores +3 Mana upon making contact with stadium perimeter walls.
+
+145. FIRM GYRO [FG]
+   - Category    : Defense
+   - Japanese    : 強固の平衡独楽
+   - Cost        : 215 PTS
+   - Description : Reduces tilt wobble by 29% after sustaining heavy impacts.
+
+146. FIRM EDGE [FE]
+   - Category    : Combat
+   - Japanese    : 強固の鋭刃
+   - Cost        : 225 PTS
+   - Description : +10% damage when striking opponent while moving faster than them.
+
+147. FIRM TREAD [FT]
+   - Category    : Mobility
+   - Japanese    : 強固の接地爪
+   - Cost        : 190 PTS
+   - Description : +20% uphill grip when ascending steep stadium walls.
+
+148. FIRM SHIELD [FS]
+   - Category    : Defense
+   - Japanese    : 強固の防壁
+   - Cost        : 210 PTS
+   - Description : Reduces damage taken from glancing scrapes by 20%.
+
+149. FIRM CELL [FC]
+   - Category    : Energy
+   - Japanese    : 強固の魔力管
+   - Cost        : 210 PTS
+   - Description : Increases maximum Mana capacity pool by +15.
+
+150. FIRM FIN [FF]
+   - Category    : Mobility
+   - Japanese    : 強固の整流翼
+   - Cost        : 210 PTS
+   - Description : +25% drift recovery torque when exiting sharp turns.
+
+151. FIRM SCRAPER [FS]
+   - Category    : Combat
+   - Japanese    : 強固の削剥刃
+   - Cost        : 225 PTS
+   - Description : Glancing side hits shave off +6 extra spin from opponents.
+
+152. FIRM ANCHOR [FA]
+   - Category    : Defense
+   - Japanese    : 強固の重碇
+   - Cost        : 235 PTS
+   - Description : +16 Mass Weight, increasing center bowl stability.
+
+153. STURDY STRIKER [SS]
+   - Category    : Combat
+   - Japanese    : 頑丈の強襲刃
+   - Cost        : 235 PTS
+   - Description : Deals +14% bonus damage on direct contact smashes.
+
+154. STURDY GUARD [SG]
+   - Category    : Defense
+   - Japanese    : 頑丈の防護甲
+   - Cost        : 225 PTS
+   - Description : +19 Base Defense against incoming collision strikes.
+
+155. STURDY SPRINTER [SS]
+   - Category    : Mobility
+   - Japanese    : 頑丈の疾走機
+   - Cost        : 220 PTS
+   - Description : +17% throttle acceleration across the arena bowl.
+
+156. STURDY BATTERY [SB]
+   - Category    : Energy
+   - Japanese    : 頑丈の蓄電器
+   - Cost        : 220 PTS
+   - Description : Restores +6 Mana upon making contact with stadium perimeter walls.
+
+157. STURDY GYRO [SG]
+   - Category    : Defense
+   - Japanese    : 頑丈の平衡独楽
+   - Cost        : 245 PTS
+   - Description : Reduces tilt wobble by 43% after sustaining heavy impacts.
+
+158. STURDY EDGE [SE]
+   - Category    : Combat
+   - Japanese    : 頑丈の鋭刃
+   - Cost        : 255 PTS
+   - Description : +17% damage when striking opponent while moving faster than them.
+
+159. STURDY TREAD [ST]
+   - Category    : Mobility
+   - Japanese    : 頑丈の接地爪
+   - Cost        : 225 PTS
+   - Description : +31% uphill grip when ascending steep stadium walls.
+
+160. STURDY SHIELD [SS]
+   - Category    : Defense
+   - Japanese    : 頑丈の防壁
+   - Cost        : 240 PTS
+   - Description : Reduces damage taken from glancing scrapes by 31%.
+
+161. STURDY CELL [SC]
+   - Category    : Energy
+   - Japanese    : 頑丈の魔力管
+   - Cost        : 190 PTS
+   - Description : Increases maximum Mana capacity pool by +10.
+
+162. STURDY FIN [SF]
+   - Category    : Mobility
+   - Japanese    : 頑丈の整流翼
+   - Cost        : 185 PTS
+   - Description : +17% drift recovery torque when exiting sharp turns.
+
+163. STURDY SCRAPER [SS]
+   - Category    : Combat
+   - Japanese    : 頑丈の削剥刃
+   - Cost        : 205 PTS
+   - Description : Glancing side hits shave off +4 extra spin from opponents.
+
+164. STURDY ANCHOR [SA]
+   - Category    : Defense
+   - Japanese    : 頑丈の重碇
+   - Cost        : 215 PTS
+   - Description : +11 Mass Weight, increasing center bowl stability.
+
+165. SOLID STRIKER [SS]
+   - Category    : Combat
+   - Japanese    : 中実の強襲刃
+   - Cost        : 210 PTS
+   - Description : Deals +10% bonus damage on direct contact smashes.
+
+166. SOLID GUARD [SG]
+   - Category    : Defense
+   - Japanese    : 中実の防護甲
+   - Cost        : 205 PTS
+   - Description : +13 Base Defense against incoming collision strikes.
+
+167. SOLID SPRINTER [SS]
+   - Category    : Mobility
+   - Japanese    : 中実の疾走機
+   - Cost        : 195 PTS
+   - Description : +12% throttle acceleration across the arena bowl.
+
+168. SOLID BATTERY [SB]
+   - Category    : Energy
+   - Japanese    : 中実の蓄電器
+   - Cost        : 200 PTS
+   - Description : Restores +4 Mana upon making contact with stadium perimeter walls.
+
+169. SOLID GYRO [SG]
+   - Category    : Defense
+   - Japanese    : 中実の平衡独楽
+   - Cost        : 225 PTS
+   - Description : Reduces tilt wobble by 34% after sustaining heavy impacts.
+
+170. SOLID EDGE [SE]
+   - Category    : Combat
+   - Japanese    : 中実の鋭刃
+   - Cost        : 235 PTS
+   - Description : +12% damage when striking opponent while moving faster than them.
+
+171. SOLID TREAD [ST]
+   - Category    : Mobility
+   - Japanese    : 中実の接地爪
+   - Cost        : 205 PTS
+   - Description : +24% uphill grip when ascending steep stadium walls.
+
+172. SOLID SHIELD [SS]
+   - Category    : Defense
+   - Japanese    : 中実の防壁
+   - Cost        : 220 PTS
+   - Description : Reduces damage taken from glancing scrapes by 23%.
+
+173. SOLID CELL [SC]
+   - Category    : Energy
+   - Japanese    : 中実の魔力管
+   - Cost        : 225 PTS
+   - Description : Increases maximum Mana capacity pool by +18.
+
+174. SOLID FIN [SF]
+   - Category    : Mobility
+   - Japanese    : 中実の整流翼
+   - Cost        : 220 PTS
+   - Description : +29% drift recovery torque when exiting sharp turns.
+
+175. SOLID SCRAPER [SS]
+   - Category    : Combat
+   - Japanese    : 中実の削剥刃
+   - Cost        : 235 PTS
+   - Description : Glancing side hits shave off +7 extra spin from opponents.
+
+176. SOLID ANCHOR [SA]
+   - Category    : Defense
+   - Japanese    : 中実の重碇
+   - Cost        : 245 PTS
+   - Description : +19 Mass Weight, increasing center bowl stability.
+
+177. GRIP STRIKER [GS]
+   - Category    : Combat
+   - Japanese    : 把握の強襲刃
+   - Cost        : 245 PTS
+   - Description : Deals +16% bonus damage on direct contact smashes.
+
+178. GRIP GUARD [GG]
+   - Category    : Defense
+   - Japanese    : 把握の防護甲
+   - Cost        : 240 PTS
+   - Description : +21 Base Defense against incoming collision strikes.
+
+179. GRIP SPRINTER [GS]
+   - Category    : Mobility
+   - Japanese    : 把握の疾走機
+   - Cost        : 230 PTS
+   - Description : +19% throttle acceleration across the arena bowl.
+
+180. GRIP BATTERY [GB]
+   - Category    : Energy
+   - Japanese    : 把握の蓄電器
+   - Cost        : 230 PTS
+   - Description : Restores +6 Mana upon making contact with stadium perimeter walls.
+
+181. GRIP GYRO [GG]
+   - Category    : Defense
+   - Japanese    : 把握の平衡独楽
+   - Cost        : 205 PTS
+   - Description : Reduces tilt wobble by 25% after sustaining heavy impacts.
+
+182. GRIP EDGE [GE]
+   - Category    : Combat
+   - Japanese    : 把握の鋭刃
+   - Cost        : 215 PTS
+   - Description : +7% damage when striking opponent while moving faster than them.
+
+183. GRIP TREAD [GT]
+   - Category    : Mobility
+   - Japanese    : 把握の接地爪
+   - Cost        : 180 PTS
+   - Description : +16% uphill grip when ascending steep stadium walls.
+
+184. GRIP SHIELD [GS]
+   - Category    : Defense
+   - Japanese    : 把握の防壁
+   - Cost        : 200 PTS
+   - Description : Reduces damage taken from glancing scrapes by 16%.
+
+185. GRIP CELL [GC]
+   - Category    : Energy
+   - Japanese    : 把握の魔力管
+   - Cost        : 200 PTS
+   - Description : Increases maximum Mana capacity pool by +12.
+
+186. GRIP FIN [GF]
+   - Category    : Mobility
+   - Japanese    : 把握の整流翼
+   - Cost        : 200 PTS
+   - Description : +21% drift recovery torque when exiting sharp turns.
+
+187. GRIP SCRAPER [GS]
+   - Category    : Combat
+   - Japanese    : 把握の削剥刃
+   - Cost        : 215 PTS
+   - Description : Glancing side hits shave off +5 extra spin from opponents.
+
+188. GRIP ANCHOR [GA]
+   - Category    : Defense
+   - Japanese    : 把握の重碇
+   - Cost        : 225 PTS
+   - Description : +14 Mass Weight, increasing center bowl stability.
+
+189. TORQUE STRIKER [TS]
+   - Category    : Combat
+   - Japanese    : 回転力の強襲刃
+   - Cost        : 220 PTS
+   - Description : Deals +12% bonus damage on direct contact smashes.
+
+190. TORQUE GUARD [TG]
+   - Category    : Defense
+   - Japanese    : 回転力の防護甲
+   - Cost        : 215 PTS
+   - Description : +16 Base Defense against incoming collision strikes.
+
+191. TORQUE SPRINTER [TS]
+   - Category    : Mobility
+   - Japanese    : 回転力の疾走機
+   - Cost        : 210 PTS
+   - Description : +15% throttle acceleration across the arena bowl.
+
+192. TORQUE BATTERY [TB]
+   - Category    : Energy
+   - Japanese    : 回転力の蓄電器
+   - Cost        : 210 PTS
+   - Description : Restores +5 Mana upon making contact with stadium perimeter walls.
+
+193. TORQUE GYRO [TG]
+   - Category    : Defense
+   - Japanese    : 回転力の平衡独楽
+   - Cost        : 235 PTS
+   - Description : Reduces tilt wobble by 38% after sustaining heavy impacts.
+
+194. TORQUE EDGE [TE]
+   - Category    : Combat
+   - Japanese    : 回転力の鋭刃
+   - Cost        : 245 PTS
+   - Description : +14% damage when striking opponent while moving faster than them.
+
+195. TORQUE TREAD [TT]
+   - Category    : Mobility
+   - Japanese    : 回転力の接地爪
+   - Cost        : 215 PTS
+   - Description : +27% uphill grip when ascending steep stadium walls.
+
+196. TORQUE SHIELD [TS]
+   - Category    : Defense
+   - Japanese    : 回転力の防壁
+   - Cost        : 230 PTS
+   - Description : Reduces damage taken from glancing scrapes by 27%.
+
+197. TORQUE CELL [TC]
+   - Category    : Energy
+   - Japanese    : 回転力の魔力管
+   - Cost        : 235 PTS
+   - Description : Increases maximum Mana capacity pool by +21.
+
+198. TORQUE FIN [TF]
+   - Category    : Mobility
+   - Japanese    : 回転力の整流翼
+   - Cost        : 235 PTS
+   - Description : +33% drift recovery torque when exiting sharp turns.
+
+199. TORQUE SCRAPER [TS]
+   - Category    : Combat
+   - Japanese    : 回転力の削剥刃
+   - Cost        : 245 PTS
+   - Description : Glancing side hits shave off +8 extra spin from opponents.
+
+200. TORQUE ANCHOR [TA]
+   - Category    : Defense
+   - Japanese    : 回転力の重碇
+   - Cost        : 255 PTS
+   - Description : +21 Mass Weight, increasing center bowl stability.
+
+========================================================================================================================
+2. UNCOMMON BLESSINGS (100 BLESSINGS — #4BCC00 Lime Green)
+========================================================================================================================
+1. TURBO RIP [TR]
+   - Category    : Energy
+   - Japanese    : 急速発射
+   - Cost        : 380 PTS
+   - Description : Expands launch sweetspot window by 40%. Perfect launch awards +16% initial spin stamina.
+
+2. MAGNETO RING [MR]
+   - Category    : Mobility
+   - Japanese    : 磁気誘引
+   - Cost        : 420 PTS
+   - Description : Electromagnetic field pulls dropped salvage parts and spirit orbs within 6.8m toward your Bey.
+
+3. IMPACT ABSORBER [IA]
+   - Category    : Defense
+   - Japanese    : 衝撃緩衝
+   - Cost        : 410 PTS
+   - Description : Reinforced dampening struts reduce direct head-on collision damage taken from opponents by 22%.
+
+4. CENTRIFUGAL CLUTCH [CC]
+   - Category    : Energy
+   - Japanese    : 遠心連結
+   - Cost        : 440 PTS
+   - Description : Spinning above 70% max speed unlocks rapid rotational dynamo charging, boosting Mana regen by +38%.
+
+5. FLANK STRIKER [FS]
+   - Category    : Combat
+   - Japanese    : 側面強襲
+   - Cost        : 450 PTS
+   - Description : Striking opponents on their sides or rear arc deals +29% bonus ambush collision damage.
+
+6. IRON PLATING [IP]
+   - Category    : Defense
+   - Japanese    : 重鉄装甲
+   - Cost        : 430 PTS
+   - Description : +22 Base Defense. Reduces knockback displacement taken from enemy special attack bursts by 32%.
+
+7. SLIPSTREAM SURGE [Sl]
+   - Category    : Mobility
+   - Japanese    : 追従加速
+   - Cost        : 400 PTS
+   - Description : Drafting behind an opponent within 3.5m grants +36% top pursuit speed and rapid dash buildup.
+
+8. OVERCHARGE CAPACITOR [OC]
+   - Category    : Energy
+   - Japanese    : 過充電器
+   - Cost        : 460 PTS
+   - Description : Expands maximum Mana capacity by +28 (raising total pool from 100 to 128).
+
+9. COUNTER WEIGHT [CW]
+   - Category    : Defense
+   - Japanese    : 均衡錘
+   - Cost        : 410 PTS
+   - Description : Wall bounces convert rebound stress into an instant forward sprint impulse with +22% boost.
+
+10. RESONANT VIBRATION [RV]
+   - Category    : Combat
+   - Japanese    : 共振振動
+   - Cost        : 470 PTS
+   - Description : Direct collisions cause severe resonant rattles in enemy Beys, increasing their stamina decay by 32% for 2.5s.
+
+11. SERRATED RING [SR]
+   - Category    : Combat
+   - Japanese    : 鋸歯外輪
+   - Cost        : 435 PTS
+   - Description : Outer perimeter features micro-serrations dealing +19% damage on glancing swipes.
+
+12. HYDRAULIC SPRING [HS]
+   - Category    : Mobility
+   - Japanese    : 油圧懸架
+   - Cost        : 415 PTS
+   - Description : Absorbs upward stadium floor bumps, preserving 32% more forward momentum on bowl banks.
+
+13. PYROCLASTIC SPARKS [PS]
+   - Category    : Combat
+   - Japanese    : 火砕流花火
+   - Cost        : 465 PTS
+   - Description : Clash impacts ignite high-temperature sparks dealing 9 bonus thermal damage over 2 seconds.
+
+14. HEAVY ALLOY RING [HA]
+   - Category    : Defense
+   - Japanese    : 重合金輪
+   - Cost        : 425 PTS
+   - Description : +30 Mass Weight. Increases collision momentum and reduces lateral deflection.
+
+15. FLUX CAPACITOR [FC]
+   - Category    : Energy
+   - Japanese    : 磁束蓄電器
+   - Cost        : 455 PTS
+   - Description : Stores surplus kinetic energy, granting +14 instant Mana whenever top speed is reached.
+
+16. AERO FIN STABILIZER [AF]
+   - Category    : Mobility
+   - Japanese    : 整流安定翼
+   - Cost        : 425 PTS
+   - Description : Twin aerodynamic fins stabilize high-speed cornering, increasing banking drift torque by +37%.
+
+17. SHOCKWAVE DISPERSER [SD]
+   - Category    : Defense
+   - Japanese    : 衝撃拡散器
+   - Cost        : 445 PTS
+   - Description : Reduces burst damage taken from opponent special attacks by 28%.
+
+18. SPUR STRIKER [SS]
+   - Category    : Combat
+   - Japanese    : 拍車突撃
+   - Cost        : 485 PTS
+   - Description : Bursting an opponent restores +32 Spin Stamina and +26 Mana instantly.
+
+19. KINETIC SIPHON [KS]
+   - Category    : Mobility
+   - Japanese    : 運動吸水管
+   - Cost        : 465 PTS
+   - Description : Absorbs 12% of opponent's forward speed on collision and adds it to your own velocity.
+
+20. GILDED FLYWHEEL [GF]
+   - Category    : Mobility
+   - Japanese    : 黄金弾車
+   - Cost        : 435 PTS
+   - Description : Increases spin retention on steep stadium walls by +42%, enabling higher orbit trajectories.
+
+21. CHILLED PERIMETER [CP]
+   - Category    : Combat
+   - Japanese    : 冷却外周
+   - Cost        : 475 PTS
+   - Description : Freezes opponent contact points, reducing their friction grip by 32% for 2s after collision.
+
+22. REACTIVE ARMOR [RA]
+   - Category    : Defense
+   - Japanese    : 反応装甲
+   - Cost        : 460 PTS
+   - Description : When taking damage greater than 14, releases a kinetic burst that knocks back the attacker 3.2m.
+
+23. MANA SURGE RELAY [MR]
+   - Category    : Energy
+   - Japanese    : 魔力中継器
+   - Cost        : 475 PTS
+   - Description : Ability usage refunds 22% of consumed mana if it directly damages an opponent.
+
+24. VORTEX IMPELLER [VI]
+   - Category    : Mobility
+   - Japanese    : 渦流推進機
+   - Cost        : 430 PTS
+   - Description : Generates an updraft while spinning, reducing ground friction decay by 28%.
+
+25. DUAL EDGE CUTTER [DE]
+   - Category    : Combat
+   - Japanese    : 双刃切断
+   - Cost        : 465 PTS
+   - Description : Critical collision hits carve deep into enemy balance, dealing +32% critical bonus damage.
+
+26. TUNGSTEN CORE [TC]
+   - Category    : Defense
+   - Japanese    : タングステン核
+   - Cost        : 455 PTS
+   - Description : +32 Mass Weight and +16 Defense. Increases center-dish gravitational anchoring.
+
+27. SPIRIT DYNAMO [SD]
+   - Category    : Energy
+   - Japanese    : 精霊発電機
+   - Cost        : 425 PTS
+   - Description : Generate +2.5 Mana every time you perform a successful drift turn.
+
+28. OVERDRIVE IGNITER [OI]
+   - Category    : Mobility
+   - Japanese    : 点火加速器
+   - Cost        : 455 PTS
+   - Description : Boost propulsion duration extended by +42% and costs 22% less mana per second.
+
+29. ARMOR PIERCER [AP]
+   - Category    : Combat
+   - Japanese    : 装甲貫徹
+   - Cost        : 475 PTS
+   - Description : Direct blade strikes bypass 38% of enemy defense rating.
+
+30. STABILIZER WEIGHTS [SW]
+   - Category    : Defense
+   - Japanese    : 安定錘
+   - Cost        : 420 PTS
+   - Description : Reduces spin loss from wall collisions and rebounds by 52%.
+
+31. CHARGE RELAY [CR]
+   - Category    : Energy
+   - Japanese    : 蓄電中継
+   - Cost        : 415 PTS
+   - Description : Collecting energy orbs grants an immediate +22% speed burst for 2.6 seconds.
+
+32. TORNADO BLADE [TB]
+   - Category    : Combat
+   - Japanese    : 竜巻の刃
+   - Cost        : 485 PTS
+   - Description : Spinning creates a localized vortex pulling nearby light debris and opponent Beys inward by 2.2m.
+
+33. PRISM REFLECTOR [PR]
+   - Category    : Defense
+   - Japanese    : 角柱反射器
+   - Cost        : 455 PTS
+   - Description : Special ability attacks taken deal 28% reduced damage to spin stamina.
+
+34. NITRO BOOSTER [NB]
+   - Category    : Mobility
+   - Japanese    : 窒素加速器
+   - Cost        : 435 PTS
+   - Description : Initial boost takeoff velocity increased by +38%.
+
+35. LEECH FANGS [LF]
+   - Category    : Combat
+   - Japanese    : 吸血牙
+   - Cost        : 465 PTS
+   - Description : Glancing strikes and scratches restore +4.5 spin stamina back to your Bey.
+
+36. CAPACITOR BANK [CB]
+   - Category    : Energy
+   - Japanese    : 蓄電堤
+   - Cost        : 475 PTS
+   - Description : Maximum Mana pool increased by +38.
+
+37. IRONCLAD TIP [IT]
+   - Category    : Defense
+   - Japanese    : 重装軸先
+   - Cost        : 425 PTS
+   - Description : Prevents tip degradation, preserving maximum stamina over long duels by +28%.
+
+38. MOMENTUM KEEPER [MK]
+   - Category    : Mobility
+   - Japanese    : 運動量保持
+   - Cost        : 435 PTS
+   - Description : Maintains top cruising speed 55% longer after releasing boost throttle.
+
+39. SHATTER STRIKE [Sh]
+   - Category    : Combat
+   - Japanese    : 破砕打撃
+   - Cost        : 485 PTS
+   - Description : Hits against enemies below 30% spin deal +42% execute finisher damage.
+
+40. HEAVY INERTIA [HI]
+   - Category    : Mobility
+   - Japanese    : 重慣性
+   - Cost        : 425 PTS
+   - Description : Reduces outward centrifuge drift on steep wall rims by 34%.
+
+41. TESLA DISCHARGE [TD]
+   - Category    : Combat
+   - Japanese    : テスラ放電
+   - Cost        : 465 PTS
+   - Description : Wall impacts arc static electricity to nearest enemy within 5.2m for 11 spin damage.
+
+42. NANO MESH ARMOR [NM]
+   - Category    : Defense
+   - Japanese    : 微細網装甲
+   - Cost        : 445 PTS
+   - Description : +24 Defense and +12% resistance to all collision impacts.
+
+43. MANA OVERCLOCK [MO]
+   - Category    : Energy
+   - Japanese    : 魔力過回転
+   - Cost        : 465 PTS
+   - Description : Mana regenerates 42% faster when your Bey is at high spin velocity (>80%).
+
+44. RALLY SPUR [RS]
+   - Category    : Combat
+   - Japanese    : 反撃拍車
+   - Cost        : 455 PTS
+   - Description : Taking a heavy hit grants +28% bonus attack damage for your next counter-attack within 3s.
+
+45. SPEED SKATER [SK]
+   - Category    : Mobility
+   - Japanese    : 超速滑走
+   - Cost        : 445 PTS
+   - Description : Drifting on curved arena slopes generates frictionless ice-skating propulsion (+32% speed).
+
+46. BASTION RING [BR]
+   - Category    : Defense
+   - Japanese    : 砦壁外輪
+   - Cost        : 435 PTS
+   - Description : +26 Base Defense. Decreases wobble vibration amplitude by 42%.
+
+47. ENERGY HARVESTER [EH]
+   - Category    : Energy
+   - Japanese    : 能量収穫機
+   - Cost        : 455 PTS
+   - Description : Absorb +7 Mana whenever any enemy in the stadium is hit by an ability.
+
+48. BLADE HONE [BH]
+   - Category    : Combat
+   - Japanese    : 研ぎ澄まされし刃
+   - Cost        : 465 PTS
+   - Description : +22% flat damage on all direct frontal head-on blade clashes.
+
+49. VIBRO DAMPENER [VD]
+   - Category    : Defense
+   - Japanese    : 防振装置
+   - Cost        : 425 PTS
+   - Description : Reduces balance destabilization from rapid consecutive enemy strikes by 48%.
+
+50. CENTRIFUGAL SURGE [CS]
+   - Category    : Mobility
+   - Japanese    : 遠心激震
+   - Cost        : 445 PTS
+   - Description : Steering from top rim down to stadium center gains massive downhill gravity dive velocity (+44%).
+
+51. CRYO COATING [CC]
+   - Category    : Combat
+   - Japanese    : 極冷被膜
+   - Cost        : 450 PTS
+   - Description : Contacts coat enemy Bey in frost, increasing their wall bounce self-damage by 35%.
+
+52. MAGNETIC REPULSOR [MR]
+   - Category    : Defense
+   - Japanese    : 磁気反撥機
+   - Cost        : 440 PTS
+   - Description : When an enemy attempts to ram you, their acceleration is slowed by 25% within 1.5m.
+
+53. DYNAMO WHEEL [DW]
+   - Category    : Energy
+   - Japanese    : 発電車輪
+   - Cost        : 430 PTS
+   - Description : Moving at high speeds generates +3 Mana every 2 seconds continuously.
+
+54. GRAVITY ANCHOR [GA]
+   - Category    : Defense
+   - Japanese    : 重力碇
+   - Cost        : 445 PTS
+   - Description : +34 Mass Weight. Reduces launch displacement from floor geysers and traps by 50%.
+
+55. OVERDRIVE IGNITION [OI]
+   - Category    : Energy
+   - Japanese    : 過駆動点火
+   - Cost        : 470 PTS
+   - Description : First ability used in each arena costs 50% less Mana and triggers 20% faster.
+
+56. ORBIT STRIKER [OS]
+   - Category    : Combat
+   - Japanese    : 軌道強襲
+   - Cost        : 455 PTS
+   - Description : Attacking from upper rim bowl deals +26% bonus diving kinetic smash damage.
+
+57. ELASTIC HUB [EH]
+   - Category    : Mobility
+   - Japanese    : 弾性輪胴
+   - Cost        : 420 PTS
+   - Description : Wall rebounds propel your Bey with +28% extra rebound spring velocity.
+
+58. THERMAL PLATING [TP]
+   - Category    : Defense
+   - Japanese    : 耐熱装甲
+   - Cost        : 435 PTS
+   - Description : Immune to environmental floor hazards and takes 40% less damage from fire/inferno effects.
+
+59. MANA CAPACITOR II [MC]
+   - Category    : Energy
+   - Japanese    : 大型蓄電器
+   - Cost        : 460 PTS
+   - Description : Maximum Mana capacity expanded by +32.
+
+60. BLADE SERRATED [BS]
+   - Category    : Combat
+   - Japanese    : 鋸刃突起
+   - Cost        : 445 PTS
+   - Description : Glancing side hits carve 8 extra spin damage and trigger spark bursts.
+
+61. FLASH STEP DAMPENER [FS]
+   - Category    : Defense
+   - Japanese    : 瞬歩制振器
+   - Cost        : 450 PTS
+   - Description : After dashing or using mobility abilities, receive 30% less damage for 1.5 seconds.
+
+62. TURBINE EXHAUST [TE]
+   - Category    : Mobility
+   - Japanese    : 噴射排気
+   - Cost        : 435 PTS
+   - Description : Releases air blasts behind your Bey when boosting, shoving trailing pursuers back.
+
+63. KINETIC ABSORBER [KA]
+   - Category    : Defense
+   - Japanese    : 運動吸収体
+   - Cost        : 480 PTS
+   - Description : Converts 15% of incoming collision damage into instant spin stamina recovery.
+
+64. THUNDER SPARK [TS]
+   - Category    : Combat
+   - Japanese    : 雷火火花
+   - Cost        : 465 PTS
+   - Description : Collisions have a 30% chance to zap the opponent for 14 bonus electrical spin damage.
+
+65. PRISM CAPACITOR [PC]
+   - Category    : Energy
+   - Japanese    : 角柱充電器
+   - Cost        : 455 PTS
+   - Description : Stores up to +20 excess Mana beyond normal capacity when picking up energy pickups.
+
+66. APEX CLIMBER [AC]
+   - Category    : Mobility
+   - Japanese    : 頂上登坂
+   - Cost        : 430 PTS
+   - Description : Climbing stadium slopes gains +32% bonus speed and reduces slope friction decay by 35%.
+
+67. REFLECTIVE EDGE [RE]
+   - Category    : Combat
+   - Japanese    : 反射刃縁
+   - Cost        : 470 PTS
+   - Description : Reflects 22% of enemy attack power back at them during direct collisions.
+
+68. GYRO STABILIZER [GS]
+   - Category    : Defense
+   - Japanese    : 独楽安定装置
+   - Cost        : 425 PTS
+   - Description : Recovers from tilt wobble 60% faster after being hit by heavy smashes.
+
+69. MANA SURGE CORE [MS]
+   - Category    : Energy
+   - Japanese    : 魔力奔流核
+   - Cost        : 465 PTS
+   - Description : Whenever spin drops below 40%, Mana regeneration is boosted by +60%.
+
+70. CYCLONE FIN [CF]
+   - Category    : Defense
+   - Japanese    : 旋風安定翼
+   - Cost        : 450 PTS
+   - Description : Spinning at high speed forms an air curtain that deflects 20% of incoming damage.
+
+71. BATTERING RAM [BR]
+   - Category    : Combat
+   - Japanese    : 破城槌
+   - Cost        : 460 PTS
+   - Description : Head-on collisions deal +30% bonus knockback force to opponents.
+
+72. AERO SKATE [AS]
+   - Category    : Mobility
+   - Japanese    : 整流滑走
+   - Cost        : 425 PTS
+   - Description : Reduces friction drag across the arena floor by 24%, boosting top cruising speed.
+
+73. STATIC BURST [SB]
+   - Category    : Combat
+   - Japanese    : 静電放電
+   - Cost        : 445 PTS
+   - Description : Bouncing off walls discharges static pulses dealing 8 spin damage to foes within 3m.
+
+74. ARMOR MESH [AM]
+   - Category    : Defense
+   - Japanese    : 装甲編網
+   - Cost        : 435 PTS
+   - Description : +28 Defense against continuous spin grind damage.
+
+75. MANA TRANSDUCER [MT]
+   - Category    : Energy
+   - Japanese    : 魔力変換器
+   - Cost        : 475 PTS
+   - Description : Converts 20% of damage dealt into bonus Mana points.
+
+76. VORTEX CLUTCH [VC]
+   - Category    : Mobility
+   - Japanese    : 渦巻連結
+   - Cost        : 430 PTS
+   - Description : Drifting on curved bowl surfaces generates +18% bonus acceleration torque.
+
+77. SEISMIC PULSE [SP]
+   - Category    : Combat
+   - Japanese    : 地震波動
+   - Cost        : 465 PTS
+   - Description : Heavy arena collisions emit a tremor that shakes enemy stability within 4m.
+
+78. FORTRESS RING [FR]
+   - Category    : Defense
+   - Japanese    : 要塞外輪
+   - Cost        : 455 PTS
+   - Description : +30 Base Defense and +20 Mass Weight.
+
+79. ENERGY PRISM II [EP]
+   - Category    : Energy
+   - Japanese    : 増幅角柱
+   - Cost        : 465 PTS
+   - Description : Reduces all ability cooldown timers by 18%.
+
+80. SWIFT THRUST [ST]
+   - Category    : Mobility
+   - Japanese    : 疾風突進
+   - Cost        : 440 PTS
+   - Description : Initial dash speed increased by +28% and costs 15% less Mana.
+
+81. BLOOD SPUR [BS]
+   - Category    : Combat
+   - Japanese    : 吸血拍車
+   - Cost        : 470 PTS
+   - Description : Absorbs 8% of all collision damage dealt back as Spin Stamina.
+
+82. TITANIUM PLATING [TP]
+   - Category    : Defense
+   - Japanese    : チタン装甲
+   - Cost        : 445 PTS
+   - Description : +26 Defense and complete immunity to arena edge chipping damage.
+
+83. MANA BATTERY [MB]
+   - Category    : Energy
+   - Japanese    : 魔力蓄電池
+   - Cost        : 435 PTS
+   - Description : Starting any arena duel gives +25 bonus instant Mana.
+
+84. DRIFT MASTER [DM]
+   - Category    : Mobility
+   - Japanese    : 滑走達人
+   - Cost        : 440 PTS
+   - Description : +35% drift turning speed and +50% faster steering response while banking.
+
+85. STAGGER STRIKE [SS]
+   - Category    : Combat
+   - Japanese    : 眩暈一撃
+   - Cost        : 460 PTS
+   - Description : Direct hits above 6m/s stagger enemy steering trajectory for 0.6s.
+
+86. REINFORCED HUB [RH]
+   - Category    : Defense
+   - Japanese    : 強化輪胴
+   - Cost        : 430 PTS
+   - Description : +18 Mass Weight and 35% reduced recoil knockback displacement.
+
+87. OVERCLOCK REGEN [OR]
+   - Category    : Energy
+   - Japanese    : 過負荷再生
+   - Cost        : 450 PTS
+   - Description : Mana regen rate increased by +32% across all battle conditions.
+
+88. SLIPSTREAM MASTER [SM]
+   - Category    : Mobility
+   - Japanese    : 追従の極み
+   - Cost        : 465 PTS
+   - Description : Drafting behind enemies grants +42% pursuit speed and +25% attack damage.
+
+89. PIERCING CONTACT [PC]
+   - Category    : Combat
+   - Japanese    : 刺突接触
+   - Cost        : 455 PTS
+   - Description : Direct blade hits ignore 25% of opponent's armor defense.
+
+90. DEFLECTION SHIELD [DS]
+   - Category    : Defense
+   - Japanese    : 受け流し盾
+   - Cost        : 440 PTS
+   - Description : Deflects 20% of incoming collision damage when struck from the sides.
+
+91. SPIRIT SIPHON [SS]
+   - Category    : Energy
+   - Japanese    : 霊力吸水管
+   - Cost        : 445 PTS
+   - Description : Passively generates +2.8 Mana per second while in active combat.
+
+92. TURBO THRUST [TT]
+   - Category    : Mobility
+   - Japanese    : 超速推力
+   - Cost        : 435 PTS
+   - Description : Boost acceleration force increased by +34%.
+
+93. IMPACT CRUSHER [IC]
+   - Category    : Combat
+   - Japanese    : 衝撃粉砕
+   - Cost        : 460 PTS
+   - Description : Collisions against lighter opponents deal +28% extra spin damage.
+
+94. IRON CORE [IC]
+   - Category    : Defense
+   - Japanese    : 重鉄核
+   - Cost        : 435 PTS
+   - Description : +30 Mass Weight and +14 Defense.
+
+95. MANA CONDUIT II [MC]
+   - Category    : Energy
+   - Japanese    : 魔力伝導管II
+   - Cost        : 465 PTS
+   - Description : All special ability costs discounted by 18%.
+
+96. AERODYNAMICS [AD]
+   - Category    : Mobility
+   - Japanese    : 空気力学
+   - Cost        : 430 PTS
+   - Description : Reduces air friction, allowing top speed to reach +18% higher maximum.
+
+97. VIPER FANGS [VF]
+   - Category    : Combat
+   - Japanese    : 毒蛇の牙
+   - Cost        : 470 PTS
+   - Description : Attacks inflict a venomous friction drain dealing 4 spin/sec for 3 seconds.
+
+98. BULWARK PLATING [BP]
+   - Category    : Defense
+   - Japanese    : 防壁装甲
+   - Cost        : 440 PTS
+   - Description : Reduces maximum knockback taken from collisions by 35%.
+
+99. CAPACITOR CORE [CC]
+   - Category    : Energy
+   - Japanese    : 蓄電核
+   - Cost        : 475 PTS
+   - Description : Max Mana pool increased by +30 and start match with full Mana.
+
+100. SONIC IMPULSE [SI]
+   - Category    : Mobility
+   - Japanese    : 音速衝動
+   - Cost        : 445 PTS
+   - Description : Bouncing off walls grants an instantaneous +25% sprint boost for 2 seconds.
+
+========================================================================================================================
+3. RARE BLESSINGS (20 BLESSINGS — #DF0000 Racing Red)
+========================================================================================================================
+1. VAMPIRIC SPIN [VP]
+   - Category    : Combat
+   - Japanese    : 吸血の回転
+   - Cost        : 680 PTS
+   - Description : Absorbs 15% of all collision and ability damage dealt to opponents back as Spin Stamina.
+
+2. STATIC OVERLOAD [SO]
+   - Category    : Combat
+   - Japanese    : 電磁過負荷
+   - Cost        : 720 PTS
+   - Description : Heavy collisions (>5.5 m/s) discharge chain lightning arcs to nearby enemies for 16 spin damage.
+
+3. INFERNO AURA [IA]
+   - Category    : Combat
+   - Japanese    : 業火の闘気
+   - Cost        : 750 PTS
+   - Description : Radiates blistering thermal friction, burning all nearby enemies within 2.5m for 6 spin/sec.
+
+4. CYCLONE VORTEX [CV]
+   - Category    : Combat
+   - Japanese    : 疾風旋回
+   - Cost        : 780 PTS
+   - Description : High-speed spinning generates localized vortex turbulence, slowing down nearby enemies within 3.5m by 30%.
+
+5. IRON FORTRESS [IF]
+   - Category    : Defense
+   - Japanese    : 鋼鉄要塞
+   - Cost        : 720 PTS
+   - Description : +35 Base Defense. Eliminates all self-damage from arena wall rebounds and impacts.
+
+6. SPIRIT SURGE [Sp]
+   - Category    : Energy
+   - Japanese    : 聖霊奔流
+   - Cost        : 680 PTS
+   - Description : Landing heavy critical hits or burst knockouts instantly refills 40% of your maximum Mana pool.
+
+7. RAZOR EDGE [RE]
+   - Category    : Combat
+   - Japanese    : 鋭刃連撃
+   - Cost        : 700 PTS
+   - Description : Hitting enemies in rapid succession builds up momentum, increasing damage dealt by +10% per hit (up to +40%).
+
+8. VORTEX SHIELD [VS]
+   - Category    : Defense
+   - Japanese    : 渦巻防壁
+   - Cost        : 760 PTS
+   - Description : Spinning above 60% generates a barrier that deflects hostile projectiles and repels enemy dash surges.
+
+9. SEISMIC SLAM [SS]
+   - Category    : Combat
+   - Japanese    : 大地激震
+   - Cost        : 710 PTS
+   - Description : Wall bounces at high speed send shock tremors through the arena floor, knocking back opponents by 4.0m.
+
+10. ARCANE RESONANCE [AR]
+   - Category    : Energy
+   - Japanese    : 神秘共鳴
+   - Cost        : 740 PTS
+   - Description : Using an ability grants +20% collision damage and +25% top speed for 3 seconds.
+
+11. PHANTOM DASH [PD]
+   - Category    : Mobility
+   - Japanese    : 幻影突進
+   - Cost        : 760 PTS
+   - Description : Dashing through opponents shaves 15 spin stamina while making you intangible for 0.3s.
+
+12. GLACIAL ARMOR [GA]
+   - Category    : Defense
+   - Japanese    : 氷結甲冑
+   - Cost        : 730 PTS
+   - Description : When hit, encases the attacker in sub-zero frost, slowing their movement and spin acceleration by 35% for 2s.
+
+13. TEMPEST DRIVE [TD]
+   - Category    : Mobility
+   - Japanese    : 暴風駆動
+   - Cost        : 750 PTS
+   - Description : High velocity movement generates tailwind currents, continuously accelerating up to +40% top speed over 4s.
+
+14. SOUL REAPER [SR]
+   - Category    : Combat
+   - Japanese    : 魂魄収穫
+   - Cost        : 790 PTS
+   - Description : Every opponent burst in the match permanently increases your collision damage by +20% for the rest of the arena.
+
+15. OBSIDIAN CORE [OC]
+   - Category    : Defense
+   - Japanese    : 黒曜石核
+   - Cost        : 740 PTS
+   - Description : +35 Mass Weight and +25 Defense. Completely immune to tilt instability from heavy slams.
+
+16. MANA CONDUIT [MC]
+   - Category    : Energy
+   - Japanese    : 魔力伝導管
+   - Cost        : 770 PTS
+   - Description : Ability mana costs are reduced by 25% and Mana regen delay after spending mana is eliminated.
+
+17. THUNDERSTRIKE [TS]
+   - Category    : Combat
+   - Japanese    : 迅雷一撃
+   - Cost        : 730 PTS
+   - Description : Every 5th direct hit calls down a divine thunderbolt on the opponent for 22 spin damage.
+
+18. MIRROR PLATING [MP]
+   - Category    : Defense
+   - Japanese    : 鏡面装甲
+   - Cost        : 750 PTS
+   - Description : Reflects 30% of all collision damage received directly back onto the attacking Bey.
+
+19. SONIC BOOM [SB]
+   - Category    : Mobility
+   - Japanese    : 音速衝撃
+   - Cost        : 710 PTS
+   - Description : Breaking top speed barrier emits a conical sonic shockwave that knocks back foes ahead of you.
+
+20. SOLAR RADIANCE [So]
+   - Category    : Energy
+   - Japanese    : 太陽光輝
+   - Cost        : 760 PTS
+   - Description : At full Mana, emits blinding solar beams that disorient enemies and boost your speed by +25%.
+
+========================================================================================================================
+4. EPIC BLESSINGS (10 BLESSINGS — #B0008A Raspberry Plum)
+========================================================================================================================
+1. OVERDRIVE CORE [OD]
+   - Category    : Energy
+   - Japanese    : 限界突破炉
+   - Cost        : 1100 PTS
+   - Description : Freezes natural spin decay for the first 8s of match, and accelerates all ability cooldowns by 25%.
+
+2. AEGIS BARRIER [AB]
+   - Category    : Defense
+   - Japanese    : 絶対防壁
+   - Cost        : 1000 PTS
+   - Description : Solid kinetic shield that reduces incoming collision damage by 40% when below 50% Spin.
+
+3. COSMIC SYNERGY [CY]
+   - Category    : Energy
+   - Japanese    : 宇宙共鳴
+   - Cost        : 1150 PTS
+   - Description : Heavy impacts instantly restore +18 Mana and reduce current ability cooldowns by 2.0s.
+
+4. TITAN CRUSHER [TC]
+   - Category    : Combat
+   - Japanese    : 巨人粉砕
+   - Cost        : 1120 PTS
+   - Description : Colossal head-on smash! Collisions above 5.8 m/s deal +50% bonus critical damage and trigger an explosive shockwave.
+
+5. NULLIFY ARMOR [NA]
+   - Category    : Defense
+   - Japanese    : 完全無効装甲
+   - Cost        : 1050 PTS
+   - Description : Generates a kinetic buffer every 7 seconds that completely absorbs and negates 1 full enemy collision impact.
+
+6. GRAVITY WELL [GW]
+   - Category    : Mobility
+   - Japanese    : 重力渦発生
+   - Cost        : 1150 PTS
+   - Description : Gravitationally pulls nearby opponents toward the center dish whenever you occupy the lower bowl.
+
+7. SUPERNOVA BURST [SB]
+   - Category    : Combat
+   - Japanese    : 超新星爆発
+   - Cost        : 1180 PTS
+   - Description : When bursting an opponent, trigger a massive stadium shockwave that deals 35 spin damage to all remaining enemies.
+
+8. ETERNAL DYNAMO [ED]
+   - Category    : Energy
+   - Japanese    : 永久発電炉
+   - Cost        : 1140 PTS
+   - Description : Max Mana pool increased by +50 and Mana regenerates at 200% speed when spinning above 60% spin stamina.
+
+9. VALKYRIE FLIGHT [VF]
+   - Category    : Mobility
+   - Japanese    : 戦乙女の飛翔
+   - Cost        : 1160 PTS
+   - Description : Boost grants complete immunity to wall friction and allows launching airborne ramps for high-dive aerial smashes.
+
+10. DIAMOND CARAPACE [DC]
+   - Category    : Defense
+   - Japanese    : 金剛甲殻
+   - Cost        : 1080 PTS
+   - Description : +50 Defense. Completely prevents spin drain from glancing enemy scratches and reduces maximum knockback received by 50%.
+
+========================================================================================================================
+5. LEGENDARY BLESSINGS (5 BLESSINGS — #FFB900 Amber Flame)
+========================================================================================================================
+1. PHOENIX REBIRTH [PR]
+   - Category    : Defense
+   - Japanese    : 不死鳥の転生
+   - Cost        : 1650 PTS
+   - Description : ONCE PER RUN: If defeated, instantly resurrect with 65% Spin Stamina and a massive flame shockwave.
+
+2. PLASMA COIL [PC]
+   - Category    : Combat
+   - Japanese    : 超高圧電磁界
+   - Cost        : 1600 PTS
+   - Description : Surrounds your Bey with high-voltage plasma. Dealing collision damage shocks the target for 25% of their current spin over 3s.
+
+3. CHRONOS SHIFT [C$]
+   - Category    : Mobility
+   - Japanese    : 時空跳躍
+   - Cost        : 1700 PTS
+   - Description : Boost speed increased by +45%. Double-tapping Boost performs an instantaneous phase-dash forward.
+
+4. DRAGON HEART [DH]
+   - Category    : Energy
+   - Japanese    : 龍心覚醒
+   - Cost        : 1750 PTS
+   - Description : Awakens ultimate dragon vitality: Doubles all combat Mana gains, cuts all ability costs by 35%, and empowers special moves with critical strikes.
+
+5. CELESTIAL SINGULARITY [CS]
+   - Category    : Combat
+   - Japanese    : 天体特異点
+   - Cost        : 1800 PTS
+   - Description : Creates a perpetual gravitational pull around your Bey that continuously drains 8 spin/sec from all opponents within 6.0m.
+

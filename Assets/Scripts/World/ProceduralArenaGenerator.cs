@@ -207,6 +207,10 @@ namespace BladeSpinners.World
             for (int i = 0; i < pickups.Length; i++)
                 SetLayerRecursive(pickups[i].gameObject, 0);
 
+            // ---- Distant Tournament Stadium Backdrop (League of Legends / AAA style) ----
+            GameObject backdrop = CreateDistantStadiumBackdrop(radius, rng);
+            if (backdrop != null) backdrop.transform.SetParent(root.transform, false);
+
             return root;
         }
 
@@ -1195,6 +1199,193 @@ namespace BladeSpinners.World
             mat.SetFloat("_Metallic", metallic);
             mat.SetFloat("_Smoothness", smoothness);
             return mat;
+        }
+
+        private static GameObject CreateDistantStadiumBackdrop(float arenaRadius, System.Random rng)
+        {
+            GameObject backdrop = new GameObject("DistantStadiumBackdrop");
+
+            Material concreteMat = CreateArenaMaterial(new Color(0.04f, 0.07f, 0.12f, 1f), 0.35f, 0.40f);
+            Material metalMat = CreateArenaMaterial(new Color(0.08f, 0.14f, 0.22f, 1f), 0.85f, 0.65f);
+            Material cyanEmissive = ShaderProvider.CreateEmissiveMaterial(new Color(0f, 0.85f, 1f, 1f), 2.5f);
+            Material orangeEmissive = ShaderProvider.CreateEmissiveMaterial(new Color(1f, 0.45f, 0.05f, 1f), 2.5f);
+            Material yellowEmissive = ShaderProvider.CreateEmissiveMaterial(new Color(1f, 0.85f, 0.15f, 1f), 2.2f);
+            Material magentaEmissive = ShaderProvider.CreateEmissiveMaterial(new Color(0.95f, 0.15f, 0.80f, 1f), 2.2f);
+
+            // 1. Concentric Grandstand Bleacher Rings
+            int ringSegments = 36;
+            float[] tierRadii = new float[] { arenaRadius + 8f, arenaRadius + 18f, arenaRadius + 30f, arenaRadius + 44f };
+            float[] tierHeights = new float[] { 3f, 8f, 16f, 26f };
+
+            for (int t = 0; t < tierRadii.Length - 1; t++)
+            {
+                float innerR = tierRadii[t];
+                float outerR = tierRadii[t + 1];
+                float botY = tierHeights[t];
+                float topY = tierHeights[t + 1];
+
+                GameObject tierObj = new GameObject($"Stadium_Tier_{t}");
+                tierObj.transform.SetParent(backdrop.transform, false);
+
+                MeshFilter mf = tierObj.AddComponent<MeshFilter>();
+                MeshRenderer mr = tierObj.AddComponent<MeshRenderer>();
+                mr.sharedMaterial = concreteMat;
+
+                Mesh mesh = new Mesh();
+                mesh.name = $"StadiumTierMesh_{t}";
+
+                Vector3[] verts = new Vector3[(ringSegments + 1) * 2];
+                Vector2[] uvs = new Vector2[(ringSegments + 1) * 2];
+                int[] tris = new int[ringSegments * 6];
+
+                for (int i = 0; i <= ringSegments; i++)
+                {
+                    float angle = (Mathf.PI * 2f * i) / ringSegments;
+                    float cos = Mathf.Cos(angle);
+                    float sin = Mathf.Sin(angle);
+
+                    verts[i * 2] = new Vector3(cos * innerR, botY, sin * innerR);
+                    verts[i * 2 + 1] = new Vector3(cos * outerR, topY, sin * outerR);
+
+                    uvs[i * 2] = new Vector2((float)i / ringSegments * 6f, 0f);
+                    uvs[i * 2 + 1] = new Vector2((float)i / ringSegments * 6f, 1f);
+                }
+
+                int tri = 0;
+                for (int i = 0; i < ringSegments; i++)
+                {
+                    int b0 = i * 2;
+                    int t0 = i * 2 + 1;
+                    int b1 = (i + 1) * 2;
+                    int t1 = (i + 1) * 2 + 1;
+
+                    tris[tri++] = b0;
+                    tris[tri++] = t0;
+                    tris[tri++] = t1;
+
+                    tris[tri++] = b0;
+                    tris[tri++] = t1;
+                    tris[tri++] = b1;
+                }
+
+                mesh.vertices = verts;
+                mesh.uv = uvs;
+                mesh.triangles = tris;
+                mesh.RecalculateNormals();
+                mf.sharedMesh = mesh;
+            }
+
+            // 2. Spectator Crowd Glow Flecks across the Grandstands
+            int crowdPillars = 48;
+            for (int i = 0; i < crowdPillars; i++)
+            {
+                float angle = (float)i / crowdPillars * Mathf.PI * 2f + ((float)rng.NextDouble() * 0.08f);
+                float rDist = Mathf.Lerp(arenaRadius + 10f, arenaRadius + 42f, (float)rng.NextDouble());
+                float yPos = Mathf.Lerp(4f, 24f, (rDist - (arenaRadius + 10f)) / 32f) + (float)rng.NextDouble() * 0.8f;
+
+                GameObject crowdCube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                crowdCube.name = "CrowdLight";
+                crowdCube.transform.SetParent(backdrop.transform, false);
+                crowdCube.transform.position = new Vector3(Mathf.Cos(angle) * rDist, yPos, Mathf.Sin(angle) * rDist);
+                crowdCube.transform.localScale = new Vector3(0.6f + (float)rng.NextDouble() * 0.6f, 0.3f, 1.2f);
+                crowdCube.transform.rotation = Quaternion.Euler(0f, -angle * Mathf.Rad2Deg + 90f, 0f);
+
+                // Remove collider so it never interacts with gameplay physics
+                Collider col = crowdCube.GetComponent<Collider>();
+                if (col != null) Object.Destroy(col);
+
+                MeshRenderer cr = crowdCube.GetComponent<MeshRenderer>();
+                int colorPick = rng.Next(4);
+                cr.sharedMaterial = colorPick switch
+                {
+                    0 => cyanEmissive,
+                    1 => orangeEmissive,
+                    2 => yellowEmissive,
+                    _ => magentaEmissive
+                };
+            }
+
+            // 3. Tournament Holographic Pylon Spires (8 Massive Spires)
+            int spireCount = 8;
+            float spireRadius = arenaRadius + 32f;
+            for (int i = 0; i < spireCount; i++)
+            {
+                float angle = (float)i / spireCount * Mathf.PI * 2f;
+                Vector3 spirePos = new Vector3(Mathf.Cos(angle) * spireRadius, 0f, Mathf.Sin(angle) * spireRadius);
+
+                GameObject spire = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                spire.name = $"TournamentSpire_{i}";
+                spire.transform.SetParent(backdrop.transform, false);
+                spire.transform.position = spirePos + Vector3.up * 26f;
+                spire.transform.localScale = new Vector3(3.2f, 26f, 3.2f);
+
+                Collider col = spire.GetComponent<Collider>();
+                if (col != null) Object.Destroy(col);
+
+                MeshRenderer mr = spire.GetComponent<MeshRenderer>();
+                mr.sharedMaterial = metalMat;
+
+                // Emissive Neon Rib on Spire
+                GameObject rib = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                rib.name = "SpireNeonRib";
+                rib.transform.SetParent(spire.transform, false);
+                rib.transform.localPosition = new Vector3(0f, 0f, 0.55f);
+                rib.transform.localScale = new Vector3(0.2f, 1f, 0.2f);
+
+                Collider ribCol = rib.GetComponent<Collider>();
+                if (ribCol != null) Object.Destroy(ribCol);
+
+                MeshRenderer ribMr = rib.GetComponent<MeshRenderer>();
+                ribMr.sharedMaterial = (i % 2 == 0) ? cyanEmissive : orangeEmissive;
+            }
+
+            // 4. Floating Hologram Jumbotron Screens (4 Screens)
+            int screenCount = 4;
+            float screenRadius = arenaRadius + 20f;
+            for (int i = 0; i < screenCount; i++)
+            {
+                float angle = ((float)i / screenCount + 0.125f) * Mathf.PI * 2f;
+                Vector3 screenPos = new Vector3(Mathf.Cos(angle) * screenRadius, 20f, Mathf.Sin(angle) * screenRadius);
+
+                GameObject screen = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                screen.name = $"HoloJumbotron_{i}";
+                screen.transform.SetParent(backdrop.transform, false);
+                screen.transform.position = screenPos;
+                screen.transform.localScale = new Vector3(14f, 6.5f, 0.5f);
+
+                // Look at arena center, slightly tilted down
+                Vector3 toCenter = (Vector3.up * 2f - screenPos).normalized;
+                screen.transform.rotation = Quaternion.LookRotation(toCenter);
+
+                Collider col = screen.GetComponent<Collider>();
+                if (col != null) Object.Destroy(col);
+
+                MeshRenderer mr = screen.GetComponent<MeshRenderer>();
+                mr.sharedMaterial = (i % 2 == 0) ? cyanEmissive : magentaEmissive;
+            }
+
+            // 5. Sky Lasers / Beacons shooting into the upper atmosphere
+            int laserCount = 6;
+            float laserRadius = arenaRadius + 40f;
+            for (int i = 0; i < laserCount; i++)
+            {
+                float angle = (float)i / laserCount * Mathf.PI * 2f;
+                Vector3 laserPos = new Vector3(Mathf.Cos(angle) * laserRadius, 45f, Mathf.Sin(angle) * laserRadius);
+
+                GameObject laser = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                laser.name = $"SkyLaser_{i}";
+                laser.transform.SetParent(backdrop.transform, false);
+                laser.transform.position = laserPos;
+                laser.transform.localScale = new Vector3(0.7f, 45f, 0.7f);
+
+                Collider col = laser.GetComponent<Collider>();
+                if (col != null) Object.Destroy(col);
+
+                MeshRenderer mr = laser.GetComponent<MeshRenderer>();
+                mr.sharedMaterial = (i % 2 == 0) ? cyanEmissive : orangeEmissive;
+            }
+
+            return backdrop;
         }
 
         private static void SetLayerRecursive(GameObject obj, int layer)

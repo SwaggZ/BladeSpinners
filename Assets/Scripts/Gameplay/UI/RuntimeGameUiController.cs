@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -12,6 +13,7 @@ using BladeSpinners.Audio;
 using BladeSpinners.Gameplay.Parts;
 using BladeSpinners.Gameplay.Shrine;
 using BladeSpinners.Gameplay.Combat;
+using BladeSpinners.Gameplay.Progression;
 
 namespace BladeSpinners.Gameplay.UI
 {
@@ -32,6 +34,7 @@ namespace BladeSpinners.Gameplay.UI
         {
             Home,
             Inventory,
+            ShrineCompendium,
             Records,
             Settings,
             Keybinds,
@@ -45,6 +48,12 @@ namespace BladeSpinners.Gameplay.UI
         private RootUiState rootState     = RootUiState.StartScreen;
         private MenuPanel   mainMenuPanel = MenuPanel.Home;
         private MenuPanel   pausePanel    = MenuPanel.Home;
+        private Vector2     compendiumScrollPos;
+        private int         compendiumRarityFilter = -1;
+        private int         compendiumCategoryFilter = -1;
+        private string      compendiumSearchQuery = string.Empty;
+        private List<ShrinePerkType> lastRunUnlockedBlessings = new List<ShrinePerkType>();
+        private bool        showRunVictoryModal = false;
         private MusicSituation? requestedMusicSituation;
         private const float StartScreenInputDelay = 0.45f;
         private const float StartScreenExitDuration = 1.15f;
@@ -73,7 +82,8 @@ namespace BladeSpinners.Gameplay.UI
         private Vector2 ownedScroll;
         private Vector2 runScroll;
         private Vector2 garageSwapScroll;
-        private PartType? garageSwapSlot;
+        private Vector2 settingsScroll;
+        private PartType? garageInspectSlot = PartType.EnergyRing;
         private bool buildSlotPickerOpen;
         private readonly Dictionary<PartType, BeyPart>[] savedBuildSlots = new Dictionary<PartType, BeyPart>[3];
         private readonly string[] savedBuildNames = new string[3];
@@ -92,7 +102,6 @@ namespace BladeSpinners.Gameplay.UI
         private bool previewIsDragging;
         private int previewDragPointerId = -1;
         private Vector2 previewLastPointerPos;
-        private float previewManualYaw;
         private float previewManualPitch;
 
         // Per-part 3D preview system
@@ -120,6 +129,24 @@ namespace BladeSpinners.Gameplay.UI
         private float settingsSensitivity = 1f;
         private float settingsClippingOpacity = 0.2f;
         private float settingsRingsOpacity = 1f;
+        private bool showResetConfirm = false;
+
+        // ── Resolution dropdown state ─────────────────────────────────────────────
+        private static readonly (string label, int w, int h)[] ResolutionPresets = new[]
+        {
+            ("4K  —  3840 x 2160",  3840, 2160),
+            ("1440p  —  2560 x 1440", 2560, 1440),
+            ("1080p  —  1920 x 1080", 1920, 1080),
+            ("900p  —  1600 x 900",  1600, 900),
+            ("720p  —  1280 x 720",  1280, 720),
+        };
+        private bool resolutionDropdownOpen = false;
+        private int pendingResolutionIndex = -1;   // which preset was applied but not confirmed
+        private int confirmedResolutionIndex = -1; // last confirmed preset (-1 = original)
+        private int prevResW = 0;
+        private int prevResH = 0;
+        private float revertResolutionTimer = 0f;
+        private const float RevertResolutionSeconds = 15f;
 
         // ── Loot transfer state ──────────────────────────────────────────────────
         private List<BeyPart> lootEligibleParts;
@@ -146,6 +173,15 @@ namespace BladeSpinners.Gameplay.UI
         private int styleScreenW = -1;
         private int styleScreenH = -1;
         private bool deathOverlayPreviewPrepared;
+
+        // ── Stardew Valley-Style Fishing Rip Launcher State ─────────────────────
+        private float ripBobberPos = 0f;
+        private float ripBobberVel = 0f;
+        private float ripTargetPos = 0.5f;
+        private float ripTensionCharge = 0f;
+        private float ripTargetTimer = 0f;
+        private MatchManager lastCountdownMatch;
+
         // ── Build safety ─────────────────────────────────────────────────────────
         private bool   initFailed;
         private string initErrorMsg = "";
@@ -293,15 +329,42 @@ namespace BladeSpinners.Gameplay.UI
                 }
             }
 
+            Keyboard kb = Keyboard.current;
+            if (kb != null)
+            {
+                if (kb.f11Key.wasPressedThisFrame || (kb.altKey.isPressed && kb.enterKey.wasPressedThisFrame))
+                {
+                    Screen.fullScreen = !Screen.fullScreen;
+                }
+            }
+
             if (rootState == RootUiState.InRun || rootState == RootUiState.Paused || rootState == RootUiState.BetweenArenas)
             {
-                Keyboard kb = Keyboard.current;
-                if (kb != null && kb.escapeKey.wasPressedThisFrame)
+                Gamepad gp = Gamepad.current;
+                bool pausePressed = false;
+                if (kb != null && kb.escapeKey.wasPressedThisFrame) pausePressed = true;
+                if (gp != null && (gp.startButton.wasPressedThisFrame || gp.selectButton.wasPressedThisFrame)) pausePressed = true;
+
+                if (pausePressed)
                     TogglePause();
             }
 
             UpdateCursorState();
             UpdateRunTimersAndRecords();
+
+            // Resolution revert countdown
+            if (pendingResolutionIndex >= 0 && revertResolutionTimer > 0f)
+            {
+                revertResolutionTimer -= Time.unscaledDeltaTime;
+                if (revertResolutionTimer <= 0f)
+                {
+                    // Revert
+                    Screen.SetResolution(prevResW, prevResH, Screen.fullScreenMode);
+                    pendingResolutionIndex = -1;
+                    revertResolutionTimer = 0f;
+                }
+            }
+
 
             if (rootState != RootUiState.InRun
                 || runContext.Match == null
@@ -342,10 +405,17 @@ namespace BladeSpinners.Gameplay.UI
         //  ONGUI DISPATCH
         // ══════════════════════════════════════════════════════════════════════════
 
+        public static float UiWidth => 1080f * ((float)Screen.width / Mathf.Max(1, Screen.height));
+        public static float UiHeight => 1080f;
+
         private void OnGUI()
         {
             try
             {
+                float scale = Screen.height / 1080f;
+                Matrix4x4 origMatrix = GUI.matrix;
+                GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1.0f));
+
                 EnsureStyles();
                 switch (rootState)
                 {
@@ -361,16 +431,18 @@ namespace BladeSpinners.Gameplay.UI
                 if (initFailed)
                 {
                     GUI.color = Color.red;
-                    GUI.Label(new Rect(10, Screen.height - 30, Screen.width, 24),
+                    GUI.Label(new Rect(10, UiHeight - 30, UiWidth, 24),
                         $"[Init Warning] {initErrorMsg}");
                     GUI.color = Color.white;
                 }
+
+                GUI.matrix = origMatrix;
             }
             catch (Exception e)
             {
                 // Emergency fallback — render error on screen so builds aren't silent
                 GUI.color = Color.red;
-                GUI.Label(new Rect(10, 10, Screen.width - 20, 60),
+                GUI.Label(new Rect(10, 10, UiWidth - 20, 60),
                     $"[UI Error] {e.Message}");
                 GUI.color = Color.white;
                 Debug.LogError($"[BladeSpinners] OnGUI exception: {e}");
@@ -390,7 +462,7 @@ namespace BladeSpinners.Gameplay.UI
 
         private void DrawStartScreen()
         {
-            Rect screen = new Rect(0f, 0f, Screen.width, Screen.height);
+            Rect screen = new Rect(0f, 0f, UiWidth, UiHeight);
             // Deep gradient from dark sci-fi navy to obsidian
             DrawVerticalGradient(screen, new Color(0.006f, 0.018f, 0.055f, 1f), new Color(0.001f, 0.003f, 0.010f, 1f), 32);
 
@@ -411,17 +483,20 @@ namespace BladeSpinners.Gameplay.UI
 
             // 4. Top Tech Metadata Headers
             float metaAlpha = (1f - easedExit) * 0.85f;
-            GUIStyle techMetaStyle = new GUIStyle(bodyLabelStyle)
-            {
-                fontSize = Mathf.Clamp(Mathf.RoundToInt(11f * GetUiScale()), 9, 16),
-                alignment = TextAnchor.MiddleLeft,
-                fontStyle = FontStyle.Bold
-            };
-            techMetaStyle.normal.textColor = new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, metaAlpha);
+            GUIStyle techMetaStyle = CreateStaticStyle(
+                bodyLabelStyle,
+                new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, metaAlpha),
+                ScaleFont(11f),
+                TextAnchor.MiddleLeft,
+                FontStyle.Bold);
             GUI.Label(new Rect(24f, 16f, 420f, 22f), "⬢ SYSTEM: ONLINE // HYPER-SPIN PROTOCOL", techMetaStyle);
 
-            GUIStyle techRightStyle = new GUIStyle(techMetaStyle) { alignment = TextAnchor.MiddleRight };
-            techRightStyle.normal.textColor = new Color(ACCENT_YEL.r, ACCENT_YEL.g, ACCENT_YEL.b, metaAlpha);
+            GUIStyle techRightStyle = CreateStaticStyle(
+                bodyLabelStyle,
+                new Color(ACCENT_YEL.r, ACCENT_YEL.g, ACCENT_YEL.b, metaAlpha),
+                ScaleFont(11f),
+                TextAnchor.MiddleRight,
+                FontStyle.Bold);
             GUI.Label(new Rect(screen.width - 444f, 16f, 420f, 22f), "ENGINE: UNIVERSAL URP // 60 FPS HI-FI", techRightStyle);
 
             // 5. Hero Logo
@@ -446,12 +521,12 @@ namespace BladeSpinners.Gameplay.UI
             }
 
             // 6. Anime Subtitle Badge
-            GUIStyle catchphraseStyle = new GUIStyle(sectionLabelStyle)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontStyle = FontStyle.Bold,
-                fontSize = Mathf.Clamp(Mathf.RoundToInt(22f * GetUiScale()), 15, 36)
-            };
+            GUIStyle catchphraseStyle = CreateStaticStyle(
+                sectionLabelStyle,
+                new Color(0.78f, 0.92f, 1f, 1f - easedExit),
+                ScaleFont(22f),
+                TextAnchor.MiddleCenter,
+                FontStyle.Bold);
             Rect phraseRect = new Rect(screen.width * 0.20f, screen.height * 0.58f, screen.width * 0.60f, Mathf.Clamp(screen.height * 0.06f, 36f, 60f));
             DrawPanelFrame(phraseRect, new Color(0.02f, 0.06f, 0.12f, 0.85f * (1f - easedExit)), new Color(0.04f, 0.10f, 0.20f, 0.90f * (1f - easedExit)), new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.75f * (1f - easedExit)), 2f);
             DrawFrameCorners(phraseRect, new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 1f - easedExit), 14f, 1.5f);
@@ -470,24 +545,22 @@ namespace BladeSpinners.Gameplay.UI
                 DrawFrameCorners(promptRect, promptBorder, 20f, 2f);
                 DrawMotionBandClipped(new Rect(promptRect.x + promptRect.width * 0.55f, promptRect.y, promptRect.width * 0.35f, promptRect.height), promptBorder, 8f, 12f, 0.10f * breath);
 
-                GUIStyle promptStyle = new GUIStyle(bodyLabelStyle)
-                {
-                    alignment = TextAnchor.MiddleCenter,
-                    fontStyle = FontStyle.Bold,
-                    fontSize = Mathf.Clamp(Mathf.RoundToInt(20f * GetUiScale()), 14, 32)
-                };
-                promptStyle.normal.textColor = new Color(1f, 0.92f, 0.35f, breath);
+                GUIStyle promptStyle = CreateStaticStyle(
+                    bodyLabelStyle,
+                    new Color(1f, 0.92f, 0.35f, breath),
+                    ScaleFont(20f),
+                    TextAnchor.MiddleCenter,
+                    FontStyle.Bold);
                 GUI.Label(promptRect, "PRESS ANY KEY OR CLICK TO ENTER", promptStyle);
             }
             GUI.color = previousColor;
 
             // 8. Bottom Cyber Footer
-            GUIStyle footerStyle = new GUIStyle(bodyLabelStyle)
-            {
-                fontSize = Mathf.Clamp(Mathf.RoundToInt(11f * GetUiScale()), 9, 15),
-                alignment = TextAnchor.MiddleCenter
-            };
-            footerStyle.normal.textColor = new Color(0.45f, 0.60f, 0.75f, (1f - easedExit) * 0.75f);
+            GUIStyle footerStyle = CreateStaticStyle(
+                bodyLabelStyle,
+                new Color(0.45f, 0.60f, 0.75f, (1f - easedExit) * 0.75f),
+                ScaleFont(11f),
+                TextAnchor.MiddleCenter);
             GUI.Label(new Rect(0f, screen.height - 32f, screen.width, 24f), "© 2026 BLADE SPINNERS ARCADE // ALL SYSTEMS OPERATIONAL", footerStyle);
 
             if (exitProgress > 0f)
@@ -580,16 +653,19 @@ namespace BladeSpinners.Gameplay.UI
             // Double-Layered 3D Metallic Title
             Rect titleRect = new Rect(rect.x, rect.y + emblemSize + 8f, rect.width, rect.height - emblemSize - 8f);
 
-            GUIStyle shadowStyle = new GUIStyle(titleBarStyle)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontStyle = FontStyle.Bold,
-                fontSize = Mathf.Clamp(Mathf.RoundToInt(60f * GetUiScale()), 32, 108)
-            };
-            shadowStyle.normal.textColor = new Color(0f, 0.05f, 0.12f, 0.95f);
+            GUIStyle shadowStyle = CreateStaticStyle(
+                titleBarStyle,
+                new Color(0f, 0.05f, 0.12f, 0.95f),
+                Mathf.Clamp(Mathf.RoundToInt(60f * GetUiScale()), 32, 108),
+                TextAnchor.MiddleCenter,
+                FontStyle.Bold);
 
-            GUIStyle titleStyle = new GUIStyle(shadowStyle);
-            titleStyle.normal.textColor = Color.white;
+            GUIStyle titleStyle = CreateStaticStyle(
+                titleBarStyle,
+                Color.white,
+                Mathf.Clamp(Mathf.RoundToInt(60f * GetUiScale()), 32, 108),
+                TextAnchor.MiddleCenter,
+                FontStyle.Bold);
 
             // Drop shadow offsets
             GUI.Label(new Rect(titleRect.x + 4f, titleRect.y + 4f, titleRect.width, titleRect.height), "BLADE SPINNERS", shadowStyle);
@@ -606,8 +682,7 @@ namespace BladeSpinners.Gameplay.UI
             }
         }
 
-        private static float StartScreenHash01(
-            int value)
+        private static float StartScreenHash01(int value)
         {
             unchecked
             {
@@ -672,6 +747,21 @@ namespace BladeSpinners.Gameplay.UI
             if (match == null)
                 return;
 
+            if (match.CurrentState == MatchManager.MatchState.PlayerWon)
+            {
+                DrawVictoryCelebrationOverlay(match);
+                return;
+            }
+
+            if (match.CurrentState == MatchManager.MatchState.PlayerLost)
+            {
+                if (match.StateTimer > 0.6f)
+                    DrawDramaticDefeatOverlay(match);
+                else
+                    DrawDeathOverlay(match);
+                return;
+            }
+
             DrawRunDepthOverlay();
             DrawEnergyRingPassiveOverlay();
             DrawActiveShrinePerksOverlay();
@@ -680,9 +770,6 @@ namespace BladeSpinners.Gameplay.UI
 
             if (match.CurrentState == MatchManager.MatchState.WaitingToStart)
                 DrawStartCountdownOverlay(match);
-
-            if (match.CurrentState == MatchManager.MatchState.PlayerLost)
-                DrawDeathOverlay(match);
 
             DrawComicPopups();
         }
@@ -697,8 +784,8 @@ namespace BladeSpinners.Gameplay.UI
             if (passive == null)
                 return;
 
-            int sw = Screen.width;
-            int sh = Screen.height;
+            int sw = Mathf.RoundToInt(UiWidth);
+            int sh = Mathf.RoundToInt(UiHeight);
             float panelW = Mathf.Clamp(
                 sw * 0.26f, 300f, 520f);
             float panelH = Mathf.Clamp(
@@ -775,8 +862,8 @@ namespace BladeSpinners.Gameplay.UI
                 return;
 
             float uiScale = GetUiScale();
-            float startX = Mathf.Clamp(Screen.width * 0.008f, 14f, 28f);
-            float startY = Mathf.Clamp(Screen.height * 0.170f, 155f, 250f);
+            float startX = Mathf.Clamp(UiWidth * 0.008f, 14f, 28f);
+            float startY = Mathf.Clamp(UiHeight * 0.170f, 155f, 250f);
             float badgeH = Mathf.Clamp(24f * uiScale, 20f, 32f);
             float badgeW = Mathf.Clamp(180f * uiScale, 150f, 230f);
 
@@ -786,10 +873,11 @@ namespace BladeSpinners.Gameplay.UI
                 ShrinePerkData data = ShrinePerkCatalog.GetPerk(perkType);
                 if (data == null) continue;
 
+                Color perkRarityColor = GetRarityColor(data.Rarity);
                 Rect bRect = new Rect(startX, startY + (badgeH + 4f) * idx, badgeW, badgeH);
                 DrawRect(bRect, new Color(0.02f, 0.05f, 0.10f, 0.85f));
-                DrawFrameCorners(bRect, data.ThemeColor, 6f, 1.2f);
-                DrawFittedLabel(new Rect(bRect.x + 6f, bRect.y + 2f, bRect.width - 12f, bRect.height - 4f), $"{data.IconSymbol} {data.Name}", bodyLabelStyle, data.ThemeColor, 9);
+                DrawFrameCorners(bRect, perkRarityColor, 6f, 1.2f);
+                DrawFittedLabel(new Rect(bRect.x + 6f, bRect.y + 2f, bRect.width - 12f, bRect.height - 4f), $"{data.IconSymbol} {data.Name}", bodyLabelStyle, perkRarityColor, 9);
                 idx++;
             }
         }
@@ -806,85 +894,205 @@ namespace BladeSpinners.Gameplay.UI
             float totalTime = Mathf.Max(0.1f, duel.TotalDuration);
             float timeRatio = Mathf.Clamp01(timeLeft / totalTime);
 
-            int sw = Screen.width;
-            int sh = Screen.height;
+            int sw = Mathf.RoundToInt(UiWidth);
+            int sh = Mathf.RoundToInt(UiHeight);
 
-            float panelW = Mathf.Clamp(580f * uiScale, 460f, 780f);
-            float panelH = Mathf.Clamp(190f * uiScale, 160f, 250f);
-            Rect panel = new Rect(sw * 0.5f - panelW * 0.5f, sh * 0.36f - panelH * 0.5f, panelW, panelH);
+            float panelW = Mathf.Clamp(620f * uiScale, 500f, 920f);
+            float panelH = Mathf.Clamp(200f * uiScale, 170f, 290f);
+            Rect panel = new Rect(sw * 0.5f - panelW * 0.5f, sh * 0.72f - panelH * 0.5f, panelW, panelH);
 
             Color frameColor = meter >= 0.5f
                 ? Color.Lerp(ACCENT_GOLD, ACCENT_CYAN, (meter - 0.5f) * 2f)
                 : Color.Lerp(ACCENT_GOLD, ACCENT_RED, (0.5f - meter) * 2f);
 
             // Background & Border
-            DrawPanelFrame(panel, new Color(0.02f, 0.04f, 0.09f, 0.94f), new Color(0.04f, 0.08f, 0.16f, 0.98f), frameColor, 3f);
-            DrawFrameCorners(panel, frameColor, 18f, 3f);
+            DrawPanelFrame(panel, new Color(0.02f, 0.04f, 0.09f, 0.95f), new Color(0.04f, 0.08f, 0.16f, 0.98f), frameColor, 3f);
+            DrawFrameCorners(panel, frameColor, 20f, 3f);
 
             float pad = Mathf.Clamp(12f * uiScale, 10f, 20f);
 
-            // 1. Header Title
-            float headerH = Mathf.Clamp(36f * uiScale, 30f, 48f);
-            Rect headerRect = new Rect(panel.x + pad, panel.y + 6f, panel.width - pad * 2f, headerH);
-            DrawFittedLabel(headerRect, "BLADE LOCK CLASH // 激突ブレードロック", titleBarStyle, frameColor, 13);
+            // 1. Header Title by Minigame Type
+            string minigameTitle;
+            string minigamePrompt;
+            switch (duel.CurrentMinigame)
+            {
+                case ClashMinigameType.PrecisionTiming:
+                    minigameTitle = "BLADE LOCK CLASH // PRECISION STRIKE [一閃]";
+                    minigamePrompt = "CLICK [LEFT MOUSE BUTTON] IN THE CRITICAL TARGET ZONE!";
+                    break;
+                case ClashMinigameType.RhythmBeat:
+                    minigameTitle = "BLADE LOCK CLASH // RHYTHM COMBO [連続撃]";
+                    minigamePrompt = $"CLICK [LMB] AS THE RING CLOSES! [BEAT {duel.CurrentBeatIndex + 1}/{duel.TotalBeats}]";
+                    break;
+                case ClashMinigameType.TensionBalance:
+                    minigameTitle = "BLADE LOCK CLASH // TENSION BALANCE [拮抗維持]";
+                    minigamePrompt = "HOLD [LMB] TO THRUST UP // RELEASE [LMB] TO FALL";
+                    break;
+                case ClashMinigameType.OrbitalCrosshair:
+                    minigameTitle = "BLADE LOCK CLASH // ORBITAL LOCK [旋風追尾]";
+                    minigamePrompt = "CLICK [LMB] WHEN ORBITING SPARK OVERLAPS RETICLE!";
+                    break;
+                case ClashMinigameType.ReflexTrigger:
+                    minigameTitle = "BLADE LOCK CLASH // QUICK-DRAW REFLEX [瞬撃拔刀]";
+                    if (duel.FalseStart)
+                        minigamePrompt = "⚠ FALSE START! CLICKED PREMATURELY! ⚠";
+                    else if (duel.ReflexSignalActive)
+                        minigamePrompt = "⚡⚡ STRIKE NOW! CLICK [LEFT MOUSE BUTTON]! ⚡⚡";
+                    else
+                        minigamePrompt = "STAND BY... WAIT FOR THE STRIKE SIGNAL (DO NOT CLICK!)";
+                    break;
+                default:
+                    minigameTitle = "BLADE LOCK CLASH // OVERPOWER MASH [猛連打]";
+                    minigamePrompt = "RAPIDLY CLICK [LEFT MOUSE BUTTON] TO OVERPOWER!";
+                    break;
+            }
 
-            // 2. Tug-Of-War Gauge Bar
-            float barY = headerRect.yMax + 8f;
-            float barH = Mathf.Clamp(32f * uiScale, 26f, 42f);
+            float headerH = Mathf.Clamp(34f * uiScale, 28f, 44f);
+            Rect headerRect = new Rect(panel.x + pad, panel.y + 6f, panel.width - pad * 2f, headerH);
+            DrawFittedLabel(headerRect, minigameTitle, titleBarStyle, frameColor, 13);
+
+            // 2. Interactive Minigame Gauge Area
+            float barY = headerRect.yMax + 6f;
+            float barH = Mathf.Clamp(42f * uiScale, 34f, 54f);
             Rect gaugeRect = new Rect(panel.x + pad, barY, panel.width - pad * 2f, barH);
 
-            // Gauge Frame
             DrawRect(gaugeRect, new Color(0.05f, 0.05f, 0.08f, 0.9f));
             DrawPanelFrame(gaugeRect, new Color(0f, 0f, 0f, 0.8f), new Color(0.05f, 0.05f, 0.08f, 0.9f), new Color(0.4f, 0.5f, 0.6f, 0.6f), 1.5f);
 
-            // Player Fill (Left side)
-            float playerFillW = gaugeRect.width * meter;
-            if (playerFillW > 1f)
+            // Render specific minigame controls inside gaugeRect
+            switch (duel.CurrentMinigame)
             {
-                Rect playerFillRect = new Rect(gaugeRect.x, gaugeRect.y, playerFillW, gaugeRect.height);
-                Color pCol = Color.Lerp(new Color(0.1f, 0.6f, 1f, 0.85f), new Color(0.2f, 1f, 0.6f, 0.95f), meter);
-                DrawRect(playerFillRect, pCol);
+                case ClashMinigameType.PrecisionTiming:
+                    // Draw Sweet Spot Zone
+                    float sweetX1 = gaugeRect.x + gaugeRect.width * duel.SweetSpotMin;
+                    float sweetW = gaugeRect.width * (duel.SweetSpotMax - duel.SweetSpotMin);
+                    Rect sweetRect = new Rect(sweetX1, gaugeRect.y + 2f, sweetW, gaugeRect.height - 4f);
+                    DrawRect(sweetRect, new Color(0.2f, 0.95f, 0.45f, 0.45f));
+                    DrawFrameCorners(sweetRect, ACCENT_GOLD, 6f, 2f);
+                    DrawFittedLabel(sweetRect, "TARGET ZONE", bodyLabelStyle, ACCENT_GOLD, 9);
+
+                    // Oscillating Needle
+                    float needleX = gaugeRect.x + gaugeRect.width * duel.NeedlePos;
+                    Rect needleRect = new Rect(needleX - 3f, gaugeRect.y - 4f, 6f, gaugeRect.height + 8f);
+                    DrawRect(needleRect, ACCENT_RED);
+                    DrawFrameCorners(needleRect, Color.white, 4f, 1.5f);
+                    break;
+
+                case ClashMinigameType.RhythmBeat:
+                    float centerBx = gaugeRect.center.x;
+                    float centerBy = gaugeRect.center.y;
+                    float targetNodeSize = 24f * uiScale;
+                    Rect targetNodeRect = new Rect(centerBx - targetNodeSize * 0.5f, centerBy - targetNodeSize * 0.5f, targetNodeSize, targetNodeSize);
+                    DrawPanelFrame(targetNodeRect, new Color(0.1f, 0.4f, 0.8f, 0.9f), new Color(0.05f, 0.1f, 0.2f, 0.9f), ACCENT_CYAN, 2f);
+
+                    float ringScale = Mathf.Lerp(gaugeRect.width * 0.45f, targetNodeSize * 0.6f, duel.BeatProgress);
+                    Rect ringRect = new Rect(centerBx - ringScale, centerBy - ringScale * 0.4f, ringScale * 2f, ringScale * 0.8f);
+                    Color ringColor = duel.BeatProgress >= 0.78f ? ACCENT_GOLD : ACCENT_CYAN;
+                    DrawPanelFrame(ringRect, Color.clear, Color.clear, ringColor, 2f);
+
+                    for (int b = 0; b < duel.TotalBeats; b++)
+                    {
+                        float bX = gaugeRect.x + 20f + b * 24f;
+                        Rect bRect = new Rect(bX, gaugeRect.y + 8f, 14f, 14f);
+                        Color bCol = b < duel.CurrentBeatIndex ? ACCENT_CYAN : (b == duel.CurrentBeatIndex ? ACCENT_GOLD : new Color(0.4f, 0.4f, 0.5f, 0.6f));
+                        DrawRect(bRect, bCol);
+                    }
+                    break;
+
+                case ClashMinigameType.TensionBalance:
+                    float bTargetX = gaugeRect.x + gaugeRect.width * duel.BalanceTargetPos;
+                    float bZoneW = gaugeRect.width * 0.26f;
+                    Rect bZoneRect = new Rect(bTargetX - bZoneW * 0.5f, gaugeRect.y + 3f, bZoneW, gaugeRect.height - 6f);
+                    DrawRect(bZoneRect, new Color(0.2f, 0.9f, 0.5f, 0.4f));
+                    DrawFrameCorners(bZoneRect, ACCENT_GOLD, 6f, 2f);
+
+                    float pBobX = gaugeRect.x + gaugeRect.width * duel.BalanceBobberPos;
+                    Rect pBobRect = new Rect(pBobX - 10f, gaugeRect.y - 2f, 20f, gaugeRect.height + 4f);
+                    DrawRect(pBobRect, ACCENT_CYAN);
+                    DrawFrameCorners(pBobRect, Color.white, 4f, 1.5f);
+                    break;
+
+                case ClashMinigameType.OrbitalCrosshair:
+                    float targetX = gaugeRect.x + (duel.TargetLockAngle / 360f) * gaugeRect.width;
+                    Rect crossRect = new Rect(targetX - 12f, gaugeRect.y + 2f, 24f, gaugeRect.height - 4f);
+                    DrawPanelFrame(crossRect, new Color(0.9f, 0.3f, 0.1f, 0.3f), Color.clear, ACCENT_GOLD, 2f);
+                    DrawFittedLabel(crossRect, "LOCK", bodyLabelStyle, ACCENT_GOLD, 9);
+
+                    float orbX = gaugeRect.x + (duel.OrbitAngle / 360f) * gaugeRect.width;
+                    Rect orbRect = new Rect(orbX - 8f, gaugeRect.y - 2f, 16f, gaugeRect.height + 4f);
+                    DrawRect(orbRect, ACCENT_CYAN);
+                    break;
+
+                case ClashMinigameType.ReflexTrigger:
+                    if (duel.ReflexSignalActive && !duel.FalseStart)
+                    {
+                        DrawRect(gaugeRect, new Color(1f, 0.85f, 0.1f, 0.85f));
+                        DrawFittedLabel(gaugeRect, "⚡⚡ CLICK LEFT MOUSE BUTTON NOW! ⚡⚡", titleBarStyle, Color.black, 14);
+                    }
+                    else if (duel.FalseStart)
+                    {
+                        DrawRect(gaugeRect, new Color(0.8f, 0.1f, 0.1f, 0.85f));
+                        DrawFittedLabel(gaugeRect, "FALSE START // RECOIL PENALTY", titleBarStyle, Color.white, 12);
+                    }
+                    else
+                    {
+                        float standbyPulse = 0.4f + 0.3f * Mathf.Sin(Time.unscaledTime * 12f);
+                        DrawRect(gaugeRect, new Color(0.8f, 0.2f, 0.1f, standbyPulse));
+                        DrawFittedLabel(gaugeRect, "STAND BY... DO NOT CLICK", sectionLabelStyle, ACCENT_GOLD, 12);
+                    }
+                    break;
+
+                default:
+                    // Rapid Mash (Tug of war fill)
+                    float playerFillW = gaugeRect.width * meter;
+                    if (playerFillW > 1f)
+                    {
+                        Rect playerFillRect = new Rect(gaugeRect.x, gaugeRect.y, playerFillW, gaugeRect.height);
+                        Color pCol = Color.Lerp(new Color(0.1f, 0.6f, 1f, 0.85f), new Color(0.2f, 1f, 0.6f, 0.95f), meter);
+                        DrawRect(playerFillRect, pCol);
+                    }
+
+                    float enemyFillW = gaugeRect.width * (1f - meter);
+                    if (enemyFillW > 1f)
+                    {
+                        Rect enemyFillRect = new Rect(gaugeRect.x + playerFillW, gaugeRect.y, enemyFillW, gaugeRect.height);
+                        Color eCol = Color.Lerp(new Color(0.9f, 0.2f, 0.2f, 0.85f), new Color(0.7f, 0.1f, 0.8f, 0.95f), 1f - meter);
+                        DrawRect(enemyFillRect, eCol);
+                    }
+
+                    float reticleX = gaugeRect.x + gaugeRect.width * meter;
+                    float reticleSize = Mathf.Clamp(36f * uiScale, 28f, 48f);
+                    Rect reticleRect = new Rect(reticleX - reticleSize * 0.5f, gaugeRect.center.y - reticleSize * 0.5f, reticleSize, reticleSize);
+                    DrawRect(reticleRect, new Color(0.05f, 0.05f, 0.08f, 0.85f));
+                    DrawFrameCorners(reticleRect, frameColor, 8f, 2f);
+                    GUIStyle diamondStyle = new GUIStyle(titleBarStyle)
+                    {
+                        fontSize = Mathf.RoundToInt(18f * uiScale),
+                        alignment = TextAnchor.MiddleCenter
+                    };
+                    GUI.Label(reticleRect, "◆", diamondStyle);
+                    break;
             }
 
-            // Enemy Fill (Right side)
-            float enemyFillW = gaugeRect.width * (1f - meter);
-            if (enemyFillW > 1f)
-            {
-                Rect enemyFillRect = new Rect(gaugeRect.x + playerFillW, gaugeRect.y, enemyFillW, gaugeRect.height);
-                Color eCol = Color.Lerp(new Color(0.9f, 0.2f, 0.2f, 0.85f), new Color(0.7f, 0.1f, 0.8f, 0.95f), 1f - meter);
-                DrawRect(enemyFillRect, eCol);
-            }
+            // 3. Mini Overall Dominance Bar below minigame gauge
+            float domY = gaugeRect.yMax + 4f;
+            float domH = 6f;
+            Rect domRect = new Rect(panel.x + pad, domY, panel.width - pad * 2f, domH);
+            DrawRect(domRect, new Color(0.1f, 0.1f, 0.15f, 0.9f));
+            DrawRect(new Rect(domRect.x, domRect.y, domRect.width * meter, domH), frameColor);
 
-            // Center Target Notch
-            float centerNotchX = gaugeRect.x + gaugeRect.width * 0.5f;
-            DrawRect(new Rect(centerNotchX - 1.5f, gaugeRect.y - 3f, 3f, gaugeRect.height + 6f), new Color(1f, 1f, 1f, 0.75f));
-
-            // Sliding Clash Diamond Reticle
-            float reticleX = gaugeRect.x + gaugeRect.width * meter;
-            float reticleSize = Mathf.Clamp(36f * uiScale, 28f, 48f);
-            Rect reticleRect = new Rect(reticleX - reticleSize * 0.5f, gaugeRect.center.y - reticleSize * 0.5f, reticleSize, reticleSize);
-            DrawRect(reticleRect, new Color(0.05f, 0.05f, 0.08f, 0.85f));
-            DrawFrameCorners(reticleRect, frameColor, 8f, 2f);
-            GUIStyle diamondStyle = new GUIStyle(titleBarStyle)
-            {
-                fontSize = Mathf.RoundToInt(18f * uiScale),
-                alignment = TextAnchor.MiddleCenter
-            };
-            GUI.Label(reticleRect, "◆", diamondStyle);
-
-            // 3. Action Prompt (Pulsing mash callout)
-            float promptY = gaugeRect.yMax + 10f;
-            float promptH = Mathf.Clamp(38f * uiScale, 32f, 50f);
+            // 4. Action Prompt (Pulsing callout)
+            float promptY = domRect.yMax + 6f;
+            float promptH = Mathf.Clamp(32f * uiScale, 26f, 40f);
             Rect promptRect = new Rect(panel.x + pad, promptY, panel.width - pad * 2f, promptH);
 
             float pulse = 0.85f + Mathf.Abs(Mathf.Sin(Time.unscaledTime * 10f)) * 0.35f;
             Color promptColor = new Color(frameColor.r, frameColor.g, frameColor.b, pulse);
-            string mashText = "MASH [SPACE] OR [CLICK] RAPIDLY TO OVERPOWER!";
-            DrawFittedLabel(promptRect, mashText, sectionLabelStyle, promptColor, 12);
+            DrawFittedLabel(promptRect, minigamePrompt, sectionLabelStyle, promptColor, 12);
 
-            // 4. Timer Depletion Bar
-            float timerH = Mathf.Clamp(6f * uiScale, 4f, 8f);
-            Rect timerRect = new Rect(panel.x + pad, panel.yMax - timerH - 8f, (panel.width - pad * 2f) * timeRatio, timerH);
+            // 5. Timer Depletion Bar
+            float timerH = Mathf.Clamp(5f * uiScale, 4f, 7f);
+            Rect timerRect = new Rect(panel.x + pad, panel.yMax - timerH - 6f, (panel.width - pad * 2f) * timeRatio, timerH);
             DrawRect(timerRect, frameColor);
         }
 
@@ -894,8 +1102,8 @@ namespace BladeSpinners.Gameplay.UI
             if (progression == null)
                 return;
 
-            int sw = Screen.width;
-            int sh = Screen.height;
+            int sw = Mathf.RoundToInt(UiWidth);
+            int sh = Mathf.RoundToInt(UiHeight);
             string label =
                 $"LEVEL {progression.CurrentLevelOneBased}/{progression.TotalLevels}   " +
                 $"ARENA {progression.CurrentArenaOneBased}/{progression.ArenasPerLevel}\n" +
@@ -953,7 +1161,7 @@ namespace BladeSpinners.Gameplay.UI
                 color = color,
                 startTime = Time.unscaledTime,
                 duration = 1.15f * scale,
-                screenPos = new Vector2(Screen.width * 0.5f + UnityEngine.Random.Range(-120f, 120f), Screen.height * 0.38f + UnityEngine.Random.Range(-40f, 40f)),
+                screenPos = new Vector2(UiWidth * 0.5f + UnityEngine.Random.Range(-120f, 120f), UiHeight * 0.38f + UnityEngine.Random.Range(-40f, 40f)),
                 scale = scale
             });
         }
@@ -980,20 +1188,32 @@ namespace BladeSpinners.Gameplay.UI
                 float bounce = Mathf.Sin(norm * Mathf.PI * 0.5f) * 45f;
                 float popScale = (1f + Mathf.Sin(norm * Mathf.PI) * 0.35f) * popup.scale;
 
-                int fontSize = Mathf.RoundToInt(Mathf.Clamp(Screen.height * 0.045f * popScale, 24f, 72f));
+                float uiScale = GetUiScale();
+                int fontSize = Mathf.RoundToInt(Mathf.Clamp(17f * uiScale * popScale, 12f, 32f));
                 GUIStyle style = new GUIStyle(titleBarStyle)
                 {
                     fontSize = fontSize,
                     alignment = TextAnchor.MiddleCenter,
-                    fontStyle = FontStyle.Bold
+                    fontStyle = FontStyle.Bold,
+                    wordWrap = false,
+                    clipping = TextClipping.Overflow
                 };
 
+                Vector2 textSize = style.CalcSize(new GUIContent(popup.text));
+                float boxW = textSize.x + 18f * uiScale;
+                float boxH = textSize.y + 8f * uiScale;
                 Vector2 pos = popup.screenPos - new Vector2(0f, bounce);
-                Rect r = new Rect(pos.x - 200f, pos.y - 40f, 400f, 80f);
+                Rect r = new Rect(pos.x - boxW * 0.5f, pos.y - boxH * 0.5f, boxW, boxH);
+
+                // Backdrop dark cyber card with vibrant border
+                Color bgCard = new Color(0.02f, 0.04f, 0.08f, alpha * 0.90f);
+                Color borderCard = new Color(popup.color.r, popup.color.g, popup.color.b, alpha * 0.95f);
+                DrawPanelFrame(r, bgCard, bgCard, borderCard, 2f);
+                DrawFrameCorners(r, borderCard, 10f, 1.5f);
 
                 // Shadow
-                style.normal.textColor = new Color(0f, 0f, 0f, alpha * 0.85f);
-                GUI.Label(new Rect(r.x + 3f, r.y + 3f, r.width, r.height), popup.text, style);
+                style.normal.textColor = new Color(0f, 0f, 0f, alpha * 0.95f);
+                GUI.Label(new Rect(r.x + 2f, r.y + 2f, r.width, r.height), popup.text, style);
 
                 // Main text
                 Color c = popup.color;
@@ -1005,42 +1225,111 @@ namespace BladeSpinners.Gameplay.UI
 
         private void DrawStartCountdownOverlay(MatchManager match)
         {
-            int sw = Screen.width;
-            int sh = Screen.height;
+            int sw = Mathf.RoundToInt(UiWidth);
+            int sh = Mathf.RoundToInt(UiHeight);
 
             float remaining = match.CountdownRemaining;
             float total = Mathf.Max(0.1f, match.CountdownDuration);
+            float elapsed = total - remaining;
+            float showcaseDuration = Mathf.Max(0.1f, total - 3.0f);
 
-            // Calculate needle position 0..1 (oscillates faster as countdown nears 0)
-            float speedMultiplier = Mathf.Lerp(3.2f, 1.8f, remaining / total);
-            float needlePos01 = Mathf.PingPong(Time.unscaledTime * speedMultiplier, 1f);
+            // Reset minigame parameters to 0 at the start of every match countdown
+            if (lastCountdownMatch != match || elapsed <= 0.05f)
+            {
+                ripBobberPos = 0f;
+                ripBobberVel = 0f;
+                ripTargetPos = 0.5f;
+                ripTensionCharge = 0f;
+                ripTargetTimer = 0f;
+                lastCountdownMatch = match;
+            }
 
-            // Handle Input
+            // Stardew Valley-Style Buoyant Physics Simulation for the Launch Bobber
             if (!match.HasPlayerRipped)
             {
-                if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Return) || (Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame))
+                bool isHolding = false;
+                if (Mouse.current != null && (Mouse.current.leftButton.isPressed || Mouse.current.rightButton.isPressed)) isHolding = true;
+                if (Keyboard.current != null && (Keyboard.current.spaceKey.isPressed || Keyboard.current.enterKey.isPressed)) isHolding = true;
+                if (Gamepad.current != null && (Gamepad.current.buttonSouth.isPressed || Gamepad.current.buttonWest.isPressed || Gamepad.current.rightTrigger.isPressed || Gamepad.current.leftTrigger.isPressed || Gamepad.current.rightShoulder.isPressed)) isHolding = true;
+
+                // Physics update: smooth buoyant acceleration and gentle gravity
+                float dt = Time.unscaledDeltaTime;
+                float targetVel = isHolding ? 0.45f : -0.38f;
+                float accelRate = isHolding ? 1.6f : 1.3f;
+                ripBobberVel = Mathf.MoveTowards(ripBobberVel, targetVel, dt * accelRate);
+                ripBobberVel = Mathf.Clamp(ripBobberVel, -0.45f, 0.45f);
+                ripBobberPos = Mathf.Clamp01(ripBobberPos + ripBobberVel * dt);
+                if (ripBobberPos <= 0f || ripBobberPos >= 1f) ripBobberVel *= -0.15f;
+
+                // Smooth organic sweet-spot wander
+                ripTargetTimer += dt * 1.2f;
+                ripTargetPos = 0.50f + 0.33f * Mathf.Sin(ripTargetTimer) + 0.08f * Mathf.Sin(ripTargetTimer * 2.5f);
+
+                // Overlap calculation: sweet-spot zone is 0.28 wide
+                float sweetZoneHalfH = 0.14f;
+                bool insideSweetSpot = Mathf.Abs(ripBobberPos - ripTargetPos) <= sweetZoneHalfH;
+
+                if (insideSweetSpot)
+                    ripTensionCharge = Mathf.Clamp01(ripTensionCharge + 0.20f * dt);
+                else
+                    ripTensionCharge = Mathf.Clamp01(ripTensionCharge - 0.12f * dt);
+
+                // If countdown reaches 0, trigger launch with current charged tension
+                if (remaining <= 0.08f)
                 {
-                    match.ExecuteRipCord(needlePos01);
+                    match.ExecuteRipCord(ripTensionCharge);
                 }
             }
 
-            // ── TOP ANIME COUNTDOWN BANNER ──────────────────────────────────────────
+            // ── TOP ANIME COUNTDOWN & SHOWCASE BANNER ───────────────────────────────
             string mainText;
             string subText;
             Color textColor;
             Color borderColor;
 
-            if (remaining > 2.0f)
+            if (elapsed < showcaseDuration)
+            {
+                float shotDuration = showcaseDuration / 4f;
+                int shotIndex = Mathf.Clamp(Mathf.FloorToInt(elapsed / shotDuration), 0, 3);
+                switch (shotIndex)
+                {
+                    case 0:
+                        mainText = "INSPECTION 01";
+                        subText = "CHASSIS & FUSION WHEEL // PRE-FLIGHT SCAN";
+                        textColor = ACCENT_CYAN;
+                        borderColor = ACCENT_CYAN;
+                        break;
+                    case 1:
+                        mainText = "INSPECTION 02";
+                        subText = "FACE BOLT & ENERGY CORE // RESONANCE SYNC";
+                        textColor = ACCENT_MAGENTA;
+                        borderColor = ACCENT_MAGENTA;
+                        break;
+                    case 2:
+                        mainText = "INSPECTION 03";
+                        subText = "LOCK SYSTEM // TENSION CALIBRATION";
+                        textColor = ACCENT_GOLD;
+                        borderColor = ACCENT_GOLD;
+                        break;
+                    default:
+                        mainText = "INSPECTION 04";
+                        subText = "ARENA SECTOR SCAN // ENGAGE LAUNCHER";
+                        textColor = ACCENT_ORANGE;
+                        borderColor = ACCENT_ORANGE;
+                        break;
+                }
+            }
+            else if (remaining > 2.0f)
             {
                 mainText = "3";
-                subText = "READY... CHARGE LAUNCHER!";
+                subText = "READY... THREE!";
                 textColor = new Color(1f, 0.9f, 0.2f, 1f);
                 borderColor = ACCENT_YEL;
             }
             else if (remaining > 1.0f)
             {
                 mainText = "2";
-                subText = "SET... TENSION PEAK!";
+                subText = "SET... TWO!";
                 textColor = ACCENT_CYAN;
                 borderColor = ACCENT_CYAN;
             }
@@ -1060,7 +1349,7 @@ namespace BladeSpinners.Gameplay.UI
             }
 
             float pulse = 1f + Mathf.Sin(Time.unscaledTime * 14f) * 0.03f;
-            float topW = Mathf.Clamp(sw * 0.28f, 280f, 460f) * pulse;
+            float topW = Mathf.Clamp(sw * 0.38f, 360f, 580f) * pulse;
             float topH = Mathf.Clamp(sh * 0.14f, 100f, 170f) * pulse;
             Rect topPanel = new Rect((sw - topW) * 0.5f, sh * 0.05f, topW, topH);
 
@@ -1068,21 +1357,8 @@ namespace BladeSpinners.Gameplay.UI
             DrawFrameCorners(topPanel, borderColor, topPanel.width * 0.16f, 2f);
             DrawMotionBandClipped(new Rect(topPanel.x + topPanel.width * 0.5f, topPanel.y, topPanel.width * 0.45f, topPanel.height), borderColor, 8f, 14f, 0.12f);
 
-            GUIStyle countdownStyle = new GUIStyle(titleBarStyle)
-            {
-                fontSize = Mathf.RoundToInt(Mathf.Clamp(Screen.height * 0.075f, 44f, 96f)),
-                alignment = TextAnchor.MiddleCenter,
-                fontStyle = FontStyle.Bold
-            };
-            countdownStyle.normal.textColor = textColor;
-
-            GUIStyle countdownSubStyle = new GUIStyle(bodyLabelStyle)
-            {
-                alignment = TextAnchor.MiddleCenter,
-                fontSize = Mathf.RoundToInt(Mathf.Clamp(Screen.height * 0.022f, 14f, 26f)),
-                fontStyle = FontStyle.Bold
-            };
-            countdownSubStyle.normal.textColor = borderColor;
+            GUIStyle countdownStyle = CreateStaticStyle(titleBarStyle, textColor, Mathf.RoundToInt(Mathf.Clamp(UiHeight * 0.065f, 36f, 84f)), TextAnchor.MiddleCenter, FontStyle.Bold);
+            GUIStyle countdownSubStyle = CreateStaticStyle(bodyLabelStyle, borderColor, Mathf.RoundToInt(Mathf.Clamp(UiHeight * 0.019f, 12f, 22f)), TextAnchor.MiddleCenter, FontStyle.Bold);
 
             GUILayout.BeginArea(topPanel);
             GUILayout.FlexibleSpace();
@@ -1091,109 +1367,109 @@ namespace BladeSpinners.Gameplay.UI
             GUILayout.FlexibleSpace();
             GUILayout.EndArea();
 
-            // ── RIP-CORD LAUNCHER TACHOMETER GAUGE ───────────────────────────────────
-            float meterW = Mathf.Clamp(sw * 0.46f, 460f, 800f);
-            float meterH = Mathf.Clamp(sh * 0.22f, 160f, 240f);
-            Rect meterPanel = new Rect((sw - meterW) * 0.5f, sh * 0.68f, meterW, meterH);
+            // ── STARDEW VALLEY-STYLE LAUNCH TENSION GAUGE ───────────────────────────
+            float meterW = Mathf.Clamp(sw * 0.38f, 380f, 620f);
+            float meterH = Mathf.Clamp(sh * 0.32f, 250f, 370f);
+            Rect meterPanel = new Rect((sw - meterW) * 0.5f, sh * 0.58f, meterW, meterH);
 
             Color meterBorder = match.HasPlayerRipped
                 ? (match.RipRating == BladeSpinners.Abilities.LaunchRating.Perfect ? ACCENT_YEL : (match.RipRating == BladeSpinners.Abilities.LaunchRating.Great ? ACCENT_CYAN : ACCENT_ORANGE))
-                : ACCENT_CYAN;
+                : (ripTensionCharge >= 0.85f ? ACCENT_GOLD : ACCENT_CYAN);
 
             DrawPanelFrame(meterPanel, new Color(0.02f, 0.05f, 0.10f, 0.95f), new Color(0.04f, 0.08f, 0.16f, 0.98f), meterBorder, 3f);
-            DrawFrameCorners(meterPanel, meterBorder, 32f, 2f);
+            DrawFrameCorners(meterPanel, meterBorder, 28f, 2f);
 
-            // Title
-            GUIStyle gaugeTitleStyle = new GUIStyle(sectionLabelStyle)
-            {
-                fontSize = Mathf.RoundToInt(Mathf.Clamp(sh * 0.022f, 15f, 25f)),
-                alignment = TextAnchor.MiddleCenter
-            };
-            GUI.Label(new Rect(meterPanel.x, meterPanel.y + 10f, meterPanel.width, 26f), "RIP-CORD LAUNCHER // POWER TENSION METER", gaugeTitleStyle);
+            // Title Header with generous padding
+            float headerH = Mathf.Clamp(sh * 0.030f, 24f, 34f);
+            Rect titleRect = new Rect(meterPanel.x + 14f, meterPanel.y + 12f, meterPanel.width - 28f, headerH);
+            DrawFittedLabel(titleRect, "RIP LAUNCHER // POWER TENSION", sectionLabelStyle, ACCENT_CYAN, 12);
 
-            // Gauge Bar Background Track
-            float trackPad = 36f;
-            float trackX = meterPanel.x + trackPad;
-            float trackY = meterPanel.y + 46f;
-            float trackW = meterPanel.width - trackPad * 2f;
-            float trackH = 34f;
-            Rect trackRect = new Rect(trackX, trackY, trackW, trackH);
+            // Inner Track Areas
+            float innerPad = 16f;
+            float trackAreaX = meterPanel.x + innerPad + 10f;
+            float trackAreaY = titleRect.yMax + 8f;
+            float trackAreaH = meterPanel.yMax - trackAreaY - 62f;
 
-            DrawRect(trackRect, new Color(0.05f, 0.07f, 0.12f, 1f));
+            // 1. Left Vertical Track: Bobber & Moving Sweet-Spot Target Zone
+            float bobberTrackW = meterPanel.width * 0.48f;
+            Rect bobberTrackRect = new Rect(trackAreaX, trackAreaY, bobberTrackW, trackAreaH);
+            DrawPanelFrame(bobberTrackRect, new Color(0.04f, 0.06f, 0.11f, 0.95f), new Color(0.02f, 0.04f, 0.08f, 0.98f), new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.4f), 1.5f);
 
-            // Color gradient zones along the track:
-            // 0..0.45: Gray/Orange (Mishap/Good)
-            // 0.45..0.78: Cyan (Great)
-            // 0.78..0.98: Glowing Gold (SWEET SPOT // 125% SPIN)
-            DrawRect(new Rect(trackX, trackY, trackW * 0.45f, trackH), new Color(0.35f, 0.35f, 0.4f, 0.65f));
-            DrawRect(new Rect(trackX + trackW * 0.45f, trackY, trackW * 0.33f, trackH), new Color(0.12f, 0.75f, 0.95f, 0.75f));
+            // Sweet Spot Zone in Vertical Track (0 at bottom, 1 at top)
+            float sweetH = trackAreaH * 0.28f;
+            float sweetCenterY = trackAreaY + trackAreaH * (1f - ripTargetPos);
+            Rect sweetZoneRect = new Rect(bobberTrackRect.x + 3f, sweetCenterY - sweetH * 0.5f, bobberTrackW - 6f, sweetH);
+            sweetZoneRect.y = Mathf.Clamp(sweetZoneRect.y, trackAreaY + 2f, trackAreaY + trackAreaH - sweetH - 2f);
 
-            // Sweet Spot Zone (Glowing Pulse)
-            float sweetSpotAlpha = 0.75f + Mathf.Sin(Time.unscaledTime * 12f) * 0.2f;
-            Rect sweetSpotRect = new Rect(trackX + trackW * 0.78f, trackY - 2f, trackW * 0.20f, trackH + 4f);
-            DrawRect(sweetSpotRect, new Color(1f, 0.85f, 0.1f, sweetSpotAlpha));
-            DrawFrameCorners(sweetSpotRect, Color.white, 8f, 1.5f);
+            float sweetPulse = 0.70f + 0.30f * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 10f));
+            Color sweetColor = new Color(0.20f, 0.95f, 0.45f, 0.40f * sweetPulse);
+            DrawRect(sweetZoneRect, sweetColor);
+            DrawFrameCorners(sweetZoneRect, new Color(0.35f, 1f, 0.55f, 0.95f), 10f, 2f);
+            DrawFittedLabel(sweetZoneRect, "SWEET SPOT ZONE", bodyLabelStyle, new Color(0.85f, 1f, 0.90f, 0.9f), 10);
 
-            // Track Border
-            DrawPanelFrame(trackRect, Color.clear, Color.clear, new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.5f), 1.5f);
+            // Player Bobber Handle (Ascends with Left-Click, falls with gravity)
+            float bobberH = 26f;
+            float bobberY = trackAreaY + trackAreaH * (1f - ripBobberPos) - bobberH * 0.5f;
+            bobberY = Mathf.Clamp(bobberY, trackAreaY + 2f, trackAreaY + trackAreaH - bobberH - 2f);
+            Rect bobberRect = new Rect(bobberTrackRect.x + 6f, bobberY, bobberTrackW - 12f, bobberH);
 
-            // Needle Indicator
-            float displayedNeedle = match.HasPlayerRipped
-                ? (match.RipRating == BladeSpinners.Abilities.LaunchRating.Perfect ? 0.88f : (match.RipRating == BladeSpinners.Abilities.LaunchRating.Great ? 0.65f : (match.RipRating == BladeSpinners.Abilities.LaunchRating.Good ? 0.35f : 0.15f)))
-                : needlePos01;
-            float needleX = trackX + trackW * displayedNeedle;
-            Rect needleRect = new Rect(needleX - 4f, trackY - 8f, 8f, trackH + 16f);
+            bool isInsideSweet = Mathf.Abs(ripBobberPos - ripTargetPos) <= 0.14f;
+            Color bobberColor = isInsideSweet ? ACCENT_GOLD : new Color(0.40f, 0.85f, 1f, 1f);
+            DrawPanelFrame(bobberRect, new Color(bobberColor.r * 0.3f, bobberColor.g * 0.3f, bobberColor.b * 0.3f, 0.9f), new Color(0.08f, 0.08f, 0.12f, 0.98f), bobberColor, 2f);
+            DrawFrameCorners(bobberRect, bobberColor, 8f, 1.5f);
+            DrawFittedLabel(bobberRect, "▲ LAUNCH BOBBER ▲", sectionLabelStyle, bobberColor, 10);
 
-            // Needle Glow + Body
-            Color needleColor = match.HasPlayerRipped
-                ? (match.RipRating == BladeSpinners.Abilities.LaunchRating.Perfect ? new Color(1f, 0.9f, 0.2f, 1f) : Color.white)
-                : Color.white;
-            DrawRect(new Rect(needleX - 6f, trackY - 10f, 12f, trackH + 20f), new Color(needleColor.r, needleColor.g, needleColor.b, 0.35f));
-            DrawRect(needleRect, needleColor);
+            // 2. Right Vertical Bar: Tension Power Charge Meter (0%..100%)
+            float chargeBarX = bobberTrackRect.xMax + 18f;
+            float chargeBarW = meterPanel.width - chargeBarX + meterPanel.x - innerPad - 10f;
+            Rect chargeTrackRect = new Rect(chargeBarX, trackAreaY, chargeBarW, trackAreaH);
+            DrawPanelFrame(chargeTrackRect, new Color(0.04f, 0.06f, 0.11f, 0.95f), new Color(0.02f, 0.04f, 0.08f, 0.98f), new Color(ACCENT_GOLD.r, ACCENT_GOLD.g, ACCENT_GOLD.b, 0.5f), 1.5f);
 
-            // Zone Labels
-            GUIStyle zoneStyle = new GUIStyle(bodyLabelStyle)
+            // Filled Tension Level
+            float filledH = trackAreaH * ripTensionCharge;
+            Rect filledRect = new Rect(chargeTrackRect.x + 3f, chargeTrackRect.yMax - filledH, chargeBarW - 6f, filledH);
+            Color fillGrad = Color.Lerp(ACCENT_ORANGE, ACCENT_GOLD, ripTensionCharge);
+            DrawRect(filledRect, fillGrad);
+
+            // Tension Percent Text
+            GUIStyle chargeStyle = CreateStaticStyle(titleBarStyle, Color.white, Mathf.RoundToInt(Mathf.Clamp(sh * 0.022f, 14f, 24f)), TextAnchor.MiddleCenter, FontStyle.Bold);
+            GUI.Label(chargeTrackRect, $"{Mathf.RoundToInt(ripTensionCharge * 100f)}%\nPOWER", chargeStyle);
+
+            // Bottom Instructions & Result Prompt
+            GUIStyle promptStyle = new GUIStyle(bodyLabelStyle)
             {
                 fontSize = Mathf.RoundToInt(Mathf.Clamp(sh * 0.016f, 11f, 18f)),
                 alignment = TextAnchor.MiddleCenter,
-                fontStyle = FontStyle.Bold
+                fontStyle = FontStyle.Bold,
+                wordWrap = true
             };
-            zoneStyle.normal.textColor = Color.black;
-            GUI.Label(sweetSpotRect, "SWEET SPOT (125%)", zoneStyle);
-
-            // Subtitle Prompt / Rating Result
-            GUIStyle promptStyle = new GUIStyle(bodyLabelStyle)
-            {
-                fontSize = Mathf.RoundToInt(Mathf.Clamp(sh * 0.024f, 16f, 28f)),
-                alignment = TextAnchor.MiddleCenter,
-                fontStyle = FontStyle.Bold
-            };
+            Rect promptRect = new Rect(meterPanel.x + 12f, meterPanel.yMax - 54f, meterPanel.width - 24f, 46f);
 
             if (!match.HasPlayerRipped)
             {
-                promptStyle.normal.textColor = ACCENT_YEL;
-                GUI.Label(
-                    new Rect(meterPanel.x, trackY + trackH + 12f, meterPanel.width, 36f),
-                    "PRESS [SPACE] OR [LEFT CLICK] TO RIP THE CORD",
-                    promptStyle);
+                promptStyle.normal.textColor = isInsideSweet ? ACCENT_GOLD : ACCENT_CYAN;
+                string hint = isInsideSweet
+                    ? ">> PERFECT TENSION LOCK! CHARGING FAST! <<"
+                    : "HOLD [LEFT CLICK / SPACE / A / X] TO RISE ▲\nRELEASE TO FALL ▼";
+                GUI.Label(promptRect, hint, promptStyle);
             }
             else
             {
-                promptStyle.normal.textColor = match.RipRating switch
+                string ratingStr = match.RipRating switch
                 {
-                    BladeSpinners.Abilities.LaunchRating.Perfect => ACCENT_YEL,
+                    BladeSpinners.Abilities.LaunchRating.Perfect => "★ SUPER PERFECT RIP! (+140% SPIN +50 PTS) ★",
+                    BladeSpinners.Abilities.LaunchRating.Great => "GREAT RIP! (+118% SPIN POWER)",
+                    BladeSpinners.Abilities.LaunchRating.Good => "GOOD RIP (+95% SPIN)",
+                    _ => "MISHAP RIP (+75% SPIN)"
+                };
+                Color ratingCol = match.RipRating switch
+                {
+                    BladeSpinners.Abilities.LaunchRating.Perfect => ACCENT_GOLD,
                     BladeSpinners.Abilities.LaunchRating.Great => ACCENT_CYAN,
-                    BladeSpinners.Abilities.LaunchRating.Good => ACCENT_ORANGE,
-                    _ => Color.gray
+                    _ => ACCENT_ORANGE
                 };
-                string ratingMsg = match.RipRating switch
-                {
-                    BladeSpinners.Abilities.LaunchRating.Perfect => $"PERFECT RIP! ({Mathf.RoundToInt(match.RipMultiplier * 100)}% STARTING SPIN)",
-                    BladeSpinners.Abilities.LaunchRating.Great => $"GREAT RIP! ({Mathf.RoundToInt(match.RipMultiplier * 100)}% STARTING SPIN)",
-                    BladeSpinners.Abilities.LaunchRating.Good => $"GOOD RIP ({Mathf.RoundToInt(match.RipMultiplier * 100)}% STARTING SPIN)",
-                    _ => $"MISHAP RIP ({Mathf.RoundToInt(match.RipMultiplier * 100)}% STARTING SPIN)"
-                };
-                GUI.Label(new Rect(meterPanel.x, trackY + trackH + 12f, meterPanel.width, 36f), ratingMsg, promptStyle);
+                promptStyle.normal.textColor = ratingCol;
+                GUI.Label(promptRect, ratingStr, promptStyle);
             }
         }
 
@@ -1204,98 +1480,289 @@ namespace BladeSpinners.Gameplay.UI
                 return;
 
             BeyConfiguration config = player.BeyConfiguration;
-            int sw = Screen.width;
-            int sh = Screen.height;
+            int sw = Mathf.RoundToInt(UiWidth);
+            int sh = Mathf.RoundToInt(UiHeight);
 
-            // ── BOTTOM-CENTER COMBAT CHASSIS ────────────────────────────
-            float chassisW = Mathf.Clamp(sw * 0.44f, 440f, 680f);
-            float chassisH = Mathf.Clamp(sh * 0.11f, 84f, 130f);
-            Rect chassis = new Rect((sw - chassisW) * 0.5f, sh - chassisH - 16f, chassisW, chassisH);
-
-            DrawPanelFrame(chassis, new Color(0.02f, 0.05f, 0.10f, 0.88f), new Color(0.04f, 0.08f, 0.16f, 0.94f), new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.75f), 2.5f);
-            DrawFrameCorners(chassis, ACCENT_CYAN, 20f, 1.5f);
-
-            float padX = 18f;
-            float barW = chassis.width - padX * 2f;
-
-            // 1. Spin / Stamina (Health) Bar
-            float spinNorm = Mathf.Clamp01(config.CurrentSpin / GameConstants.MAX_SPIN);
-            float spinPct = (config.CurrentSpin / GameConstants.DEFAULT_STARTING_SPIN) * 100f;
-
-            Rect spinBarRect = new Rect(chassis.x + padX, chassis.y + 16f, barW, 26f);
-            DrawRect(spinBarRect, new Color(0.06f, 0.08f, 0.12f, 1f));
-
-            Color spinFillColor = spinPct > 100f
-                ? Color.Lerp(ACCENT_YEL, new Color(1f, 0.4f, 0.1f), Mathf.PingPong(Time.unscaledTime * 4f, 1f))
-                : (spinPct < 25f
-                    ? (Mathf.Sin(Time.unscaledTime * 10f) > 0 ? RED_DANGER : new Color(0.4f, 0.05f, 0.05f))
-                    : (spinPct < 50f ? ACCENT_ORANGE : ACCENT_CYAN));
-
-            DrawRect(new Rect(spinBarRect.x, spinBarRect.y, spinBarRect.width * spinNorm, spinBarRect.height), spinFillColor);
-
-            // Subtle segmented dividers on the spin bar
-            for (int i = 1; i < 10; i++)
-            {
-                float divX = spinBarRect.x + spinBarRect.width * (i / 10f);
-                DrawRect(new Rect(divX, spinBarRect.y, 2f, spinBarRect.height), new Color(0f, 0f, 0f, 0.45f));
-            }
-            DrawPanelFrame(spinBarRect, Color.clear, Color.clear, new Color(spinFillColor.r, spinFillColor.g, spinFillColor.b, 0.6f), 1.5f);
-
-            // Spin text
-            GUIStyle spinStyle = new GUIStyle(sectionLabelStyle)
-            {
-                fontSize = Mathf.RoundToInt(Mathf.Clamp(sh * 0.019f, 13f, 22f)),
-                alignment = TextAnchor.MiddleLeft
-            };
-            GUI.Label(new Rect(spinBarRect.x + 8f, spinBarRect.y - 1f, spinBarRect.width * 0.5f, spinBarRect.height), "SPIN STAMINA", spinStyle);
-
-            GUIStyle spinValStyle = new GUIStyle(sectionLabelStyle)
-            {
-                fontSize = Mathf.RoundToInt(Mathf.Clamp(sh * 0.021f, 14f, 25f)),
-                alignment = TextAnchor.MiddleRight,
-                fontStyle = FontStyle.Bold
-            };
-            spinValStyle.normal.textColor = spinFillColor;
-            GUI.Label(new Rect(spinBarRect.x + spinBarRect.width * 0.5f, spinBarRect.y - 1f, spinBarRect.width * 0.5f - 8f, spinBarRect.height), $"{Mathf.RoundToInt(config.CurrentSpin)} / {Mathf.RoundToInt(GameConstants.MAX_SPIN)} ({Mathf.RoundToInt(spinPct)}%)", spinValStyle);
-
-            // 2. Mana Bar
-            float manaNorm = Mathf.Clamp01(config.CurrentMana / config.MaxMana);
-            Rect manaBarRect = new Rect(chassis.x + padX, chassis.y + 48f, barW * 0.62f, 18f);
-            DrawRect(manaBarRect, new Color(0.06f, 0.08f, 0.12f, 1f));
-            DrawRect(new Rect(manaBarRect.x, manaBarRect.y, manaBarRect.width * manaNorm, manaBarRect.height), new Color(0.1f, 0.65f, 1f, 0.9f));
-            DrawPanelFrame(manaBarRect, Color.clear, Color.clear, new Color(0.1f, 0.65f, 1f, 0.5f), 1f);
-
-            GUIStyle manaStyle = new GUIStyle(bodyLabelStyle)
-            {
-                fontSize = Mathf.RoundToInt(Mathf.Clamp(sh * 0.015f, 10f, 17f)),
-                alignment = TextAnchor.MiddleLeft
-            };
-            manaStyle.normal.textColor = Color.white;
-            GUI.Label(new Rect(manaBarRect.x + 6f, manaBarRect.y - 1f, manaBarRect.width, manaBarRect.height), $"MANA  {Mathf.RoundToInt(config.CurrentMana)} / {Mathf.RoundToInt(config.MaxMana)}", manaStyle);
-
-            // 3. Ability Card / Ready Indicator
+            // ── LEAGUE OF LEGENDS / MOBA STYLE ABILITY HUD (BOTTOM-RIGHT) ──────────
             BladeSpinners.Abilities.BeyAbility ability = config.GetStatBlock().EquippedAbility;
-            string abilityName = ability != null ? ability.AbilityName.ToUpperInvariant() : "NO ABILITY";
-            bool isReady = config.IsAbilityReady && config.CurrentMana >= (ability != null ? config.GetEffectiveAbilityCost(ability) : 999f);
-
-            Rect abilityRect = new Rect(chassis.x + padX + barW * 0.64f, chassis.y + 48f, barW * 0.36f, 18f);
-            Color abilityBorder = isReady ? ACCENT_YEL : (config.IsAbilityReady ? ACCENT_CYAN : new Color(0.4f, 0.4f, 0.4f, 0.6f));
-            DrawPanelFrame(abilityRect, new Color(0.04f, 0.06f, 0.10f, 0.9f), new Color(0.04f, 0.06f, 0.10f, 0.9f), abilityBorder, 1f);
-
-            GUIStyle abilityStyle = new GUIStyle(bodyLabelStyle)
+            BeyPart faceBolt = config.GetEquippedPart(PartType.FaceBolt);
+            if (faceBolt == null && runContext.Player != null)
             {
-                fontSize = Mathf.RoundToInt(Mathf.Clamp(sh * 0.014f, 10f, 16f)),
+                var loadout = GetCurrentRunLoadout(runContext.Player);
+                if (loadout != null && loadout.TryGetValue(PartType.FaceBolt, out BeyPart fb))
+                    faceBolt = fb;
+            }
+            if (faceBolt == null && selectedMainMenuLoadout != null && selectedMainMenuLoadout.TryGetValue(PartType.FaceBolt, out BeyPart mainFb))
+            {
+                faceBolt = mainFb;
+            }
+
+            float size = Mathf.Clamp(sh * 0.12f, 85f, 130f);
+            float marginX = 36f;
+            float marginY = 36f;
+            Rect hudRect = new Rect(sw - size - marginX, sh - size - marginY, size, size);
+
+            // Outer Tech Chassis Frame
+            DrawPanelFrame(new Rect(hudRect.x - 6f, hudRect.y - 6f, hudRect.width + 12f, hudRect.height + 12f),
+                new Color(0.01f, 0.03f, 0.07f, 0.92f),
+                new Color(0.03f, 0.07f, 0.14f, 0.96f),
+                new Color(0.15f, 0.35f, 0.55f, 0.6f), 2f);
+
+            float effectiveCost = ability != null ? config.GetEffectiveAbilityCost(ability) : 0f;
+            bool hasMana = config.CurrentMana >= effectiveCost;
+            bool isOnCooldown = !config.IsAbilityReady;
+            bool isReady = config.IsAbilityReady && hasMana;
+
+            // Face Bolt Emblem Icon / Visual (Dynamic equipped part icon)
+            Rect iconRect = new Rect(hudRect.x, hudRect.y, hudRect.width, hudRect.height);
+            DrawRect(iconRect, new Color(0.02f, 0.05f, 0.10f, 1f));
+
+            float pad = 6f;
+            Rect innerRect = new Rect(iconRect.x + pad, iconRect.y + pad, iconRect.width - pad * 2f, iconRect.height - pad * 2f);
+
+            Sprite emblem = null;
+            if (faceBolt != null)
+            {
+                emblem = faceBolt.FaceBoltEmblem != null ? faceBolt.FaceBoltEmblem : faceBolt.Icon;
+            }
+            if (emblem == null && ability != null)
+            {
+                emblem = ability.Icon;
+            }
+
+            if (emblem != null && emblem.texture != null)
+            {
+                DrawSprite(innerRect, emblem);
+            }
+            else if (faceBolt != null)
+            {
+                DrawPartSprite(innerRect, faceBolt);
+            }
+            else
+            {
+                // Stylized Fallback: Glowing Cyber Ability Hexagon / Glyph with FaceBolt initials
+                DrawRect(innerRect, new Color(0.04f, 0.10f, 0.20f, 0.85f));
+                DrawFrameCorners(innerRect, ACCENT_CYAN, 12f, 2f);
+                string glyph = ability != null ? (ability.AbilityName.Length > 2 ? ability.AbilityName.Substring(0, 2).ToUpperInvariant() : "AB") : "FB";
+                GUIStyle glyphStyle = CreateStaticStyle(titleBarStyle, ACCENT_CYAN, Mathf.RoundToInt(size * 0.36f), TextAnchor.MiddleCenter, FontStyle.Bold);
+                GUI.Label(innerRect, glyph, glyphStyle);
+            }
+
+            // Cooldown Wipe Overlay
+            if (isOnCooldown)
+            {
+                float cdRemaining = config.AbilityCooldownRemaining;
+                float cdTotal = Mathf.Max(0.1f, ability != null ? ability.CooldownDuration : 5f);
+                float cdNorm = Mathf.Clamp01(cdRemaining / cdTotal);
+
+                // Dark semi-transparent wipe
+                Rect cdWipeRect = new Rect(iconRect.x, iconRect.y + iconRect.height * (1f - cdNorm), iconRect.width, iconRect.height * cdNorm);
+                DrawRect(new Rect(iconRect.x, iconRect.y, iconRect.width, iconRect.height), new Color(0f, 0f, 0f, 0.70f));
+                DrawRect(cdWipeRect, new Color(0.05f, 0.15f, 0.30f, 0.40f));
+
+                // Bold Centered Cooldown Number
+                GUIStyle cdNumStyle = new GUIStyle(titleBarStyle)
+                {
+                    fontSize = Mathf.RoundToInt(size * 0.38f),
+                    alignment = TextAnchor.MiddleCenter,
+                    fontStyle = FontStyle.Bold
+                };
+                cdNumStyle.normal.textColor = new Color(1f, 1f, 1f, 0.95f);
+                GUI.Label(new Rect(iconRect.x + 2f, iconRect.y + 2f, iconRect.width, iconRect.height), $"{cdRemaining:0.0}", new GUIStyle(cdNumStyle) { normal = { textColor = Color.black } });
+                GUI.Label(iconRect, $"{cdRemaining:0.0}", cdNumStyle);
+            }
+            else if (!hasMana)
+            {
+                DrawRect(iconRect, new Color(0.1f, 0.25f, 0.6f, 0.45f));
+            }
+            else
+            {
+                float pulse = 0.7f + Mathf.Abs(Mathf.Sin(Time.unscaledTime * 5f)) * 0.3f;
+                Color readyBorder = new Color(ACCENT_GOLD.r, ACCENT_GOLD.g, ACCENT_GOLD.b, pulse);
+                DrawFrameCorners(iconRect, readyBorder, 18f, 3f);
+            }
+
+            // Outer Border Frame
+            Color frameBorder = isReady ? ACCENT_GOLD : (isOnCooldown ? new Color(0.3f, 0.3f, 0.4f, 0.6f) : ACCENT_CYAN);
+            DrawPanelFrame(iconRect, Color.clear, Color.clear, frameBorder, 2f);
+
+            // Top-Right Mana Cost Badge
+            if (effectiveCost > 0f)
+            {
+                float manaTagW = size * 0.42f;
+                float manaTagH = size * 0.24f;
+                Rect manaTagRect = new Rect(iconRect.xMax - manaTagW + 4f, iconRect.y - 6f, manaTagW, manaTagH);
+                DrawPanelFrame(manaTagRect, new Color(0.04f, 0.14f, 0.30f, 0.95f), new Color(0.02f, 0.08f, 0.18f, 0.95f), ACCENT_CYAN, 1.5f);
+
+                GUIStyle manaCostStyle = new GUIStyle(sectionLabelStyle)
+                {
+                    fontSize = Mathf.RoundToInt(size * 0.16f),
+                    alignment = TextAnchor.MiddleCenter,
+                    fontStyle = FontStyle.Bold
+                };
+                manaCostStyle.normal.textColor = ACCENT_CYAN;
+                GUI.Label(manaTagRect, $"{Mathf.RoundToInt(effectiveCost)}", manaCostStyle);
+            }
+
+            // Bottom Keybind Badge Pill: [E]
+            float keyW = size * 0.36f;
+            float keyH = size * 0.24f;
+            Rect keyRect = new Rect(iconRect.center.x - keyW * 0.5f, iconRect.yMax - keyH * 0.5f, keyW, keyH);
+            DrawPanelFrame(keyRect, new Color(0.08f, 0.08f, 0.12f, 0.98f), new Color(0.12f, 0.12f, 0.18f, 0.98f), isReady ? ACCENT_GOLD : Color.white, 1.5f);
+
+            GUIStyle keyStyle = new GUIStyle(sectionLabelStyle)
+            {
+                fontSize = Mathf.RoundToInt(size * 0.17f),
                 alignment = TextAnchor.MiddleCenter,
                 fontStyle = FontStyle.Bold
             };
-            abilityStyle.normal.textColor = isReady ? ACCENT_YEL : (config.IsAbilityReady ? Color.white : new Color(0.6f, 0.6f, 0.6f));
-            GUI.Label(abilityRect, isReady ? $"[F] {abilityName} (READY)" : (config.IsAbilityReady ? $"[F] {abilityName}" : $"[F] {abilityName} ({config.AbilityCooldownRemaining:F1}s)"), abilityStyle);
+            keyStyle.normal.textColor = isReady ? ACCENT_GOLD : Color.white;
+            GUI.Label(keyRect, "E", keyStyle);
+
+            // Top Ability Name Banner
+            string abilityName = ability != null ? ability.AbilityName.ToUpperInvariant() : "NO ABILITY";
+            float nameW = size * 1.8f;
+            float nameH = 22f;
+            Rect nameRect = new Rect(iconRect.xMax - nameW, iconRect.y - nameH - 10f, nameW, nameH);
+            GUIStyle nameStyle = new GUIStyle(sectionLabelStyle)
+            {
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(size * 0.14f, 11f, 16f)),
+                alignment = TextAnchor.MiddleRight,
+                fontStyle = FontStyle.Bold
+            };
+            nameStyle.normal.textColor = isReady ? ACCENT_GOLD : (isOnCooldown ? Color.gray : ACCENT_CYAN);
+            GUI.Label(new Rect(nameRect.x + 1f, nameRect.y + 1f, nameRect.width, nameRect.height), abilityName, new GUIStyle(nameStyle) { normal = { textColor = Color.black } });
+            GUI.Label(nameRect, abilityName, nameStyle);
+        }
+
+        private void DrawDramaticDefeatOverlay(MatchManager match)
+        {
+            int sw = Mathf.RoundToInt(UiWidth);
+            int sh = Mathf.RoundToInt(UiHeight);
+
+            float totalDefeatTime = 3.2f;
+            float elapsed = totalDefeatTime - match.StateTimer;
+            float alpha = Mathf.Clamp01(elapsed * 2.5f);
+
+            // Fullscreen dark vignette + grayscale backdrop tint
+            DrawRect(new Rect(0, 0, sw, sh), new Color(0.04f, 0.01f, 0.02f, 0.70f * alpha));
+
+            // Dramatic letterbox cinematic bars
+            float barH = Mathf.Clamp(sh * 0.12f, 70f, 130f);
+            DrawRect(new Rect(0, 0, sw, barH), new Color(0f, 0f, 0f, 0.95f * alpha));
+            DrawRect(new Rect(0, sh - barH, sw, barH), new Color(0f, 0f, 0f, 0.95f * alpha));
+
+            string mainDefeatTitle;
+            string subDefeatTitle;
+            Color themeColor;
+
+            switch (match.LastPlayerDefeatReason)
+            {
+                case MatchManager.PlayerDefeatReason.BurstedByEnemy:
+                    mainDefeatTitle = "BURST FINISH";
+                    subDefeatTitle = "PARTS DISASSEMBLED // CRITICAL SPIN BREACH";
+                    themeColor = RED_DANGER;
+                    break;
+                case MatchManager.PlayerDefeatReason.KnockedOutByEnemy:
+                case MatchManager.PlayerDefeatReason.JumpedOut:
+                    mainDefeatTitle = "OVER FINISH";
+                    subDefeatTitle = "EJECTED FROM STADIUM // ARENA BOUNDARY EXIT";
+                    themeColor = ACCENT_ORANGE;
+                    break;
+                default:
+                    mainDefeatTitle = "SPIN FINISH";
+                    subDefeatTitle = "ROTATIONAL MOMENTUM DEPLETED // STAMINA ZERO";
+                    themeColor = ACCENT_CYAN;
+                    break;
+            }
+
+            float bannerH = Mathf.Clamp(sh * 0.18f, 110f, 200f);
+            float bannerW = Mathf.Clamp(sw * 0.72f, 600f, 1300f);
+            Rect bannerRect = new Rect((sw - bannerW) * 0.5f, (sh - bannerH) * 0.5f, bannerW, bannerH);
+
+            DrawPanelFrame(bannerRect, new Color(0.05f, 0.01f, 0.02f, 0.92f * alpha), new Color(0.12f, 0.02f, 0.04f, 0.96f * alpha), themeColor, 3f);
+            DrawFrameCorners(bannerRect, themeColor, 28f, 3f);
+            DrawMotionBandClipped(bannerRect, themeColor, 12f, 18f, 0.12f);
+
+            GUIStyle defeatTitleStyle = new GUIStyle(titleBarStyle)
+            {
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(bannerH * 0.44f, 32f, 72f)),
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold
+            };
+            defeatTitleStyle.normal.textColor = Color.white;
+
+            GUIStyle defeatSubStyle = new GUIStyle(sectionLabelStyle)
+            {
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(bannerH * 0.18f, 12f, 24f)),
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold
+            };
+            defeatSubStyle.normal.textColor = themeColor;
+
+            GUI.Label(new Rect(bannerRect.x, bannerRect.y + bannerH * 0.14f, bannerRect.width, bannerH * 0.48f), mainDefeatTitle, defeatTitleStyle);
+            GUI.Label(new Rect(bannerRect.x, bannerRect.y + bannerH * 0.62f, bannerRect.width, bannerH * 0.28f), subDefeatTitle, defeatSubStyle);
+        }
+
+        private void DrawVictoryCelebrationOverlay(MatchManager match)
+        {
+            int sw = Mathf.RoundToInt(UiWidth);
+            int sh = Mathf.RoundToInt(UiHeight);
+
+            float totalWinTime = 5.2f;
+            float elapsed = totalWinTime - match.StateTimer;
+            float alpha = Mathf.Clamp01(elapsed * 2.5f);
+
+            // Cinematic letterbox bars
+            float barH = Mathf.Clamp(sh * 0.10f, 60f, 110f);
+            DrawRect(new Rect(0, 0, sw, barH), new Color(0f, 0f, 0f, 0.85f * alpha));
+            DrawRect(new Rect(0, sh - barH, sw, barH), new Color(0f, 0f, 0f, 0.85f * alpha));
+
+            float bannerH = Mathf.Clamp(sh * 0.16f, 100f, 180f);
+            float bannerW = Mathf.Clamp(sw * 0.65f, 540f, 1150f);
+            Rect bannerRect = new Rect((sw - bannerW) * 0.5f, (sh - bannerH) * 0.46f, bannerW, bannerH);
+
+            DrawPanelFrame(bannerRect, new Color(0.02f, 0.05f, 0.10f, 0.90f * alpha), new Color(0.04f, 0.10f, 0.20f, 0.95f * alpha), ACCENT_GOLD, 3f);
+            DrawFrameCorners(bannerRect, ACCENT_GOLD, 24f, 2.5f);
+
+            GUIStyle winTitleStyle = new GUIStyle(titleBarStyle)
+            {
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(bannerH * 0.45f, 30f, 68f)),
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold
+            };
+            winTitleStyle.normal.textColor = ACCENT_GOLD;
+
+            GUIStyle winSubStyle = new GUIStyle(sectionLabelStyle)
+            {
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(bannerH * 0.18f, 12f, 22f)),
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold
+            };
+            winSubStyle.normal.textColor = ACCENT_CYAN;
+
+            GUI.Label(new Rect(bannerRect.x, bannerRect.y + bannerH * 0.12f, bannerRect.width, bannerH * 0.48f), "★ ARENA CLEARED! ★", winTitleStyle);
+            GUI.Label(new Rect(bannerRect.x, bannerRect.y + bannerH * 0.60f, bannerRect.width, bannerH * 0.28f), "ALL OPPONENTS BURSTED // VICTORY SECURED (+150 PTS)", winSubStyle);
+
+            // Prompt after 1.2s to continue or wait
+            if (elapsed > 1.2f)
+            {
+                float promptAlpha = Mathf.Clamp01((elapsed - 1.2f) * 2f) * (0.6f + Mathf.Abs(Mathf.Sin(Time.unscaledTime * 4f)) * 0.4f);
+                GUIStyle promptStyle = new GUIStyle(sectionLabelStyle)
+                {
+                    fontSize = Mathf.RoundToInt(Mathf.Clamp(bannerH * 0.15f, 11f, 17f)),
+                    alignment = TextAnchor.MiddleCenter,
+                    fontStyle = FontStyle.Bold
+                };
+                promptStyle.normal.textColor = new Color(1f, 1f, 1f, promptAlpha);
+                GUI.Label(new Rect(0, sh - barH + (barH - 24f) * 0.5f, sw, 24f), "[ SPACE / CLICK ] TO ADVANCE TO SHRINE", promptStyle);
+            }
         }
 
         private void DrawDeathOverlay(MatchManager match)
         {
-            int sw = Screen.width;
-            int sh = Screen.height;
+            int sw = Mathf.RoundToInt(UiWidth);
+            int sh = Mathf.RoundToInt(UiHeight);
             float uiScale = GetUiScale();
 
             if (!lootTransferInitialized)
@@ -1303,8 +1770,8 @@ namespace BladeSpinners.Gameplay.UI
 
             DrawRect(new Rect(0, 0, sw, sh), OVERLAY);
 
-            float panelW = Mathf.Clamp(sw * 0.82f, 640f, 3000f);
-            float panelH = Mathf.Clamp(sh * 0.78f, 420f, 1500f);
+            float panelW = Mathf.Clamp(sw * 0.90f, 950f, 1600f);
+            float panelH = Mathf.Clamp(sh * 0.88f, 620f, 940f);
             Rect panel = new Rect((sw - panelW) * 0.5f, (sh - panelH) * 0.5f, panelW, panelH);
 
             DrawPanelFrame(panel, new Color(0.06f, 0.02f, 0.03f, 0.97f), new Color(0.10f, 0.03f, 0.04f, 0.99f), RED_DANGER, 4f);
@@ -1320,167 +1787,323 @@ namespace BladeSpinners.Gameplay.UI
 
             if (showKillerBuild)
             {
-                Dictionary<PartType, BeyPart> killerLoadout = BuildLoadoutFromParts(killerParts);
-                if (killerLoadout.Count > 0)
-                    RefreshPreviewFromLoadout(killerLoadout);
-                deathOverlayPreviewPrepared = true;
+                if (!deathOverlayPreviewPrepared)
+                {
+                    Dictionary<PartType, BeyPart> killerLoadout = BuildLoadoutFromParts(killerParts);
+                    if (killerLoadout.Count > 0)
+                        RefreshPreviewFromLoadout(killerLoadout);
+                    deathOverlayPreviewPrepared = true;
+                }
             }
-            else if (!showKillerBuild)
+            else
             {
                 deathOverlayPreviewPrepared = false;
             }
 
-            float outerPad = Mathf.Clamp(panel.width * 0.028f, 16f, 40f);
-            float buttonH = Mathf.Clamp(40f * uiScale, 40f, 72f);
+            float outerPad = Mathf.Clamp(panel.width * 0.022f, 16f, 32f);
+            float buttonH = Mathf.Clamp(46f * uiScale, 42f, 60f);
             Rect buttonRect = new Rect(panel.x + outerPad, panel.yMax - outerPad - buttonH, panel.width - outerPad * 2f, buttonH);
-            Rect content = new Rect(panel.x + outerPad, panel.y + outerPad, panel.width - outerPad * 2f, buttonRect.y - panel.y - outerPad * 2f);
+            Rect content = new Rect(panel.x + outerPad, panel.y + outerPad, panel.width - outerPad * 2f, buttonRect.y - panel.y - outerPad * 1.5f);
+
+            // ── TOP HEADER ──────────────────────────────────────────────────────────
             GUIStyle deathTitleStyle = new GUIStyle(titleBarStyle)
             {
-                fontSize = Mathf.RoundToInt(Mathf.Clamp(panel.height * 0.08f, 28f, 84f)),
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(panel.height * 0.062f, 26f, 52f)),
                 wordWrap = false,
-                normal  = { textColor = Color.white },
-                hover   = { textColor = Color.white },
-                active  = { textColor = Color.white },
-                focused = { textColor = Color.white }
+                normal = { textColor = Color.white }
             };
             GUIStyle deathReasonStyle = new GUIStyle(sectionLabelStyle)
             {
-                fontSize = Mathf.RoundToInt(Mathf.Clamp(panel.height * 0.036f, 14f, 38f)),
-                wordWrap = true,
-                normal  = { textColor = new Color(1f, 0.55f, 0.55f, 1f) },
-                hover   = { textColor = new Color(1f, 0.55f, 0.55f, 1f) },
-                active  = { textColor = new Color(1f, 0.55f, 0.55f, 1f) },
-                focused = { textColor = new Color(1f, 0.55f, 0.55f, 1f) }
-            };
-            GUIStyle buildHeaderStyle = new GUIStyle(sectionLabelStyle)
-            {
-                fontSize = Mathf.RoundToInt(Mathf.Clamp(panel.height * 0.032f, 13f, 30f)),
+                fontSize = Mathf.RoundToInt(Mathf.Clamp(panel.height * 0.026f, 13f, 24f)),
                 wordWrap = false,
-                clipping = TextClipping.Clip
+                clipping = TextClipping.Clip,
+                normal = { textColor = new Color(1f, 0.45f, 0.45f, 1f) }
             };
-            GUIStyle killerItemStyle = new GUIStyle(bodyLabelStyle)
+
+            float titleH = Mathf.Clamp(42f * uiScale, 34f, 54f);
+            float reasonH = Mathf.Clamp(26f * uiScale, 20f, 34f);
+            float timingH = Mathf.Clamp(22f * uiScale, 18f, 28f);
+
+            DrawFittedLabel(new Rect(content.x, content.y, content.width, titleH), "YOU BURSTED", deathTitleStyle, Color.white, 24);
+            DrawFittedLabel(new Rect(content.x, content.y + titleH + 4f, content.width, reasonH), reasonText.ToUpperInvariant(), sectionLabelStyle, new Color(1f, 0.45f, 0.45f, 1f), 13);
+
+            GUIStyle timingStyle = CreateStaticStyle(bodyLabelStyle, ACCENT_CYAN, 12, TextAnchor.MiddleLeft, FontStyle.Bold);
+            GUI.Label(new Rect(content.x, content.y + titleH + reasonH + 8f, content.width, timingH),
+                $"RUN {FormatRunTime(runElapsedSeconds)}   •   ARENA {FormatRunTime(arenaElapsedSeconds)}   •   {arenasClearedThisRun} ARENAS CLEARED", timingStyle);
+
+            // ── MAIN BODY: 2 EQUAL COLUMNS ──────────────────────────────────────────
+            float bodyY = content.y + titleH + reasonH + timingH + 16f;
+            float bodyH = content.yMax - bodyY;
+            float colGap = 16f;
+            float colW = (content.width - colGap) * 0.5f;
+
+            Rect leftCol = new Rect(content.x, bodyY, colW, bodyH);
+            Rect rightCol = new Rect(content.x + colW + colGap, bodyY, colW, bodyH);
+
+            // ── LEFT COLUMN: KILLER PREVIEW & BUILD ─────────────────────────────────
+            DrawPanelFrame(leftCol, new Color(0.02f, 0.04f, 0.08f, 0.94f), new Color(0.04f, 0.07f, 0.14f, 0.98f), ACCENT_GOLD, 2f);
+            DrawFrameCorners(leftCol, ACCENT_GOLD, 14f, 2f);
+
+            float colHeaderH = 34f;
+            Rect leftHeaderRect = new Rect(leftCol.x, leftCol.y, leftCol.width, colHeaderH);
+            DrawRect(leftHeaderRect, new Color(0.03f, 0.06f, 0.12f, 0.9f));
+            DrawRect(new Rect(leftHeaderRect.x, leftHeaderRect.yMax - 2f, leftHeaderRect.width, 2f), ACCENT_GOLD);
+            DrawFittedLabel(new Rect(leftHeaderRect.x + 12f, leftHeaderRect.y, leftHeaderRect.width - 24f, leftHeaderRect.height),
+                "KILLER PROFILE & LOADOUT", sectionLabelStyle, ACCENT_GOLD, 11);
+
+            float previewH = Mathf.Clamp(leftCol.height * 0.44f, 150f, 260f);
+            Rect previewRect = new Rect(leftCol.x + 12f, leftHeaderRect.yMax + 8f, leftCol.width - 24f, previewH);
+            DrawRect(previewRect, new Color(0f, 0f, 0f, 0.45f));
+            if (previewTexture != null)
             {
-                fontSize = Mathf.RoundToInt(Mathf.Clamp(panel.height * 0.030f, 12f, 26f)),
-                wordWrap = false,
-                clipping = TextClipping.Clip
-            };
-            bool hasLoot = lootEligibleParts != null;
-            float topGap = Mathf.Clamp(8f * uiScale, 8f, 18f);
-            float sectionGap = Mathf.Clamp(10f * uiScale, 10f, 22f);
-            float titleHeight = deathTitleStyle.CalcHeight(new GUIContent("YOU BURSTED"), content.width);
-            float reasonHeight = deathReasonStyle.CalcHeight(new GUIContent(reasonText.ToUpperInvariant()), content.width);
-            Rect titleRect = new Rect(content.x, content.y, content.width, titleHeight);
-            Rect reasonRect = new Rect(content.x, titleRect.yMax + topGap, content.width, reasonHeight);
-            GUI.Label(titleRect, "YOU BURSTED", deathTitleStyle);
-            GUI.Label(reasonRect, reasonText.ToUpperInvariant(), deathReasonStyle);
-
-            float timingH = Mathf.Clamp(
-                24f * uiScale,
-                22f,
-                42f);
-            Rect timingRect = new Rect(
-                content.x,
-                reasonRect.yMax + 3f,
-                content.width,
-                timingH);
-            GUIStyle timingStyle =
-                FitLabelStyle(
-                    bodyLabelStyle,
-                    "RUN 00:00.00   ARENA 00:00.00",
-                    content.width,
-                    10);
-            GUI.Label(
-                timingRect,
-                $"RUN {FormatRunTime(runElapsedSeconds)}   " +
-                $"ARENA {FormatRunTime(arenaElapsedSeconds)}   " +
-                $"{arenasClearedThisRun} ARENAS CLEARED",
-                timingStyle);
-
-            float remainingY = timingRect.yMax + sectionGap;
-            float remainingH = Mathf.Max(60f, content.yMax - remainingY);
-
-            float lootH = hasLoot ? Mathf.Max(90f, remainingH * (showKillerBuild ? 0.40f : 0.80f)) : 0f;
-            float killerH = showKillerBuild ? Mathf.Max(120f, remainingH - lootH - (hasLoot ? sectionGap : 0f)) : 0f;
-
-            if (showKillerBuild)
-            {
-                Rect rowRect = new Rect(content.x, remainingY, content.width, killerH);
-                float columnGap = Mathf.Clamp(panel.width * 0.018f, 10f, 28f);
-                float buildWidth = Mathf.Clamp(rowRect.width * 0.37f, 260f, rowRect.width * 0.52f);
-                float previewWidth = rowRect.width - buildWidth - columnGap;
-
-                float innerPad = Mathf.Clamp(panel.width * 0.012f, 10f, 20f);
-                float headerH = Mathf.Clamp(28f * uiScale, 24f, 46f);
-
-                Rect previewCard = new Rect(rowRect.x, rowRect.y, previewWidth, rowRect.height);
-                Rect buildCard = new Rect(previewCard.xMax + columnGap, rowRect.y, buildWidth, rowRect.height);
-                GUIStyle previewHeaderStyle = FitLabelStyle(buildHeaderStyle, "KILLER PREVIEW", previewWidth - innerPad * 2f, 12);
-                GUIStyle buildAreaHeaderStyle = FitLabelStyle(buildHeaderStyle, "KILLER BUILD", buildWidth - innerPad * 2f, 12);
-                GUIStyle buildItemStyle = FitLabelStyle(killerItemStyle, GetLongestPartLabel(killerParts), buildWidth - innerPad * 2f - 24f, 10);
-
-                DrawRect(previewCard, new Color(0f, 0f, 0f, 0.38f));
-                DrawRect(new Rect(previewCard.x, previewCard.y, previewCard.width, 3f), ACCENT_YEL);
-
-                Rect previewLabel = new Rect(previewCard.x + innerPad, previewCard.y + innerPad * 0.45f, previewCard.width - innerPad * 2f, headerH);
-                GUI.Label(previewLabel, "KILLER PREVIEW", previewHeaderStyle);
-
-                Rect previewRect = new Rect(
-                    previewCard.x + innerPad,
-                    previewCard.y + innerPad * 0.45f + headerH + 6f,
-                    previewCard.width - innerPad * 2f,
-                    previewCard.height - (innerPad * 1.4f + headerH + 6f));
-                if (previewTexture != null)
-                {
-                    GUI.DrawTexture(previewRect, previewTexture, ScaleMode.ScaleToFit, true);
-                }
-
-                DrawRect(buildCard, new Color(0f, 0f, 0f, 0.30f));
-                DrawRect(new Rect(buildCard.x, buildCard.y, buildCard.width, 3f), ACCENT_YEL);
-
-                Rect buildArea = new Rect(buildCard.x + innerPad, buildCard.y + innerPad * 0.45f, buildCard.width - innerPad * 2f, buildCard.height - innerPad);
-                GUILayout.BeginArea(buildArea);
-                GUILayout.Label("KILLER BUILD", buildAreaHeaderStyle, GUILayout.Height(headerH));
-                GUILayout.Space(Mathf.Clamp(4f * uiScale, 4f, 10f));
-                if (killerParts != null && killerParts.Count > 0)
-                    DrawKillerPartsRows(killerParts, buildItemStyle);
-                GUILayout.EndArea();
-
-                remainingY = rowRect.yMax + sectionGap;
+                GUI.DrawTexture(previewRect, previewTexture, ScaleMode.ScaleToFit, true);
             }
 
-            if (hasLoot)
+            Rect killerPartsArea = new Rect(leftCol.x + 12f, previewRect.yMax + 8f, leftCol.width - 24f, leftCol.yMax - previewRect.yMax - 16f);
+            DrawKillerPartsSection(killerPartsArea, killerParts, uiScale);
+
+            // ── RIGHT COLUMN: LOOT SALVAGE & DETAIL ──────────────────────────────────
+            DrawPanelFrame(rightCol, new Color(0.02f, 0.04f, 0.08f, 0.94f), new Color(0.04f, 0.07f, 0.14f, 0.98f), ACCENT_CYAN, 2f);
+            DrawFrameCorners(rightCol, ACCENT_CYAN, 14f, 2f);
+
+            Rect rightHeaderRect = new Rect(rightCol.x, rightCol.y, rightCol.width, colHeaderH);
+            DrawRect(rightHeaderRect, new Color(0.03f, 0.06f, 0.12f, 0.9f));
+            DrawRect(new Rect(rightHeaderRect.x, rightHeaderRect.yMax - 2f, rightHeaderRect.width, 2f), ACCENT_CYAN);
+
+            int selLoot = CountSelectedLoot();
+            string lootHeader = lootEligibleParts != null && lootEligibleParts.Count > 0
+                ? $"LOOT SALVAGE  —  {selLoot}/{lootMaxTransferCount}  ▸  MAX: {lootMaxRarityTier.ToString().ToUpper()}"
+                : "LOOT SALVAGE  —  NO NEW PARTS TO SALVAGE";
+            DrawFittedLabel(new Rect(rightHeaderRect.x + 12f, rightHeaderRect.y, rightHeaderRect.width - 24f, rightHeaderRect.height),
+                lootHeader, sectionLabelStyle, ACCENT_CYAN, 11);
+
+            if (lootEligibleParts != null && lootEligibleParts.Count > 0)
             {
-                GUILayout.BeginArea(new Rect(content.x, remainingY, content.width, Mathf.Min(lootH, content.yMax - remainingY)));
-                DrawLootSalvageSection(lootH, uiScale);
-                GUILayout.EndArea();
+                if (selectedLootPart == null || !lootEligibleParts.Contains(selectedLootPart))
+                    selectedLootPart = lootEligibleParts[0];
+
+                float listH = Mathf.Clamp((rightCol.height - colHeaderH - 24f) * 0.48f, 110f, 220f);
+                Rect listRect = new Rect(rightCol.x + 10f, rightHeaderRect.yMax + 8f, rightCol.width - 20f, listH);
+                DrawLootList(listRect, uiScale);
+
+                Rect detailRect = new Rect(rightCol.x + 10f, listRect.yMax + 8f, rightCol.width - 20f, rightCol.yMax - listRect.yMax - 16f);
+                DrawLootPartDetailCard(detailRect, selectedLootPart, uiScale);
+            }
+            else
+            {
+                GUIStyle noLootStyle = CreateStaticStyle(bodyLabelStyle, Color.gray, 14, TextAnchor.MiddleCenter, FontStyle.Italic);
+                GUI.Label(new Rect(rightCol.x + 12f, rightHeaderRect.yMax + 20f, rightCol.width - 24f, rightCol.height - colHeaderH - 40f),
+                    "NO TRANSFERABLE PARTS WERE SALVAGED THIS RUN.\nCLEAR MORE ARENAS ON YOUR NEXT ATTEMPT TO UNLOCK HIGHER-TIER SPOILS!", noLootStyle);
             }
 
-            int _lootSelected = CountSelectedLoot();
-            string _btnLabel = hasLoot && _lootSelected > 0
-                ? $"TAKE LOOT ({_lootSelected}) & LEAVE"
-                : "LEAVE RUN";
-            if (WithButtonSound(GUI.Button(buttonRect, _btnLabel, navButtonStyle)))
+            // ── BOTTOM BUTTON ───────────────────────────────────────────────────────
+            string btnLabel = lootEligibleParts != null && selLoot > 0
+                ? $"TRANSFER LOOT ({selLoot}) & RETURN TO MAIN MENU"
+                : "LEAVE RUN & RETURN TO MAIN MENU";
+            Color btnColor = selLoot > 0 ? new Color(0.18f, 0.85f, 0.55f, 1f) : ACCENT_RED;
+            if (ActionBtn(btnLabel, buttonRect, btnColor, false))
             {
                 CommitTransferLootAndReturnToMenu();
             }
         }
 
-        private void DrawKillerPartsRows(IReadOnlyList<BeyPart> parts, GUIStyle itemStyle)
+        private void DrawKillerPartsSection(Rect area, IReadOnlyList<BeyPart> parts, float uiScale)
         {
-            GUIStyle resolvedItemStyle = itemStyle ?? bodyLabelStyle;
+            if (parts == null || parts.Count == 0)
+            {
+                GUIStyle emptyStyle = CreateStaticStyle(bodyLabelStyle, Color.gray, 12, TextAnchor.MiddleCenter, FontStyle.Italic);
+                GUI.Label(area, "NO KILLER LOADOUT DATA RECORDED", emptyStyle);
+                return;
+            }
+
+            float rowH = (area.height - 4f) / Mathf.Max(1, parts.Count);
+            rowH = Mathf.Clamp(rowH, 22f, 34f);
+
             for (int i = 0; i < parts.Count; i++)
             {
                 BeyPart part = parts[i];
-                if (part == null)
-                    continue;
+                if (part == null) continue;
 
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("■", sectionLabelStyle, GUILayout.Width(18f));
+                Rect rowRect = new Rect(area.x, area.y + rowH * i, area.width, rowH - 2f);
+                DrawRect(rowRect, new Color(0f, 0f, 0f, 0.35f));
+
+                Color rarityColor = GetRarityColor(part.Rarity);
+                DrawRect(new Rect(rowRect.x + 6f, rowRect.center.y - 4f, 8f, 8f), rarityColor);
+
+                int score = Mathf.RoundToInt(GetPartPowerScore(part));
+                string partName = PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant();
+                string line = $"{partName}  [{part.PartType.ToString().ToUpper()}]";
+
+                GUIStyle nameStyle = CreateStaticStyle(bodyLabelStyle, Color.white, 12, TextAnchor.MiddleLeft, FontStyle.Bold);
+                GUIStyle scoreStyle = CreateStaticStyle(bodyLabelStyle, ACCENT_GOLD, 12, TextAnchor.MiddleRight, FontStyle.Bold);
+
+                GUI.Label(new Rect(rowRect.x + 20f, rowRect.y, rowRect.width - 110f, rowRect.height), line, nameStyle);
+                GUI.Label(new Rect(rowRect.xMax - 95f, rowRect.y, 90f, rowRect.height), $"SCORE {score}", scoreStyle);
+            }
+        }
+
+        private void DrawLootList(Rect listArea, float uiScale)
+        {
+            int sel = CountSelectedLoot();
+            float rowH = Mathf.Clamp(36f * uiScale, 32f, 44f);
+            float btnW = Mathf.Clamp(76f * uiScale, 68f, 90f);
+            float btnH = rowH - 6f;
+
+            GUILayout.BeginArea(listArea);
+            lootScroll = GUILayout.BeginScrollView(lootScroll, false, true, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
+
+            for (int i = 0; i < lootEligibleParts.Count; i++)
+            {
+                BeyPart part = lootEligibleParts[i];
+                if (part == null) continue;
+
+                bool isSelected = lootSelectedFlags != null && i < lootSelectedFlags.Count && lootSelectedFlags[i];
+                bool canToggle = isSelected || sel < lootMaxTransferCount;
+                bool isFocused = selectedLootPart == part;
+
+                Color rarityColor = GetRarityColor(part.Rarity);
                 int partScore = Mathf.RoundToInt(GetPartPowerScore(part));
-                string partLabel = $"{PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant()}  —  SCORE {partScore}";
-                GUILayout.Label(partLabel, resolvedItemStyle, GUILayout.ExpandWidth(true));
-                GUILayout.EndHorizontal();
-                GUILayout.Space(2f);
+
+                Rect rowRect = GUILayoutUtility.GetRect(listArea.width - 24f, rowH, GUILayout.ExpandWidth(true), GUILayout.Height(rowH));
+
+                // Row background
+                Color rowBg = isFocused
+                    ? new Color(0.04f, 0.12f, 0.22f, 0.90f)
+                    : (isSelected ? new Color(0.03f, 0.10f, 0.08f, 0.75f) : new Color(0.02f, 0.04f, 0.07f, 0.65f));
+                DrawRect(rowRect, rowBg);
+                if (isFocused)
+                    DrawFrameCorners(rowRect, ACCENT_CYAN, 8f, 1.5f);
+
+                // Rarity Indicator dot
+                float dotSize = 8f;
+                DrawRect(new Rect(rowRect.x + 8f, rowRect.center.y - dotSize * 0.5f, dotSize, dotSize), rarityColor);
+
+                // Labels
+                float labelX = rowRect.x + 22f;
+                float labelW = rowRect.width - labelX - (btnW * 2f + 16f);
+                string partText = $"{PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant()}  [{part.Rarity.ToString().ToUpper()}]  •  {part.PartType.ToString().ToUpper()}  •  SCORE {partScore}";
+                GUIStyle rowStyle = CreateStaticStyle(bodyLabelStyle, isFocused ? Color.white : new Color(0.85f, 0.88f, 0.92f, 0.95f), 12, TextAnchor.MiddleLeft, isFocused ? FontStyle.Bold : FontStyle.Normal);
+                GUI.Label(new Rect(labelX, rowRect.y, labelW, rowRect.height), partText, rowStyle);
+
+                // [VIEW] button
+                Rect viewBtnRect = new Rect(rowRect.xMax - btnW * 2f - 10f, rowRect.y + 3f, btnW, btnH);
+                if (ActionBtn(isFocused ? "VIEWING" : "VIEW", viewBtnRect, isFocused ? ACCENT_CYAN : new Color(0.3f, 0.6f, 0.8f, 0.8f), false))
+                {
+                    selectedLootPart = part;
+                }
+
+                // [KEEP] button
+                Rect keepBtnRect = new Rect(rowRect.xMax - btnW - 4f, rowRect.y + 3f, btnW, btnH);
+                string keepLabel = isSelected ? "✓ KEEP" : (canToggle ? "KEEP" : "—");
+                Color keepColor = isSelected ? new Color(0.2f, 0.9f, 0.45f, 1f) : (canToggle ? ACCENT_GOLD : Color.gray);
+                if (ActionBtn(keepLabel, keepBtnRect, keepColor, false, canToggle))
+                {
+                    if (lootSelectedFlags != null && i < lootSelectedFlags.Count)
+                    {
+                        lootSelectedFlags[i] = !lootSelectedFlags[i];
+                        selectedLootPart = part;
+                    }
+                }
+
+                GUILayout.Space(3f);
+            }
+
+            GUILayout.EndScrollView();
+            GUILayout.EndArea();
+        }
+
+        private void DrawLootPartDetailCard(Rect area, BeyPart part, float uiScale)
+        {
+            DrawPanelFrame(area, new Color(0.01f, 0.03f, 0.07f, 0.92f), new Color(0.02f, 0.06f, 0.12f, 0.96f), ACCENT_CYAN, 1.5f);
+            DrawFrameCorners(area, ACCENT_CYAN, 10f, 1.5f);
+
+            float pad = 10f;
+            Rect content = new Rect(area.x + pad, area.y + pad, area.width - pad * 2f, area.height - pad * 2f);
+
+            if (part == null)
+            {
+                GUIStyle emptyStyle = CreateStaticStyle(bodyLabelStyle, Color.gray, 13, TextAnchor.MiddleCenter, FontStyle.Italic);
+                GUI.Label(content, "SELECT A SALVAGED PART TO INSPECT ITS STATS & ABILITY", emptyStyle);
+                return;
+            }
+
+            Color rarityColor = GetRarityColor(part.Rarity);
+            float lineH = 20f;
+
+            // Header: Name + Rarity + Type
+            GUIStyle nameStyle = CreateStaticStyle(titleBarStyle, Color.white, 15, TextAnchor.MiddleLeft, FontStyle.Bold);
+            GUIStyle badgeStyle = CreateStaticStyle(bodyLabelStyle, rarityColor, 12, TextAnchor.MiddleRight, FontStyle.Bold);
+            GUI.Label(new Rect(content.x, content.y, content.width * 0.60f, lineH), PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant(), nameStyle);
+            GUI.Label(new Rect(content.x + content.width * 0.60f, content.y, content.width * 0.40f, lineH), $"[{part.Rarity.ToString().ToUpper()}] {part.PartType.ToString().ToUpper()}", badgeStyle);
+
+            // Row 2: Stats summary (Power Score, Weight, and comparison)
+            float statsY = content.y + lineH + 4f;
+            int score = Mathf.RoundToInt(GetPartPowerScore(part));
+            string statSummary = $"POWER SCORE: {score}    |    WEIGHT: {part.Weight:0.0}g";
+
+            Dictionary<PartType, BeyPart> currentLoadout = hasActiveRun && runContext.Player != null
+                ? GetCurrentRunLoadout(runContext.Player)
+                : selectedMainMenuLoadout;
+            if (currentLoadout != null && currentLoadout.TryGetValue(part.PartType, out BeyPart equipped) && equipped != null && equipped != part)
+            {
+                float diffScore = GetPartPowerScore(part) - GetPartPowerScore(equipped);
+                string diffStr = diffScore >= 0 ? $"+{diffScore:0}" : $"{diffScore:0}";
+                statSummary += $"  ({diffStr} vs Equipped)";
+            }
+            GUIStyle statSummaryStyle = CreateStaticStyle(bodyLabelStyle, ACCENT_GOLD, 12, TextAnchor.MiddleLeft, FontStyle.Bold);
+            GUI.Label(new Rect(content.x, statsY, content.width, lineH), statSummary, statSummaryStyle);
+
+            // Row 3: Passive or Ability or Description
+            float descY = statsY + lineH + 4f;
+            Rect descBox = new Rect(content.x, descY, content.width, content.yMax - descY);
+            DrawRect(descBox, new Color(0f, 0f, 0f, 0.45f));
+            DrawFrameCorners(descBox, new Color(0.2f, 0.5f, 0.8f, 0.5f), 6f, 1f);
+
+            string abilityTitle = "";
+            string abilityDesc = "";
+
+            if (part.PartType == PartType.EnergyRing)
+            {
+                BeyPassive passive = EnergyRingPassiveResolver.Resolve(part);
+                if (passive != null)
+                {
+                    abilityTitle = $"PASSIVE: {passive.PassiveName.ToUpperInvariant()} [{passive.Rarity.ToString().ToUpper()}]";
+                    abilityDesc = passive.Description.ToUpperInvariant();
+                }
+            }
+            else if (part.PartType == PartType.FaceBolt)
+            {
+                BeyAbility ability = ResolveAbilityForPart(part);
+                if (ability != null)
+                {
+                    abilityTitle = $"ABILITY: {ability.AbilityName.ToUpperInvariant()} (MANA: {ability.ManaCost:0.#})";
+                    abilityDesc = ability.Description.ToUpperInvariant();
+                }
+            }
+
+            if (string.IsNullOrEmpty(abilityTitle) && !string.IsNullOrWhiteSpace(part.Description))
+            {
+                abilityTitle = "DESCRIPTION";
+                abilityDesc = part.Description.ToUpperInvariant();
+            }
+
+            if (!string.IsNullOrEmpty(abilityTitle))
+            {
+                GUIStyle aTitleStyle = CreateStaticStyle(bodyLabelStyle, ACCENT_CYAN, 11, TextAnchor.MiddleLeft, FontStyle.Bold);
+                GUIStyle aDescStyle = new GUIStyle(bodyLabelStyle)
+                {
+                    fontSize = 11,
+                    wordWrap = true,
+                    alignment = TextAnchor.UpperLeft,
+                    normal = { textColor = new Color(0.88f, 0.93f, 1f, 0.95f) }
+                };
+                GUI.Label(new Rect(descBox.x + 6f, descBox.y + 3f, descBox.width - 12f, 16f), abilityTitle, aTitleStyle);
+                GUI.Label(new Rect(descBox.x + 6f, descBox.y + 20f, descBox.width - 12f, descBox.height - 22f), abilityDesc, aDescStyle);
+            }
+            else
+            {
+                GUIStyle aDescStyle = CreateStaticStyle(bodyLabelStyle, Color.gray, 11, TextAnchor.MiddleCenter, FontStyle.Italic);
+                GUI.Label(descBox, "STANDARD PART WITH BALANCED CHARACTERISTICS", aDescStyle);
             }
         }
 
@@ -1489,8 +2112,7 @@ namespace BladeSpinners.Gameplay.UI
         private void InitLootTransferState()
         {
             lootTransferInitialized = true;
-
-            int depthIndex  = runContext.Progression?.DepthIndex  ?? 0;
+            int depthIndex = runContext.Progression?.DepthIndex ?? 0;
             int totalArenas = runContext.Progression?.TotalArenaCount ?? 1;
             GetLootTransferRules(depthIndex, totalArenas, out lootMaxTransferCount, out lootMaxRarityTier);
 
@@ -1506,14 +2128,14 @@ namespace BladeSpinners.Gameplay.UI
             // highest rarity first
             lootEligibleParts.Sort((a, b) => ((int)b.Rarity).CompareTo((int)a.Rarity));
             lootSelectedFlags = new List<bool>(new bool[lootEligibleParts.Count]);
-            lootScroll        = Vector2.zero;
+            lootScroll = Vector2.zero;
         }
 
         private static void GetLootTransferRules(int depthIndex, int totalArenas,
             out int maxCount, out RarityTier maxRarity)
         {
             float t = totalArenas > 1 ? Mathf.Clamp01((float)depthIndex / (totalArenas - 1)) : 1f;
-            maxCount  = t < 0.34f ? 1 : t < 0.67f ? 2 : 3;
+            maxCount = t < 0.34f ? 1 : t < 0.67f ? 2 : 3;
             maxRarity = t < 0.34f ? RarityTier.Common
                       : t < 0.67f ? RarityTier.Uncommon
                       :             RarityTier.Rare;
@@ -1525,67 +2147,6 @@ namespace BladeSpinners.Gameplay.UI
             int n = 0;
             foreach (bool b in lootSelectedFlags) if (b) n++;
             return n;
-        }
-
-        private void DrawLootSalvageSection(float sectionH, float uiScale)
-        {
-            float btnW = Mathf.Clamp(72f * uiScale, 70f, 120f);
-            float btnH = Mathf.Clamp(26f * uiScale, 24f, 40f);
-            int sel    = CountSelectedLoot();
-
-            string headerText = lootEligibleParts.Count > 0
-                ? $"LOOT SALVAGE  —  {sel}/{lootMaxTransferCount}  ▸  MAX: {lootMaxRarityTier.ToString().ToUpper()}"
-                : "LOOT SALVAGE  —  NO NEW PARTS TO SALVAGE";
-            GUILayout.Label(headerText, sectionLabelStyle);
-
-            if (lootEligibleParts.Count == 0) return;
-
-            if (selectedLootPart == null || !lootEligibleParts.Contains(selectedLootPart))
-                selectedLootPart = lootEligibleParts[0];
-
-            float scrollH = Mathf.Max(40f, sectionH - sectionLabelStyle.fontSize * 2f - 10f);
-            GUIStyle rowLabel = new GUIStyle(bodyLabelStyle) { alignment = TextAnchor.MiddleLeft };
-            GUILayout.BeginHorizontal(GUILayout.Height(scrollH));
-
-            float detailWidth = Mathf.Clamp(280f * uiScale, 260f, 420f);
-            GUILayout.BeginVertical(GUILayout.ExpandWidth(true), GUILayout.Height(scrollH));
-            lootScroll = GUILayout.BeginScrollView(lootScroll, GUILayout.Height(scrollH));
-            for (int i = 0; i < lootEligibleParts.Count; i++)
-            {
-                BeyPart part       = lootEligibleParts[i];
-                bool    isSelected = lootSelectedFlags[i];
-                bool    canToggle  = isSelected || sel < lootMaxTransferCount;
-                bool    isFocused  = selectedLootPart == part;
-
-                GUILayout.BeginHorizontal();
-                int partScore = Mathf.RoundToInt(GetPartPowerScore(part));
-                string partLabel = $"{PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant()}  [{part.Rarity.ToString().ToUpper()}]  —  {part.PartType.ToString().ToUpper()}  —  SCORE {partScore}";
-                GUILayout.Label(partLabel, rowLabel, GUILayout.ExpandWidth(true));
-                if (InlineBtn(isFocused ? "VIEWING" : "VIEW", btnW, btnH, isFocused))
-                    selectedLootPart = part;
-                string toggleLabel = isSelected ? "\u2713 KEEP" : (canToggle ? "KEEP" : "\u2014");
-                if (InlineBtn(toggleLabel, btnW, btnH, isSelected) && canToggle)
-                {
-                    lootSelectedFlags[i] = !lootSelectedFlags[i];
-                    selectedLootPart = part;
-                }
-                GUILayout.EndHorizontal();
-                GUILayout.Space(2f);
-            }
-            GUILayout.EndScrollView();
-
-            GUILayout.EndVertical();
-            GUILayout.Space(Mathf.Clamp(10f * uiScale, 10f, 18f));
-            Rect detailRect = GUILayoutUtility.GetRect(
-                detailWidth,
-                scrollH,
-                GUILayout.Width(detailWidth),
-                GUILayout.Height(scrollH));
-            DrawSelectedPartCardInRect(
-                detailRect,
-                selectedLootPart,
-                "SALVAGE PART");
-            GUILayout.EndHorizontal();
         }
 
         private void CommitTransferLootAndReturnToMenu()
@@ -1631,17 +2192,35 @@ namespace BladeSpinners.Gameplay.UI
 
         private static void DrawSprite(Rect rect, Sprite sprite)
         {
-            if (sprite == null || sprite.texture == null)
+            if (sprite == null)
                 return;
 
-            Rect tr = sprite.textureRect;
             Texture tex = sprite.texture;
-            Rect uv = new Rect(
-                tr.x / tex.width,
-                tr.y / tex.height,
-                tr.width / tex.width,
-                tr.height / tex.height);
-            GUI.DrawTextureWithTexCoords(rect, tex, uv, true);
+            if (tex == null)
+                return;
+
+            // Direct standard IMGUI rendering for full texture sprites (our icons/emblems)
+            if (sprite.rect.width >= tex.width && sprite.rect.height >= tex.height)
+            {
+                GUI.DrawTexture(rect, tex, ScaleMode.ScaleToFit, true);
+                return;
+            }
+
+            // Sub-rect sprite in atlas
+            try
+            {
+                Rect tr = sprite.rect;
+                Rect uv = new Rect(
+                    tr.x / (float)tex.width,
+                    tr.y / (float)tex.height,
+                    tr.width / (float)tex.width,
+                    tr.height / (float)tex.height);
+                GUI.DrawTextureWithTexCoords(rect, tex, uv, true);
+            }
+            catch
+            {
+                GUI.DrawTexture(rect, tex, ScaleMode.ScaleToFit, true);
+            }
         }
 
         // ══════════════════════════════════════════════════════════════════════════
@@ -1652,11 +2231,10 @@ namespace BladeSpinners.Gameplay.UI
         {
             RefreshPreviewFromLoadout(selectedMainMenuLoadout);
 
-            int sw = Screen.width, sh = Screen.height;
-            float uiScale = GetUiScale();
-            float gutter = Mathf.Clamp(sw * 0.006f, 8f, 18f);
-            float topH = Mathf.Clamp(78f * uiScale, 70f, 118f);
-            float bottomH = Mathf.Clamp(90f * uiScale, 82f, 128f);
+            int sw = Mathf.RoundToInt(UiWidth), sh = Mathf.RoundToInt(UiHeight);
+            float gutter = 10f;
+            float topH = 78f;
+            float bottomH = 90f;
 
             Rect screenRect = new Rect(0, 0, sw, sh);
             DrawConceptBackdrop(screenRect);
@@ -1676,11 +2254,12 @@ namespace BladeSpinners.Gameplay.UI
                         false);
                     break;
 
+                case MenuPanel.ShrineCompendium:
+                    DrawShrineBlessingsCompendium(contentRect);
+                    break;
+
                 case MenuPanel.Records:
-                    DrawFramedContentPanel(
-                        contentRect,
-                        "PERSONAL BESTS",
-                        DrawPersonalBestPanel);
+                    DrawPersonalBestPanel(contentRect);
                     break;
 
                 case MenuPanel.Settings:
@@ -1697,6 +2276,11 @@ namespace BladeSpinners.Gameplay.UI
 
             DrawMainBottomBar(bottomRect);
             DrawTransientUiMessage(new Rect(gutter, bottomRect.y - 42f, sw - gutter * 2f, 32f));
+
+            if (showRunVictoryModal && lastRunUnlockedBlessings != null && lastRunUnlockedBlessings.Count > 0)
+            {
+                DrawRunVictoryUnlocksModal();
+            }
         }
 
         // ══════════════════════════════════════════════════════════════════════════
@@ -1723,17 +2307,8 @@ namespace BladeSpinners.Gameplay.UI
         private void DrawInventoryPanel(bool isRunInventory)
         {
             float uiScale = GetUiScale();
-            float inlineButtonW = Mathf.Clamp(110f * uiScale, 100f, 190f);
-            float inlineButtonH = Mathf.Clamp(34f * uiScale, 32f, 50f);
-            float rowMinH = Mathf.Clamp(42f * uiScale, 40f, 72f);
-            GUIStyle rowLabelStyle = new GUIStyle(bodyLabelStyle)
-            {
-                wordWrap = true,
-                clipping = TextClipping.Clip,
-                alignment = TextAnchor.MiddleLeft
-            };
-
-            GUILayout.Label(isRunInventory ? "RUN INVENTORY" : "INVENTORY", sectionLabelStyle);
+            float tabH = Mathf.Clamp(42f * uiScale, 38f, 54f);
+            float rowMinH = Mathf.Clamp(70f * uiScale, 64f, 90f);
 
             Dictionary<PartType, BeyPart> currentLoadout;
             List<BeyPart> sourceParts;
@@ -1741,8 +2316,7 @@ namespace BladeSpinners.Gameplay.UI
             if (isRunInventory)
             {
                 PlayerManager player = runContext.Player;
-                if (player == null) { GUILayout.Label("No active run.", bodyLabelStyle); return; }
-
+                if (player == null) { GUILayout.Label("NO ACTIVE RUN.", bodyLabelStyle); return; }
                 currentLoadout = GetCurrentRunLoadout(player);
                 sourceParts = player.GetRunInventory().GetAllParts();
             }
@@ -1752,45 +2326,61 @@ namespace BladeSpinners.Gameplay.UI
                 sourceParts = ownedParts;
             }
 
-            GUILayout.Space(Mathf.Clamp(4f * uiScale, 4f, 10f));
-            GUILayout.Label("CLICK A SLOT TO OPEN ITS PART LIST", bodyLabelStyle);
-            GUILayout.Space(Mathf.Clamp(6f * uiScale, 6f, 12f));
+            if (!selectedInventorySlot.HasValue)
+                selectedInventorySlot = PartType.FaceBolt;
 
-            foreach (PartType type in PART_DISPLAY_ORDER)
+            PartType activeSlot = selectedInventorySlot.Value;
+
+            // ── 5 CATEGORY TABS (EXPLICIT PIXEL-SNAPPED LAYOUT) ─────────────────
+            int tabCount = PART_DISPLAY_ORDER.Length;
+            float tabGap = Mathf.Round(4f * uiScale);
+            float availW = Mathf.Max(300f, UiWidth * 0.50f);
+            float tabWidth = Mathf.Floor((availW - (tabCount - 1) * tabGap) / tabCount);
+
+            Rect tabsBarRect = GUILayoutUtility.GetRect(availW, tabH, GUILayout.Width(availW), GUILayout.Height(tabH));
+            int barX = Mathf.RoundToInt(tabsBarRect.x);
+            int barY = Mathf.RoundToInt(tabsBarRect.y);
+            int barH = Mathf.RoundToInt(tabH);
+            int tabW = Mathf.RoundToInt(tabWidth);
+            int gapI = Mathf.RoundToInt(tabGap);
+
+            for (int t = 0; t < tabCount; t++)
             {
-                currentLoadout.TryGetValue(type, out BeyPart equippedPart);
-                string slotLabel = type.ToString().ToUpper();
-                string equippedLabel = equippedPart != null
-                    ? PartDisplayNameFormatter.ToShortDisplayName(equippedPart)
-                    : "NONE";
-
-                GUILayout.BeginHorizontal(listItemStyle, GUILayout.MinHeight(rowMinH));
-                GUILayout.Label($"{slotLabel} : {equippedLabel}", rowLabelStyle, GUILayout.ExpandWidth(true), GUILayout.MinHeight(rowMinH - 6f));
-                GUILayout.FlexibleSpace();
-                if (InlineBtn("CHOOSE", inlineButtonW, inlineButtonH))
+                PartType slot = PART_DISPLAY_ORDER[t];
+                bool isActive = activeSlot == slot;
+                string tabLabel = slot switch
                 {
-                    selectedInventorySlot = type;
+                    PartType.FaceBolt => "FACE BOLT",
+                    PartType.EnergyRing => "ENERGY RING",
+                    PartType.FusionWheel => "FUSION WHEEL",
+                    PartType.Track => "SPIN TRACK",
+                    PartType.Tip => "PERF. TIP",
+                    _ => slot.ToString().ToUpper()
+                };
+
+                Rect tabRect = new Rect(barX + t * (tabW + gapI), barY, tabW, barH);
+                if (DrawCategoryTabBtn(tabLabel, tabRect, isActive))
+                {
+                    selectedInventorySlot = slot;
+                    activeSlot = slot;
                 }
-                GUILayout.EndHorizontal();
             }
 
-            if (!selectedInventorySlot.HasValue)
-                return;
+            GUILayout.Space(Mathf.Clamp(8f * uiScale, 6f, 14f));
 
-            PartType selectedType = selectedInventorySlot.Value;
-            List<BeyPart> parts = GetPartsByType(sourceParts, selectedType);
-            if (selectedInventoryPart == null || selectedInventoryPart.PartType != selectedType || !parts.Contains(selectedInventoryPart))
+            List<BeyPart> parts = GetPartsByType(sourceParts, activeSlot);
+            if (selectedInventoryPart == null || selectedInventoryPart.PartType != activeSlot || !parts.Contains(selectedInventoryPart))
                 selectedInventoryPart = parts.Count > 0 ? parts[0] : null;
 
-            GUILayout.Space(Mathf.Clamp(8f * uiScale, 8f, 16f));
-            GUILayout.Label($"SELECT {selectedType.ToString().ToUpper()}", sectionLabelStyle);
+            currentLoadout.TryGetValue(activeSlot, out BeyPart equippedPart);
 
             if (parts.Count == 0)
             {
-                GUILayout.Label("NO PARTS IN THIS SLOT TYPE.", bodyLabelStyle);
+                GUILayout.Label($"NO {activeSlot.ToString().ToUpper()} PARTS OWNED.", bodyLabelStyle);
                 return;
             }
 
+            // ── SCROLLABLE PART LIST ─────────────────────────────────────────────
             if (isRunInventory)
                 runScroll = GUILayout.BeginScrollView(runScroll, GUILayout.ExpandHeight(true));
             else
@@ -1800,35 +2390,110 @@ namespace BladeSpinners.Gameplay.UI
             {
                 BeyPart part = parts[i];
                 if (part == null) continue;
-                bool isFocused = selectedInventoryPart == part;
 
-                GUILayout.BeginHorizontal(listItemStyle, GUILayout.MinHeight(rowMinH));
-                GUILayout.Label($"{PartDisplayNameFormatter.ToShortDisplayName(part)}  [{part.Rarity.ToString().ToUpper()}]", rowLabelStyle, GUILayout.ExpandWidth(true), GUILayout.MinHeight(rowMinH - 6f));
-                GUILayout.FlexibleSpace();
-                if (InlineBtn(isFocused ? "VIEWING" : "VIEW", Mathf.Clamp(104f * uiScale, 96f, 170f), inlineButtonH, isFocused))
-                    selectedInventoryPart = part;
-                if (InlineBtn("EQUIP", Mathf.Clamp(98f * uiScale, 92f, 168f), inlineButtonH))
+                bool isSelected = selectedInventoryPart == part;
+                bool isEquipped = equippedPart == part;
+
+                Rect rowRaw = GUILayoutUtility.GetRect(10f, rowMinH, GUILayout.ExpandWidth(true));
+                Rect row = new Rect(Mathf.Round(rowRaw.x), Mathf.Round(rowRaw.y), Mathf.Round(rowRaw.width), Mathf.Round(rowRaw.height));
+
+                Color rowBg = isSelected
+                    ? new Color(0.08f, 0.22f, 0.38f, 0.96f)
+                    : (isEquipped ? new Color(0.05f, 0.15f, 0.24f, 0.90f) : new Color(0.03f, 0.07f, 0.13f, 0.85f));
+                DrawRect(row, rowBg);
+                DrawRect(new Rect(row.x, row.yMax - 2f, row.width, 2f), isSelected ? ACCENT_CYAN : (isEquipped ? ACCENT_YEL : new Color(1f, 1f, 1f, 0.06f)));
+
+                if (isSelected || isEquipped)
+                    DrawFrameCorners(row, isSelected ? ACCENT_CYAN : ACCENT_YEL, 16f, 1.5f);
+
+                // Part icon
+                float iconSz = Mathf.Min(row.height - 16f, 52f);
+                Rect iconRect = new Rect(row.x + 8f, row.center.y - iconSz * 0.5f, iconSz, iconSz);
+                if (activeSlot != PartType.FaceBolt && swapPartPreviewCache.TryGetValue(part.GetInstanceID(), out RenderTexture swapRT) && swapRT != null && swapRT.IsCreated())
+                    GUI.DrawTexture(iconRect, swapRT, ScaleMode.ScaleToFit, true);
+                else
+                    DrawPartSprite(iconRect, part);
+
+                // Labels
+                float labelX = iconRect.xMax + 12f;
+                float labelW = row.width * 0.44f;
+                string partDisplayName = PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant();
+                DrawFittedLabel(new Rect(labelX, row.y + 8f, labelW, 24f), partDisplayName, sectionLabelStyle, isEquipped ? ACCENT_YEL : Color.white, 10);
+                DrawFittedLabel(new Rect(labelX, row.y + 32f, labelW, 20f), $"POWER {Mathf.RoundToInt(GetPartPowerScore(part))}  //  WT {part.Weight:0.0}G", bodyLabelStyle, new Color(0.70f, 0.88f, 1f, 0.85f), 10);
+
+                // Rarity Pill
+                DrawRarityPill(new Rect(row.xMax - 180f, row.y + 12f, 70f, row.height - 24f), part.Rarity, part.Rarity.ToString().ToUpperInvariant());
+
+                // Equip / Status button
+                Rect btnRect = new Rect(row.xMax - 96f, row.y + 12f, 88f, row.height - 24f);
+                if (isEquipped)
                 {
-                    selectedInventoryPart = part;
-                    if (isRunInventory)
+                    DrawRect(btnRect, new Color(0.12f, 0.35f, 0.22f, 0.90f));
+                    DrawRect(new Rect(btnRect.x, btnRect.yMax - 2f, btnRect.width, 2f), new Color(0.25f, 0.95f, 0.45f, 1f));
+                    DrawFittedLabel(btnRect, "EQUIPPED", bodyLabelStyle, new Color(0.4f, 1f, 0.55f, 1f), 10);
+                }
+                else
+                {
+                    if (ActionBtn("EQUIP", btnRect, ACCENT_CYAN, false))
                     {
-                        runContext.Player?.EquipPart(part);
-                        RefreshPreviewFromLoadout(GetCurrentRunLoadout(runContext.Player));
-                    }
-                    else
-                    {
-                        selectedMainMenuLoadout[selectedType] = part;
-                        RefreshPreviewFromLoadout(selectedMainMenuLoadout);
-                        AutoSave();
+                        selectedInventoryPart = part;
+                        if (isRunInventory)
+                        {
+                            runContext.Player?.EquipPart(part);
+                            RefreshPreviewFromLoadout(GetCurrentRunLoadout(runContext.Player));
+                        }
+                        else
+                        {
+                            selectedMainMenuLoadout[activeSlot] = part;
+                            RefreshPreviewFromLoadout(selectedMainMenuLoadout);
+                            AutoSave();
+                        }
                     }
                 }
-                GUILayout.EndHorizontal();
+
+                // Clicking anywhere on row selects it
+                if (WithButtonSound(GUI.Button(new Rect(row.x, row.y, row.width - 100f, row.height), GUIContent.none, GUIStyle.none)))
+                {
+                    selectedInventoryPart = part;
+                }
             }
 
             if (isRunInventory)
                 GUILayout.EndScrollView();
             else
                 GUILayout.EndScrollView();
+        }
+
+        private bool DrawCategoryTabBtn(string label, Rect rect, bool active)
+        {
+            int rx = Mathf.RoundToInt(rect.x);
+            int ry = Mathf.RoundToInt(rect.y);
+            int rw = Mathf.RoundToInt(rect.width);
+            int rh = Mathf.RoundToInt(rect.height);
+            Rect r = new Rect(rx, ry, rw, rh);
+
+            Color bg = active ? ACCENT_YEL : PANEL_STEEL;
+            Color fg = active ? Color.black : Color.white;
+            int bottomBorderH = Mathf.Max(2, Mathf.RoundToInt(rh * 0.06f));
+            int leftAccentW = active ? Mathf.Max(3, Mathf.RoundToInt(rw * 0.03f)) : 0;
+
+            DrawRect(new Rect(rx - 1, ry - 1, rw + 2, rh + 2), Color.black);
+            DrawRect(r, bg);
+            if (!active)
+            {
+                DrawRect(new Rect(rx, ry, 4, rh), ACCENT_CYAN);
+                DrawRect(new Rect(rx + 4, ry, Mathf.RoundToInt(rw * 0.18f), rh), new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.10f));
+            }
+            DrawRect(new Rect(rx, ry + rh - bottomBorderH, rw, bottomBorderH), Color.black);
+            if (active) DrawRect(new Rect(rx, ry, leftAccentW, rh), Color.black);
+
+            Rect labelRect = new Rect(rx + leftAccentW, ry, rw - leftAccentW, rh - bottomBorderH);
+            GUIStyle fittedStyle = FitLabelStyle(inlineActionButtonStyle, label, labelRect.width - 4f, 12, labelRect.height - 4f);
+
+            GUI.contentColor = fg;
+            GUI.Label(labelRect, label, fittedStyle);
+            GUI.contentColor = Color.white;
+            return WithButtonSound(GUI.Button(r, GUIContent.none, GUIStyle.none));
         }
 
         private void DrawInventoryWorkspace(
@@ -1843,47 +2508,31 @@ namespace BladeSpinners.Gameplay.UI
                 2f);
 
             float uiScale = GetUiScale();
-            float pad = Mathf.Clamp(
-                12f * uiScale,
-                10f,
-                20f);
-            float headerH = Mathf.Clamp(
-                34f * uiScale,
-                30f,
-                48f);
-            float gap = Mathf.Clamp(
-                12f * uiScale,
-                10f,
-                20f);
+            float pad = Mathf.Clamp(12f * uiScale, 10f, 20f);
+            float headerH = Mathf.Clamp(34f * uiScale, 30f, 48f);
+            float gap = Mathf.Clamp(12f * uiScale, 10f, 20f);
+
             DrawFittedLabel(
-                new Rect(
-                    area.x + pad,
-                    area.y + 6f,
-                    area.width - pad * 2f,
-                    headerH),
-                isRunInventory
-                    ? "RUN INVENTORY"
-                    : "PART INVENTORY",
+                new Rect(area.x + pad, area.y + 6f, area.width - pad * 2f, headerH),
+                isRunInventory ? "RUN INVENTORY // PART VAULT" : "INVENTORY // PART VAULT",
                 sectionLabelStyle,
                 ACCENT_CYAN,
                 10);
 
             Rect content = new Rect(
-                area.x + pad,
-                area.y + headerH + 8f,
-                area.width - pad * 2f,
-                area.height - headerH - pad - 8f);
-            float detailW = Mathf.Clamp(
-                content.width * 0.34f,
-                300f,
-                520f);
+                Mathf.Round(area.x + pad),
+                Mathf.Round(area.y + headerH + 8f),
+                Mathf.Round(area.width - pad * 2f),
+                Mathf.Round(area.height - headerH - pad - 8f));
+
+            float detailW = Mathf.Round(Mathf.Clamp(content.width * 0.36f, 320f, 540f));
             Rect listRect = new Rect(
                 content.x,
                 content.y,
-                Mathf.Max(260f, content.width - detailW - gap),
+                Mathf.Round(Mathf.Max(260f, content.width - detailW - gap)),
                 content.height);
             Rect detailRect = new Rect(
-                listRect.xMax + gap,
+                Mathf.Round(listRect.xMax + gap),
                 content.y,
                 detailW,
                 content.height);
@@ -1891,93 +2540,478 @@ namespace BladeSpinners.Gameplay.UI
             GUILayout.BeginArea(listRect);
             DrawInventoryPanel(isRunInventory);
             GUILayout.EndArea();
+
             DrawSelectedPartCardInRect(
                 detailRect,
                 selectedInventoryPart,
-                "SELECTED PART");
+                "PART SPECIFICATIONS");
         }
 
-        private void DrawPersonalBestPanel()
+        private void DrawPersonalBestPanel(Rect area)
         {
-            IReadOnlyList<RunRecord> fastest =
-                RunRecordStore.GetFastestCompleted();
-            IReadOnlyList<RunRecord> deepest =
-                RunRecordStore.GetDeepest();
+            DrawPanelFrame(
+                area,
+                new Color(0.03f, 0.06f, 0.11f, 0.94f),
+                new Color(0.05f, 0.10f, 0.16f, 0.95f),
+                ACCENT_CYAN,
+                2f);
 
-            GUILayout.BeginHorizontal();
-            DrawRunRecordColumn(
-                "FASTEST COMPLETED RUNS",
-                fastest,
-                true);
-            GUILayout.Space(Mathf.Clamp(
-                18f * GetUiScale(),
-                14f,
-                28f));
-            DrawRunRecordColumn(
-                "MOST ARENAS CLEARED",
-                deepest,
-                false);
-            GUILayout.EndHorizontal();
+            float uiScale = GetUiScale();
+            float pad = Mathf.Clamp(12f * uiScale, 10f, 20f);
+            float headerH = Mathf.Clamp(34f * uiScale, 30f, 48f);
+            float colGap = Mathf.Clamp(16f * uiScale, 12f, 24f);
+
+            DrawFittedLabel(
+                new Rect(area.x + pad, area.y + 6f, area.width - pad * 2f, headerH),
+                "TOURNAMENT RECORDS // 大会戦績",
+                sectionLabelStyle,
+                ACCENT_CYAN,
+                10);
+
+            Rect content = new Rect(
+                Mathf.Round(area.x + pad),
+                Mathf.Round(area.y + headerH + 8f),
+                Mathf.Round(area.width - pad * 2f),
+                Mathf.Round(area.height - headerH - pad - 8f));
+
+            IReadOnlyList<RunRecord> fastest = RunRecordStore.GetFastestCompleted();
+            IReadOnlyList<RunRecord> deepest = RunRecordStore.GetDeepest();
+
+            int colW = Mathf.RoundToInt((content.width - colGap) * 0.5f);
+            int colH = Mathf.RoundToInt(content.height);
+
+            Rect leftCol = new Rect(content.x, content.y, colW, colH);
+            Rect rightCol = new Rect(content.x + colW + Mathf.RoundToInt(colGap), content.y, colW, colH);
+
+            DrawRunRecordColumnStyled(leftCol, "FASTEST COMPLETED RUNS // 最速走破記録", fastest, true, ACCENT_CYAN, uiScale);
+            DrawRunRecordColumnStyled(rightCol, "MOST ARENAS CLEARED // 最高到達記録", deepest, false, ACCENT_GOLD, uiScale);
         }
 
-        private void DrawRunRecordColumn(
+        private void DrawRunRecordColumnStyled(
+            Rect colRect,
             string header,
             IReadOnlyList<RunRecord> records,
-            bool fastestColumn)
+            bool fastestColumn,
+            Color themeColor,
+            float uiScale)
         {
-            GUILayout.BeginVertical(
-                listItemStyle,
-                GUILayout.ExpandWidth(true),
-                GUILayout.ExpandHeight(true));
-            GUILayout.Label(header, sectionLabelStyle);
-            GUILayout.Space(6f);
+            DrawPanelFrame(colRect, new Color(0.02f, 0.04f, 0.09f, 0.94f), new Color(0.04f, 0.08f, 0.15f, 0.96f), themeColor, 2f);
+            DrawFrameCorners(colRect, themeColor, 12f, 2f);
+
+            float pad = Mathf.Clamp(10f * uiScale, 8f, 16f);
+            float headerH = Mathf.Clamp(36f * uiScale, 30f, 48f);
+            Rect headerRect = new Rect(colRect.x + pad, colRect.y + 6f, colRect.width - pad * 2f, headerH);
+            DrawRect(headerRect, new Color(themeColor.r * 0.15f, themeColor.g * 0.15f, themeColor.b * 0.15f, 0.6f));
+            DrawFittedLabel(headerRect, header, sectionLabelStyle, themeColor, 11);
+
+            float listY = headerRect.yMax + 8f;
+            float rowH = Mathf.Clamp(44f * uiScale, 38f, 58f);
+            float rowGap = Mathf.Clamp(6f * uiScale, 4f, 10f);
 
             if (records == null || records.Count == 0)
             {
-                GUILayout.Label(
+                Rect emptyRect = new Rect(colRect.x + pad, listY, colRect.width - pad * 2f, 80f);
+                DrawRect(emptyRect, new Color(0f, 0f, 0f, 0.4f));
+                DrawFittedLabel(
+                    emptyRect,
                     fastestColumn
-                        ? "COMPLETE A RUN TO SET YOUR FIRST TIME."
-                        : "FINISH AN ARENA TO SET YOUR FIRST DEPTH.",
-                    bodyLabelStyle);
-                GUILayout.FlexibleSpace();
-                GUILayout.EndVertical();
+                        ? "COMPLETE A RUN TO REGISTER YOUR FIRST TIME"
+                        : "CLEAR ARENAS TO RECORD YOUR DEEPEST RUN",
+                    bodyLabelStyle,
+                    new Color(0.6f, 0.7f, 0.8f, 0.7f),
+                    11);
                 return;
             }
 
-            GUIStyle recordStyle = new GUIStyle(statRowStyle)
-            {
-                alignment = TextAnchor.MiddleLeft,
-                clipping = TextClipping.Clip
-            };
-            for (int i = 0; i < records.Count; i++)
+            int displayCount = Mathf.Min(records.Count, 8);
+            for (int i = 0; i < displayCount; i++)
             {
                 RunRecord record = records[i];
-                string status = record.completed
-                    ? "COMPLETE"
-                    : "DEFEATED";
-                string label = fastestColumn
-                    ? $"{i + 1,2}.  {FormatRunTime(record.durationSeconds)}   " +
-                      $"{record.arenasCleared}/{record.totalArenas} ARENAS"
-                    : $"{i + 1,2}.  {record.arenasCleared}/{record.totalArenas} ARENAS   " +
-                      $"{FormatRunTime(record.durationSeconds)}   {status}";
-                GUILayout.Label(
-                    label,
-                    recordStyle,
-                    GUILayout.MinHeight(
-                        Mathf.Clamp(
-                            34f * GetUiScale(),
-                            30f,
-                            52f)));
+                int ry = Mathf.RoundToInt(listY + i * (rowH + rowGap));
+                Rect rowRect = new Rect(colRect.x + pad, ry, colRect.width - pad * 2f, rowH);
+
+                bool isRank1 = i == 0;
+                bool isRank2 = i == 1;
+                bool isRank3 = i == 2;
+
+                Color rankColor = isRank1 ? ACCENT_GOLD : (isRank2 ? new Color(0.85f, 0.88f, 0.95f, 1f) : (isRank3 ? new Color(0.90f, 0.60f, 0.35f, 1f) : new Color(0.3f, 0.5f, 0.7f, 0.8f)));
+                Color rowBg = isRank1
+                    ? new Color(0.12f, 0.09f, 0.02f, 0.92f)
+                    : (isRank2 ? new Color(0.06f, 0.08f, 0.12f, 0.88f) : (isRank3 ? new Color(0.08f, 0.05f, 0.03f, 0.88f) : new Color(0.02f, 0.04f, 0.08f, 0.85f)));
+
+                DrawRect(rowRect, rowBg);
+                DrawRect(new Rect(rowRect.x, rowRect.y, 4f, rowRect.height), rankColor);
+                DrawRect(new Rect(rowRect.x, rowRect.yMax - 1f, rowRect.width, 1f), new Color(1f, 1f, 1f, 0.08f));
+
+                // Rank badge / medal
+                string rankTag = isRank1 ? "1ST" : (isRank2 ? "2ND" : (isRank3 ? "3RD" : $"{i + 1:D2}."));
+                float rankW = Mathf.Clamp(46f * uiScale, 38f, 60f);
+                Rect rankRect = new Rect(rowRect.x + 8f, rowRect.y, rankW, rowRect.height);
+                DrawFittedLabel(rankRect, rankTag, titleBarStyle, rankColor, 12);
+
+                // Arenas cleared badge
+                float arenaW = Mathf.Clamp(130f * uiScale, 110f, 160f);
+                Rect arenaRect = new Rect(rankRect.xMax + 6f, rowRect.y, arenaW, rowRect.height);
+                string arenaStr = $"{record.arenasCleared}/{record.totalArenas} ARENAS";
+                DrawFittedLabel(arenaRect, arenaStr, sectionLabelStyle, Color.white, 11);
+
+                // Time Duration
+                float timeW = Mathf.Clamp(100f * uiScale, 90f, 130f);
+                Rect timeRect = new Rect(arenaRect.xMax + 6f, rowRect.y, timeW, rowRect.height);
+                DrawFittedLabel(timeRect, FormatRunTime(record.durationSeconds), bodyLabelStyle, ACCENT_CYAN, 11);
+
+                // Status Badge
+                float statusW = Mathf.Clamp(100f * uiScale, 85f, 120f);
+                Rect statusRect = new Rect(rowRect.xMax - statusW - 8f, rowRect.center.y - 12f * uiScale, statusW, 24f * uiScale);
+                bool won = record.completed;
+                Color statusBg = won ? new Color(0.10f, 0.32f, 0.18f, 0.85f) : new Color(0.35f, 0.08f, 0.10f, 0.85f);
+                Color statusFg = won ? new Color(0.35f, 0.95f, 0.50f, 1f) : new Color(1f, 0.40f, 0.40f, 1f);
+                DrawRect(statusRect, statusBg);
+                DrawFittedLabel(statusRect, won ? "VICTORY" : "DEFEATED", bodyLabelStyle, statusFg, 9);
             }
-            GUILayout.FlexibleSpace();
-            GUILayout.EndVertical();
+        }
+
+        // ══════════════════════════════════════════════════════════════════════════
+        //  SHRINE BLESSINGS COMPENDIUM
+        // ══════════════════════════════════════════════════════════════════════════
+
+        private void DrawShrineBlessingsCompendium(Rect area)
+        {
+            float uiScale = GetUiScale();
+            float pad = Mathf.Clamp(12f * uiScale, 10f, 20f);
+
+            DrawPanelFrame(
+                area,
+                new Color(0.02f, 0.04f, 0.08f, 0.96f),
+                new Color(0.04f, 0.08f, 0.14f, 0.98f),
+                ACCENT_CYAN,
+                2.5f);
+            DrawFrameCorners(area, ACCENT_CYAN, 20f, 2f);
+
+            // ── TOP HEADER & META PROGRESS ───────────────────────────
+            float headerH = Mathf.Clamp(72f * uiScale, 64f, 96f);
+            Rect headerRect = new Rect(area.x + pad, area.y + pad * 0.6f, area.width - pad * 2f, headerH);
+            DrawPanelFrame(headerRect, new Color(0.03f, 0.06f, 0.12f, 0.92f), new Color(0.05f, 0.10f, 0.18f, 0.95f), ACCENT_CYAN, 1.5f);
+
+            int unlockedCount = ShrineBlessingsUnlockManager.GetUnlockedCount();
+            int totalCount = ShrineBlessingsUnlockManager.GetTotalCount();
+            float unlockPct = totalCount > 0 ? (float)unlockedCount / totalCount : 0f;
+
+            // Title & Subtitle
+            float titleW = headerRect.width * 0.48f;
+            DrawFittedLabel(new Rect(headerRect.x + 14f, headerRect.y + 6f, titleW, headerH * 0.48f), "SHRINE BLESSINGS // COMPENDIUM", titleBarStyle, ACCENT_CYAN, 13);
+            DrawFittedLabel(new Rect(headerRect.x + 14f, headerRect.y + headerH * 0.50f, titleW, headerH * 0.42f), "WIN FULL RUNS (9 ARENAS) TO UNLOCK NEW SHRINE BLESSINGS", bodyLabelStyle, new Color(0.65f, 0.85f, 1f, 0.80f), 10);
+
+            // Progress Meter on right
+            float progW = headerRect.width * 0.46f;
+            Rect progArea = new Rect(headerRect.xMax - progW - 14f, headerRect.y + 6f, progW, headerH - 12f);
+            string progStr = $"UNLOCKED: {unlockedCount} / {totalCount} ({unlockPct * 100f:F1}%)";
+            DrawFittedLabel(new Rect(progArea.x, progArea.y + 2f, progArea.width, progArea.height * 0.42f), progStr, sectionLabelStyle, ACCENT_GOLD, 11);
+
+            Rect barRect = new Rect(progArea.x, progArea.y + progArea.height * 0.48f, progArea.width, Mathf.Clamp(14f * uiScale, 10f, 18f));
+            DrawRect(barRect, new Color(0f, 0f, 0f, 0.6f));
+            DrawPanelFrame(barRect, new Color(0f, 0f, 0f, 0.6f), new Color(0f, 0f, 0f, 0.6f), new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.4f), 1f);
+            if (unlockPct > 0f)
+            {
+                Rect fillRect = new Rect(barRect.x + 1f, barRect.y + 1f, (barRect.width - 2f) * Mathf.Clamp01(unlockPct), barRect.height - 2f);
+                DrawRect(fillRect, ACCENT_CYAN);
+            }
+
+            // ── FILTER TOOLBAR ──────────────────────────────────────────
+            float filterY = headerRect.yMax + 8f;
+            float filterH = Mathf.Clamp(34f * uiScale, 30f, 44f);
+            Rect filterBar = new Rect(area.x + pad, filterY, area.width - pad * 2f, filterH);
+
+            // Rarity Tabs: ALL, COMMON, UNCOMMON, RARE, EPIC, LEGENDARY
+            int totalRarities = 6;
+            float rTabW = (filterBar.width * 0.60f) / totalRarities;
+            string[] rNames = { "ALL", "COMMON", "UNCOMMON", "RARE", "EPIC", "LEGENDARY" };
+            Color[] rColors = { ACCENT_CYAN, GetRarityColor(PerkRarity.Common), GetRarityColor(PerkRarity.Uncommon), GetRarityColor(PerkRarity.Rare), GetRarityColor(PerkRarity.Epic), GetRarityColor(PerkRarity.Legendary) };
+
+            for (int r = 0; r < totalRarities; r++)
+            {
+                int rIndex = r - 1;
+                bool isSelected = compendiumRarityFilter == rIndex;
+                Rect rRect = new Rect(filterBar.x + r * rTabW, filterBar.y, rTabW - 4f, filterH);
+
+                int rUnl = r == 0 ? unlockedCount : ShrineBlessingsUnlockManager.GetUnlockedCountForRarity((PerkRarity)rIndex);
+                int rTot = r == 0 ? totalCount : ShrineBlessingsUnlockManager.GetTotalCountForRarity((PerkRarity)rIndex);
+                string tabLabel = $"{rNames[r]} [{rUnl}/{rTot}]";
+
+                Color bg = isSelected ? new Color(rColors[r].r * 0.3f, rColors[r].g * 0.3f, rColors[r].b * 0.3f, 0.9f) : new Color(0.03f, 0.06f, 0.10f, 0.85f);
+                DrawPanelFrame(rRect, bg, bg, isSelected ? rColors[r] : new Color(0.15f, 0.25f, 0.35f, 0.6f), isSelected ? 2f : 1f);
+                if (GUI.Button(rRect, GUIContent.none, GUIStyle.none))
+                {
+                    compendiumRarityFilter = rIndex;
+                }
+                DrawFittedLabel(rRect, tabLabel, sectionLabelStyle, isSelected ? rColors[r] : new Color(0.7f, 0.8f, 0.9f, 0.8f), 9);
+            }
+
+            // Category Tabs on right: ALL, COMBAT, MOBILITY, ENERGY, DEFENSE
+            float cStartX = filterBar.x + filterBar.width * 0.62f;
+            float cAvailW = filterBar.xMax - cStartX;
+            int totalCats = 5;
+            float cTabW = cAvailW / totalCats;
+            string[] cNames = { "ALL", "COMBAT", "MOBILITY", "ENERGY", "DEFENSE" };
+
+            for (int c = 0; c < totalCats; c++)
+            {
+                int cIndex = c - 1;
+                bool isSelected = compendiumCategoryFilter == cIndex;
+                Rect cRect = new Rect(cStartX + c * cTabW, filterBar.y, cTabW - 4f, filterH);
+
+                Color bg = isSelected ? new Color(0.08f, 0.22f, 0.32f, 0.9f) : new Color(0.02f, 0.05f, 0.09f, 0.85f);
+                DrawPanelFrame(cRect, bg, bg, isSelected ? ACCENT_CYAN : new Color(0.15f, 0.25f, 0.35f, 0.6f), isSelected ? 2f : 1f);
+                if (GUI.Button(cRect, GUIContent.none, GUIStyle.none))
+                {
+                    compendiumCategoryFilter = cIndex;
+                }
+                DrawFittedLabel(cRect, cNames[c], sectionLabelStyle, isSelected ? ACCENT_CYAN : new Color(0.6f, 0.7f, 0.8f, 0.8f), 9);
+            }
+
+            // ── MAIN SCROLLABLE GRID ────────────────────────────────────
+            float gridY = filterBar.yMax + 8f;
+            Rect gridArea = new Rect(area.x + pad, gridY, area.width - pad * 2f, area.yMax - gridY - pad);
+            DrawPanelFrame(gridArea, new Color(0.015f, 0.035f, 0.07f, 0.95f), new Color(0.02f, 0.05f, 0.09f, 0.96f), new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.35f), 1f);
+
+            var filteredList = ShrinePerkCatalog.GetAllPerks().ToList();
+            if (compendiumRarityFilter >= 0)
+                filteredList = filteredList.Where(p => (int)p.Rarity == compendiumRarityFilter).ToList();
+            if (compendiumCategoryFilter >= 0)
+                filteredList = filteredList.Where(p => (int)p.Category == compendiumCategoryFilter).ToList();
+
+            float scrollAreaW = gridArea.width - 12f;
+            float scrollAreaH = gridArea.height - 8f;
+            int cols = Mathf.Max(2, Mathf.FloorToInt((scrollAreaW - 16f) / Mathf.Clamp(260f * uiScale, 220f, 340f)));
+            int rows = Mathf.CeilToInt((float)filteredList.Count / cols);
+            float cardH = Mathf.Clamp(148f * uiScale, 136f, 175f);
+            float gap = Mathf.Clamp(6f * uiScale, 5f, 10f);
+            float totalContentH = rows * (cardH + gap) + 12f;
+
+            float innerW = scrollAreaW - 14f;
+            float cardW = (innerW - gap * (cols - 1)) / cols;
+
+            Rect viewRect = new Rect(0, 0, innerW, totalContentH);
+            compendiumScrollPos = GUI.BeginScrollView(
+                new Rect(gridArea.x + 4f, gridArea.y + 4f, scrollAreaW, scrollAreaH),
+                compendiumScrollPos,
+                viewRect,
+                false,
+                false,
+                GUIStyle.none,
+                GUIStyle.none);
+
+            for (int i = 0; i < filteredList.Count; i++)
+            {
+                int r = i / cols;
+                float cy = 6f + r * (cardH + gap);
+
+                // Viewport Culling: Skip offscreen cards for buttery-smooth 144+ FPS scrolling
+                if (cy + cardH < compendiumScrollPos.y - 15f || cy > compendiumScrollPos.y + scrollAreaH + 15f)
+                    continue;
+
+                int c = i % cols;
+                float cx = c * (cardW + gap);
+                Rect cardRect = new Rect(cx, cy, cardW, cardH);
+
+                ShrinePerkData perk = filteredList[i];
+                DrawCompendiumPerkCard(cardRect, perk, uiScale);
+            }
+
+            GUI.EndScrollView();
+
+            // Custom Sleek Vertical Scrollbar Indicator
+            if (totalContentH > scrollAreaH)
+            {
+                Rect scrollTrack = new Rect(gridArea.xMax - 7f, gridArea.y + 6f, 4f, gridArea.height - 12f);
+                DrawRect(scrollTrack, new Color(0.04f, 0.08f, 0.15f, 0.85f));
+
+                float maxScroll = totalContentH - scrollAreaH;
+                float thumbH = Mathf.Max(26f, (scrollAreaH / totalContentH) * scrollTrack.height);
+                float thumbY = scrollTrack.y + Mathf.Clamp01(compendiumScrollPos.y / maxScroll) * (scrollTrack.height - thumbH);
+                Rect thumbRect = new Rect(scrollTrack.x - 1f, thumbY, 6f, thumbH);
+                DrawRect(thumbRect, ACCENT_CYAN);
+                DrawFrameCorners(thumbRect, ACCENT_CYAN, 3f, 1f);
+            }
+        }
+
+        private void DrawCompendiumPerkCard(Rect card, ShrinePerkData perk, float uiScale)
+        {
+            bool isUnlocked = ShrineBlessingsUnlockManager.IsUnlocked(perk.Type);
+            Color rarityColor = GetRarityColor(perk.Rarity);
+
+            if (isUnlocked)
+            {
+                // Unlocked Blessing Card
+                DrawPanelFrame(card, new Color(0.03f, 0.06f, 0.12f, 0.94f), new Color(0.04f, 0.08f, 0.16f, 0.96f), rarityColor, 2f);
+                DrawFrameCorners(card, rarityColor, 8f, 1.5f);
+
+                // Top Accent Line
+                DrawRect(new Rect(card.x + 2f, card.y + 2f, card.width - 4f, 3f), rarityColor);
+
+                // Icon Symbol Box (Centered Symbol)
+                float iconBoxSize = Mathf.Clamp(34f * uiScale, 30f, 42f);
+                Rect iconBox = new Rect(card.x + 8f, card.y + 8f, iconBoxSize, iconBoxSize);
+                DrawPanelFrame(iconBox, new Color(rarityColor.r * 0.25f, rarityColor.g * 0.25f, rarityColor.b * 0.25f, 0.90f), new Color(0.02f, 0.04f, 0.08f, 0.95f), rarityColor, 1.5f);
+
+                GUIStyle iconSymbolStyle = CreateStaticStyle(
+                    sectionLabelStyle,
+                    rarityColor,
+                    Mathf.RoundToInt(Mathf.Clamp(iconBoxSize * 0.44f, 11f, 18f)),
+                    TextAnchor.MiddleCenter,
+                    FontStyle.Bold);
+                GUI.Label(iconBox, perk.IconSymbol, iconSymbolStyle);
+
+                // Name & Japanese Name
+                float textX = iconBox.xMax + 8f;
+                float textW = card.width - iconBoxSize - 96f * uiScale;
+                Rect nameRect = new Rect(textX, card.y + 6f, textW, 18f * uiScale);
+                DrawFittedLabel(nameRect, perk.Name, sectionLabelStyle, Color.white, 11);
+
+                Rect jpRect = new Rect(textX, nameRect.yMax - 2f, textW, 14f * uiScale);
+                DrawFittedLabel(jpRect, perk.JapaneseName, bodyLabelStyle, new Color(0.60f, 0.80f, 1f, 0.75f), 9);
+
+                // Category & Rarity Badge on top right
+                float badgeW = Mathf.Clamp(76f * uiScale, 68f, 90f);
+                Rect catBadge = new Rect(card.xMax - badgeW - 6f, card.y + 8f, badgeW, 18f * uiScale);
+                DrawRect(catBadge, new Color(rarityColor.r * 0.20f, rarityColor.g * 0.20f, rarityColor.b * 0.20f, 0.85f));
+                DrawFittedLabel(catBadge, perk.Category.ToString().ToUpperInvariant(), bodyLabelStyle, rarityColor, 8);
+
+                // Description Body (Larger crisp font)
+                float descY = iconBox.yMax + 4f;
+                float descH = (card.yMax - 22f * uiScale) - descY;
+                Rect descRect = new Rect(card.x + 6f, descY, card.width - 12f, Mathf.Max(16f, descH));
+                DrawRect(descRect, new Color(0f, 0f, 0f, 0.25f));
+                DrawFittedLabel(new Rect(descRect.x + 4f, descRect.y + 2f, descRect.width - 8f, descRect.height - 4f), perk.Description, bodyLabelStyle, new Color(0.90f, 0.95f, 1f, 0.95f), 12);
+
+                // Footer Bar (Cost & Discovered Tag)
+                float footerY = card.yMax - 20f * uiScale;
+                Rect costRect = new Rect(card.x + 8f, footerY, card.width * 0.50f, 16f * uiScale);
+                DrawFittedLabel(costRect, $"COST: {perk.BaseCost} PTS", bodyLabelStyle, ACCENT_GOLD, 9);
+
+                Rect discRect = new Rect(card.xMax - 95f * uiScale - 6f, footerY, 95f * uiScale, 16f * uiScale);
+                DrawFittedLabel(discRect, "✓ DISCOVERED", bodyLabelStyle, new Color(0.35f, 0.95f, 0.55f, 0.90f), 9);
+            }
+            else
+            {
+                // Locked Blessing Card (Risk of Rain style)
+                DrawPanelFrame(card, new Color(0.015f, 0.025f, 0.045f, 0.96f), new Color(0.012f, 0.020f, 0.035f, 0.98f), new Color(0.12f, 0.20f, 0.32f, 0.45f), 1.5f);
+
+                // Top Accent Line (Dimmed)
+                DrawRect(new Rect(card.x + 2f, card.y + 2f, card.width - 4f, 2f), new Color(0.12f, 0.20f, 0.30f, 0.50f));
+
+                // Icon Box (Centered ??)
+                float iconBoxSize = Mathf.Clamp(34f * uiScale, 30f, 42f);
+                Rect iconBox = new Rect(card.x + 8f, card.y + 8f, iconBoxSize, iconBoxSize);
+                DrawPanelFrame(iconBox, new Color(0.01f, 0.02f, 0.03f, 0.95f), new Color(0.01f, 0.02f, 0.03f, 0.95f), new Color(0.2f, 0.3f, 0.4f, 0.4f), 1f);
+
+                GUIStyle lockSymbolStyle = CreateStaticStyle(
+                    sectionLabelStyle,
+                    new Color(0.35f, 0.45f, 0.55f, 0.6f),
+                    Mathf.RoundToInt(Mathf.Clamp(iconBoxSize * 0.44f, 11f, 18f)),
+                    TextAnchor.MiddleCenter,
+                    FontStyle.Bold);
+                GUI.Label(iconBox, "??", lockSymbolStyle);
+
+                // Name & Japanese Name (Hidden ?????)
+                float textX = iconBox.xMax + 8f;
+                float textW = card.width - iconBoxSize - 96f * uiScale;
+                Rect nameRect = new Rect(textX, card.y + 6f, textW, 18f * uiScale);
+                DrawFittedLabel(nameRect, "? ? ? ? ? ?", sectionLabelStyle, new Color(0.40f, 0.50f, 0.65f, 0.65f), 11);
+
+                Rect jpRect = new Rect(textX, nameRect.yMax - 2f, textW, 14f * uiScale);
+                DrawFittedLabel(jpRect, "未知の加護", bodyLabelStyle, new Color(0.25f, 0.35f, 0.45f, 0.5f), 9);
+
+                // Category Tag
+                float badgeW = Mathf.Clamp(76f * uiScale, 68f, 90f);
+                Rect catBadge = new Rect(card.xMax - badgeW - 6f, card.y + 8f, badgeW, 18f * uiScale);
+                DrawRect(catBadge, new Color(0f, 0f, 0f, 0.5f));
+                DrawFittedLabel(catBadge, "LOCKED", bodyLabelStyle, new Color(0.45f, 0.55f, 0.65f, 0.6f), 8);
+
+                // Description Body (Sealed ????? marks)
+                float descY = iconBox.yMax + 4f;
+                float descH = (card.yMax - 22f * uiScale) - descY;
+                Rect descRect = new Rect(card.x + 6f, descY, card.width - 12f, Mathf.Max(16f, descH));
+                DrawRect(descRect, new Color(0f, 0f, 0f, 0.35f));
+                DrawFittedLabel(new Rect(descRect.x + 4f, descRect.y + 2f, descRect.width - 8f, descRect.height - 4f), "? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ?", bodyLabelStyle, new Color(0.30f, 0.40f, 0.50f, 0.60f), 12);
+
+                // Footer Bar
+                float footerY = card.yMax - 20f * uiScale;
+                Rect costRect = new Rect(card.x + 8f, footerY, card.width * 0.50f, 16f * uiScale);
+                DrawFittedLabel(costRect, "COST: ??? PTS", bodyLabelStyle, new Color(0.35f, 0.45f, 0.55f, 0.6f), 9);
+
+                Rect discRect = new Rect(card.xMax - 95f * uiScale - 6f, footerY, 95f * uiScale, 16f * uiScale);
+                DrawFittedLabel(discRect, "SEALED", bodyLabelStyle, new Color(0.70f, 0.35f, 0.20f, 0.75f), 9);
+            }
+        }
+
+        private void DrawRunVictoryUnlocksModal()
+        {
+            int sw = Mathf.RoundToInt(UiWidth);
+            int sh = Mathf.RoundToInt(UiHeight);
+            float uiScale = GetUiScale();
+
+            DrawRect(new Rect(0, 0, sw, sh), new Color(0f, 0.02f, 0.05f, 0.88f));
+
+            float modalW = Mathf.Clamp(sw * 0.85f, 780f, 1300f);
+            float modalH = Mathf.Clamp(sh * 0.82f, 520f, 850f);
+            Rect modal = new Rect((sw - modalW) * 0.5f, (sh - modalH) * 0.5f, modalW, modalH);
+
+            DrawPanelFrame(modal, new Color(0.02f, 0.05f, 0.10f, 0.98f), new Color(0.04f, 0.10f, 0.18f, 0.99f), ACCENT_GOLD, 3.5f);
+            DrawFrameCorners(modal, ACCENT_GOLD, 28f, 3f);
+
+            float pad = Mathf.Clamp(16f * uiScale, 12f, 24f);
+
+            // Title & Banner
+            float bannerH = Mathf.Clamp(75f * uiScale, 65f, 95f);
+            Rect bannerRect = new Rect(modal.x + pad, modal.y + pad, modal.width - pad * 2f, bannerH);
+            DrawPanelFrame(bannerRect, new Color(0.12f, 0.09f, 0.02f, 0.92f), new Color(0.18f, 0.14f, 0.03f, 0.95f), ACCENT_GOLD, 2f);
+
+            DrawFittedLabel(new Rect(bannerRect.x, bannerRect.y + 6f, bannerRect.width, bannerH * 0.50f), "★ RUN COMPLETE // GRAND VICTORY! ★", titleBarStyle, ACCENT_GOLD, 16);
+            DrawFittedLabel(new Rect(bannerRect.x, bannerRect.y + bannerH * 0.52f, bannerRect.width, bannerH * 0.40f), "ALL 9 ARENAS CLEARED! THE SHRINE SPIRITS HAVE REVEALED NEW BLESSINGS:", sectionLabelStyle, ACCENT_CYAN, 11);
+
+            // Cards container
+            float cardsY = bannerRect.yMax + 12f;
+            float cardsH = modal.yMax - cardsY - 65f * uiScale;
+            Rect cardsArea = new Rect(modal.x + pad, cardsY, modal.width - pad * 2f, cardsH);
+            DrawPanelFrame(cardsArea, new Color(0.015f, 0.03f, 0.06f, 0.90f), new Color(0.02f, 0.05f, 0.09f, 0.95f), new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.4f), 1f);
+
+            int count = lastRunUnlockedBlessings.Count;
+            int cols = Mathf.Min(count, 3);
+            int rows = Mathf.CeilToInt((float)count / cols);
+            float cardW = (cardsArea.width - 24f - 12f * (cols - 1)) / cols;
+            float cardH = (cardsArea.height - 24f - 12f * (rows - 1)) / rows;
+
+            for (int i = 0; i < count; i++)
+            {
+                int r = i / cols;
+                int c = i % cols;
+                float cx = cardsArea.x + 12f + c * (cardW + 12f);
+                float cy = cardsArea.y + 12f + r * (cardH + 12f);
+                Rect cRect = new Rect(cx, cy, cardW, cardH);
+
+                ShrinePerkData perk = ShrinePerkCatalog.GetPerk(lastRunUnlockedBlessings[i]);
+                if (perk != null)
+                {
+                    DrawCompendiumPerkCard(cRect, perk, uiScale);
+                }
+            }
+
+            // Claim button
+            float btnW = Mathf.Clamp(300f * uiScale, 240f, 400f);
+            float btnH = Mathf.Clamp(46f * uiScale, 40f, 60f);
+            Rect claimRect = new Rect(modal.center.x - btnW * 0.5f, modal.yMax - btnH - pad * 0.8f, btnW, btnH);
+            if (ActionBtn("CLAIM & CONTINUE // 承知", claimRect, ACCENT_GOLD, false))
+            {
+                showRunVictoryModal = false;
+            }
         }
 
         private void DrawPreviewAndStats(Rect area, PlayerManager runPlayer)
         {
             float uiScale = GetUiScale();
             float innerPad = Mathf.Clamp(10f * uiScale, 10f, 24f);
-            float frame = Mathf.Max(3f, Mathf.Clamp(Screen.width * 0.0028f, 3f, 7f));
+            float frame = Mathf.Max(3f, Mathf.Clamp(UiWidth * 0.0028f, 3f, 7f));
             DrawPanelFrame(area, new Color(0.05f, 0.06f, 0.10f, 0.92f), new Color(0.09f, 0.06f, 0.02f, 0.96f), ACCENT_YEL, frame);
             DrawHorizontalGradient(new Rect(area.x, area.y + area.height * 0.72f, area.width, area.height * 0.28f), new Color(0f, 0f, 0f, 0f), new Color(1f, 0.64f, 0.06f, 0.12f), 18);
 
@@ -2142,11 +3176,28 @@ namespace BladeSpinners.Gameplay.UI
             GUILayout.Space(4f);
             GUILayout.Label(PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant(), statStyle);
             GUILayout.Label($"TYPE      {part.PartType.ToString().ToUpper()}", statStyle);
-            GUILayout.Label($"RARITY    {part.Rarity.ToString().ToUpper()}", statStyle);
+            GUIStyle rarityRowStyle = new GUIStyle(statStyle) { normal = { textColor = GetRarityColor(part.Rarity) } };
+            GUILayout.Label($"RARITY    {part.Rarity.ToString().ToUpper()}", rarityRowStyle);
 
             List<string> partLines = BuildPartDetailLines(part);
             for (int i = 0; i < partLines.Count; i++)
                 GUILayout.Label(partLines[i], statStyle);
+
+            Dictionary<PartType, BeyPart> currentLoadout = hasActiveRun && runContext.Player != null
+                ? GetCurrentRunLoadout(runContext.Player)
+                : selectedMainMenuLoadout;
+
+            if (currentLoadout != null && currentLoadout.TryGetValue(part.PartType, out BeyPart equipped) && equipped != null && equipped != part)
+            {
+                GUILayout.Space(6f);
+                GUILayout.Label($"EQUIPPED COMPARISON ({PartDisplayNameFormatter.ToShortDisplayName(equipped).ToUpperInvariant()})", headerStyle);
+                float diffScore = GetPartPowerScore(part) - GetPartPowerScore(equipped);
+                string scoreDiffStr = diffScore >= 0 ? $"+{diffScore:0}" : $"{diffScore:0}";
+                GUILayout.Label($"POWER SCORE   {GetPartPowerScore(part):0} ({scoreDiffStr})", statStyle);
+                float diffWeight = part.Weight - equipped.Weight;
+                string weightDiffStr = diffWeight >= 0 ? $"+{diffWeight:0.0}" : $"{diffWeight:0.0}";
+                GUILayout.Label($"WEIGHT        {part.Weight:0.0}g ({weightDiffStr}g)", statStyle);
+            }
 
             if (part.PartType == PartType.EnergyRing)
             {
@@ -2214,20 +3265,55 @@ namespace BladeSpinners.Gameplay.UI
                 area,
                 new Color(0.015f, 0.035f, 0.065f, 0.96f),
                 new Color(0.04f, 0.08f, 0.13f, 0.97f),
-                ACCENT_YEL,
+                ACCENT_CYAN,
                 2f);
-            float pad = Mathf.Clamp(
-                12f * GetUiScale(),
-                10f,
-                18f);
+            float pad = Mathf.Clamp(12f * GetUiScale(), 10f, 18f);
+            float btnH = Mathf.Clamp(44f * GetUiScale(), 38f, 56f);
+            bool canEquip = part != null;
+
             Rect content = new Rect(
                 area.x + pad,
                 area.y + pad,
                 Mathf.Max(1f, area.width - pad * 2f),
-                Mathf.Max(1f, area.height - pad * 2f));
+                Mathf.Max(1f, area.height - pad * 2f - (canEquip ? btnH + 10f : 0f)));
             GUILayout.BeginArea(content);
             DrawSelectedPartCard(part, header, false);
             GUILayout.EndArea();
+
+            if (canEquip)
+            {
+                Dictionary<PartType, BeyPart> currentLoadout = hasActiveRun && runContext.Player != null
+                    ? GetCurrentRunLoadout(runContext.Player)
+                    : selectedMainMenuLoadout;
+
+                currentLoadout.TryGetValue(part.PartType, out BeyPart equipped);
+                bool isEquipped = equipped == part;
+
+                Rect equipBtnRect = new Rect(area.x + pad, area.yMax - pad - btnH, area.width - pad * 2f, btnH);
+                if (isEquipped)
+                {
+                    DrawRect(equipBtnRect, new Color(0.10f, 0.32f, 0.20f, 0.92f));
+                    DrawRect(new Rect(equipBtnRect.x, equipBtnRect.yMax - 2f, equipBtnRect.width, 2f), new Color(0.25f, 0.95f, 0.45f, 1f));
+                    DrawFittedLabel(equipBtnRect, "CURRENTLY EQUIPPED", bodyLabelStyle, new Color(0.4f, 1f, 0.55f, 1f), 11);
+                }
+                else
+                {
+                    if (ActionBtn("EQUIP PART TO CURRENT BUILD", equipBtnRect, ACCENT_CYAN, false))
+                    {
+                        if (hasActiveRun && runContext.Player != null)
+                        {
+                            runContext.Player.EquipPart(part);
+                            RefreshPreviewFromLoadout(GetCurrentRunLoadout(runContext.Player));
+                        }
+                        else
+                        {
+                            selectedMainMenuLoadout[part.PartType] = part;
+                            RefreshPreviewFromLoadout(selectedMainMenuLoadout);
+                            AutoSave();
+                        }
+                    }
+                }
+            }
         }
 
         private static BeyAbility ResolveAbilityForPart(BeyPart part)
@@ -2280,7 +3366,6 @@ namespace BladeSpinners.Gameplay.UI
                     break;
 
                 case PartType.FaceBolt:
-                    lines.Add($"EMBLEM    {(part.FaceBoltEmblem != null ? "YES" : "NO")}");
                     break;
             }
 
@@ -2292,6 +3377,8 @@ namespace BladeSpinners.Gameplay.UI
 
         private void DrawSettingsPanel()
         {
+            settingsScroll = GUILayout.BeginScrollView(settingsScroll, false, false, GUIStyle.none, GUIStyle.none, GUIStyle.none, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
+
             GUILayout.Label("SETTINGS", sectionLabelStyle);
             GUILayout.Space(6);
             GUILayout.Label("AUDIO", sectionLabelStyle);
@@ -2359,27 +3446,244 @@ namespace BladeSpinners.Gameplay.UI
                 ApplySettingsToCameraController(runContext.CameraController);
             }
 
+            GUILayout.Space(10);
+            GUILayout.Label("DISPLAY & RESOLUTION", sectionLabelStyle);
+            GUILayout.Space(4);
+
+            string windowModeText = Screen.fullScreen
+                ? "WINDOW MODE: FULLSCREEN  [CLICK TO SWITCH TO WINDOWED]"
+                : "WINDOW MODE: WINDOWED  [CLICK TO SWITCH TO FULLSCREEN]";
+            if (GUILayout.Button(windowModeText, inlineActionButtonStyle, GUILayout.Height(36)))
+            {
+                Screen.fullScreen = !Screen.fullScreen;
+            }
+
+            GUILayout.Space(8);
+
+            // ── Resolution dropdown ──────────────────────────────────────────────
+            // Determine current display label
+            int currentDispIdx = confirmedResolutionIndex >= 0 ? confirmedResolutionIndex : -1;
+            string currentLabel = currentDispIdx >= 0
+                ? ResolutionPresets[currentDispIdx].label
+                : $"CURRENT  —  {Screen.width} x {Screen.height}";
+            if (pendingResolutionIndex >= 0)
+                currentLabel = ResolutionPresets[pendingResolutionIndex].label + $"  (REVERTS IN {Mathf.CeilToInt(revertResolutionTimer)}s)";
+
+            // Dropdown trigger button
+            Color dropdownColor = pendingResolutionIndex >= 0 ? ACCENT_GOLD : ACCENT_CYAN;
+            Rect dropdownBtnRect = GUILayoutUtility.GetRect(0f, 36f, GUILayout.ExpandWidth(true));
+            if (ActionBtn(currentLabel + "  [ CHANGE RESOLUTION ]", dropdownBtnRect, dropdownColor, resolutionDropdownOpen))
+            {
+                resolutionDropdownOpen = !resolutionDropdownOpen;
+            }
+
+            // Dropdown list
+            if (resolutionDropdownOpen)
+            {
+                GUILayout.Space(2);
+                for (int ri = 0; ri < ResolutionPresets.Length; ri++)
+                {
+                    int rIdx = ri; // capture
+                    var preset = ResolutionPresets[rIdx];
+                    bool isSelected = rIdx == (pendingResolutionIndex >= 0 ? pendingResolutionIndex : confirmedResolutionIndex);
+                    Color itemColor = isSelected ? ACCENT_GOLD : new Color(0.7f, 0.85f, 1f, 1f);
+                    Rect itemRect = GUILayoutUtility.GetRect(0f, 32f, GUILayout.ExpandWidth(true));
+                    DrawRect(itemRect, isSelected ? new Color(0.12f, 0.18f, 0.28f, 0.95f) : new Color(0.04f, 0.08f, 0.14f, 0.9f));
+                    DrawRect(new Rect(itemRect.x, itemRect.yMax - 1f, itemRect.width, 1f), new Color(1f, 1f, 1f, 0.06f));
+                    DrawFittedLabel(new Rect(itemRect.x + 14f, itemRect.y, itemRect.width - 28f, itemRect.height),
+                        preset.label, bodyLabelStyle, itemColor, 12);
+                    if (Event.current.type == EventType.MouseDown && itemRect.Contains(Event.current.mousePosition))
+                    {
+                        // Apply preview
+                        prevResW = Screen.width;
+                        prevResH = Screen.height;
+                        Screen.SetResolution(preset.w, preset.h, Screen.fullScreenMode);
+                        pendingResolutionIndex = rIdx;
+                        revertResolutionTimer = RevertResolutionSeconds;
+                        resolutionDropdownOpen = false;
+                        Event.current.Use();
+                    }
+                }
+                GUILayout.Space(4);
+            }
+
+            // Confirm / revert bar (shows only while there's a pending resolution)
+            if (pendingResolutionIndex >= 0)
+            {
+                GUILayout.Space(4);
+                float barH = 38f;
+                Rect barRect = GUILayoutUtility.GetRect(0f, barH, GUILayout.ExpandWidth(true));
+                float half = (barRect.width - 12f) * 0.5f;
+                Rect confRect = new Rect(barRect.x, barRect.y, half, barH);
+                Rect revertRect = new Rect(barRect.x + half + 12f, barRect.y, half, barH);
+
+                if (ActionBtn($"CONFIRM RESOLUTION ({ResolutionPresets[pendingResolutionIndex].label})", confRect, new Color(0.2f, 0.9f, 0.45f, 1f), false))
+                {
+                    confirmedResolutionIndex = pendingResolutionIndex;
+                    pendingResolutionIndex = -1;
+                    revertResolutionTimer = 0f;
+                }
+                if (ActionBtn($"REVERT  (REVERTS IN {Mathf.CeilToInt(revertResolutionTimer)}s)", revertRect, ACCENT_RED, false))
+                {
+                    Screen.SetResolution(prevResW, prevResH, Screen.fullScreenMode);
+                    pendingResolutionIndex = -1;
+                    revertResolutionTimer = 0f;
+                }
+            }
+
+
             GUILayout.Space(12);
             GUILayout.Label("KEYBINDS", sectionLabelStyle);
             GUILayout.Space(4);
             DrawKeybindPanel();
+
+            GUILayout.Space(22);
+            GUILayout.Label("DATA MANAGEMENT // DANGER ZONE", sectionLabelStyle);
+            GUILayout.Space(4);
+            GUILayout.Label("Wipe all local save files, unlocked shrine blessings, and tournament records to return profile to fresh starter state.", bodyLabelStyle);
+            GUILayout.Space(8);
+
+            Rect dangerBtnRect = GUILayoutUtility.GetRect(0f, 44f, GUILayout.ExpandWidth(true));
+            if (!showResetConfirm)
+            {
+                if (ActionBtn("RESET ALL PROGRESS & SAVE DATA", dangerBtnRect, ACCENT_RED, false))
+                {
+                    showResetConfirm = true;
+                }
+            }
+            else
+            {
+                float btnHalf = (dangerBtnRect.width - 12f) * 0.5f;
+                Rect confirmRect = new Rect(dangerBtnRect.x, dangerBtnRect.y, btnHalf, dangerBtnRect.height);
+                Rect cancelRect = new Rect(dangerBtnRect.x + btnHalf + 12f, dangerBtnRect.y, btnHalf, dangerBtnRect.height);
+
+                if (ActionBtn("CONFIRM WIPE ALL PROGRESS", confirmRect, Color.red, true))
+                {
+                    ExecuteFullReset();
+                    showResetConfirm = false;
+                }
+                if (ActionBtn("CANCEL", cancelRect, ACCENT_CYAN, false))
+                {
+                    showResetConfirm = false;
+                }
+            }
+
+            GUILayout.Space(16);
+            GUILayout.EndScrollView();
         }
+
+        private void ExecuteFullReset()
+        {
+            // 1. Delete EVERYTHING in the persistent data folder
+            string dataDir = Application.persistentDataPath;
+            if (System.IO.Directory.Exists(dataDir))
+            {
+                foreach (string file in System.IO.Directory.GetFiles(dataDir, "*", System.IO.SearchOption.AllDirectories))
+                {
+                    try { System.IO.File.Delete(file); }
+                    catch (System.Exception e) { Debug.LogWarning($"[Reset] Could not delete {file}: {e.Message}"); }
+                }
+            }
+
+            // 2. Clear all PlayerPrefs
+            PlayerPrefs.DeleteAll();
+            PlayerPrefs.Save();
+
+            // 3. Reset shrine blessings to starter pool
+            ShrineBlessingsUnlockManager.ResetToStarterPool();
+
+            // 4. Reset resolution dropdown state
+            pendingResolutionIndex = -1;
+            confirmedResolutionIndex = -1;
+            revertResolutionTimer = 0f;
+
+            // 5. Rebuild starter inventory & loadout
+            BuildStarterData();
+            BuildDefaultLoadout();
+            RefreshPreviewFromLoadout(selectedMainMenuLoadout);
+            SetMainMenuPanel(MenuPanel.Home);
+
+            Debug.Log("[RuntimeGameUiController] Full player progress reset executed — persistent data folder wiped.");
+        }
+
 
         private void DrawKeybindPanel()
         {
-            GUIStyle keybindStyle = new GUIStyle(bodyLabelStyle)
+            float totalW = UiWidth * 0.48f;
+            float col1W = Mathf.Round(totalW * 0.25f);
+            float col2W = Mathf.Round(totalW * 0.25f);
+            float col3W = Mathf.Round(totalW * 0.25f);
+            float col4W = Mathf.Max(60f, totalW - col1W - col2W - col3W);
+
+            // Table Header Bar
+            GUILayout.BeginHorizontal();
+            GUIStyle thStyle1 = CreateStaticStyle(sectionLabelStyle, ACCENT_GOLD, 11, TextAnchor.MiddleLeft, FontStyle.Bold);
+            GUIStyle thStyle2 = CreateStaticStyle(sectionLabelStyle, ACCENT_CYAN, 11, TextAnchor.MiddleLeft, FontStyle.Bold);
+            GUIStyle thStyle3 = CreateStaticStyle(sectionLabelStyle, new Color(0.25f, 0.90f, 0.35f, 1f), 11, TextAnchor.MiddleLeft, FontStyle.Bold);
+            GUIStyle thStyle4 = CreateStaticStyle(sectionLabelStyle, new Color(0.35f, 0.65f, 1f, 1f), 11, TextAnchor.MiddleLeft, FontStyle.Bold);
+
+            GUILayout.Label("ACTION", thStyle1, GUILayout.Width(col1W));
+            GUILayout.Label("KEYBOARD & MOUSE", thStyle2, GUILayout.Width(col2W));
+            GUILayout.Label("SYMMETRIC CONTROLLER (L/R-OFFSET)", thStyle3, GUILayout.Width(col3W));
+            GUILayout.Label("ASYMMETRIC CONTROLLER (SOUTH-FACE)", thStyle4, GUILayout.Width(col4W));
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(3f);
+
+            var keybinds = new (string action, string kbm, string symCtrl, string asymCtrl)[]
             {
-                wordWrap = true,
-                clipping = TextClipping.Clip
+                // ── In-game ──
+                ("MOVEMENT",         "W / A / S / D",        "Left Stick / D-Pad",       "Left Stick / D-Pad"),
+                ("BOOST ACCEL",      "LEFT SHIFT",            "Right Trigger",             "Right Trigger"),
+                ("JUMP HOP",         "SPACEBAR",              "Bottom Face Button",        "Bottom Face Button"),
+                ("SPECIAL ABILITY",  "E KEY",                 "Top Face Button",           "Top Face Button"),
+                ("LOCK-ON TARGET",   "MIDDLE MOUSE",          "Right Stick Click",         "Right Stick Click"),
+                ("CYCLE TARGET",     "SCROLL WHEEL",          "D-Pad Left / Right",        "D-Pad Left / Right"),
+                ("CLASH DUEL",       "LEFT CLICK (MASH)",     "Bottom Face / Trigger",     "Bottom Face / Trigger"),
+                ("LAUNCH RIP-CORD",  "HOLD LEFT CLICK",       "HOLD Bottom Face / Trigger","HOLD Bottom Face / Trigger"),
+                ("BRAKE / DRIFT",    "C KEY",                 "Left Trigger",              "Left Trigger"),
+                ("CAMERA LOOK",      "MOUSE MOVE",            "Right Stick",               "Right Stick"),
+                ("PAUSE / MENU",     "ESC",                   "Start / Menu",              "Start / Options"),
+                ("FULLSCREEN",       "F11 / ALT + ENTER",     "—",                         "—"),
+                // ── Menu navigation ──
+                ("NAVIGATE MENU",    "MOUSE",                 "Left Stick / D-Pad",        "Left Stick / D-Pad"),
+                ("SELECT / CONFIRM", "LEFT CLICK",            "Bottom Face Button",        "Bottom Face Button"),
+                ("BACK / CANCEL",    "ESC / RIGHT CLICK",     "Right Face Button",         "Right Face Button"),
+                ("SCROLL LISTS",     "SCROLL WHEEL",          "Left Stick Up / Down",      "Left Stick Up / Down"),
             };
-            GUILayout.Label("MOVE         WASD",            keybindStyle);
-            GUILayout.Label("BOOST        LEFT SHIFT",      keybindStyle);
-            GUILayout.Label("JUMP         SPACE",           keybindStyle);
-            GUILayout.Label("ABILITY      E",               keybindStyle);
-            GUILayout.Label("LOCK-ON      MIDDLE MOUSE",    keybindStyle);
-            GUILayout.Label("CYCLE TGT    SCROLL WHEEL",    keybindStyle);
-            GUILayout.Label("PAUSE        ESC",             keybindStyle);
+
+            // Section separator index
+            int menuNavStartIdx = System.Array.FindIndex(keybinds, r => r.action == "NAVIGATE MENU");
+
+            GUIStyle rowActionStyle = CreateStaticStyle(bodyLabelStyle, Color.white, 11, TextAnchor.MiddleLeft, FontStyle.Bold);
+            GUIStyle rowKbmStyle = CreateStaticStyle(bodyLabelStyle, new Color(0.85f, 0.92f, 1f, 0.95f), 11, TextAnchor.MiddleLeft, FontStyle.Normal);
+            GUIStyle rowSymStyle = CreateStaticStyle(bodyLabelStyle, new Color(0.75f, 1f, 0.8f, 0.95f), 11, TextAnchor.MiddleLeft, FontStyle.Normal);
+            GUIStyle rowAsymStyle = CreateStaticStyle(bodyLabelStyle, new Color(0.8f, 0.9f, 1f, 0.95f), 11, TextAnchor.MiddleLeft, FontStyle.Normal);
+
+            for (int i = 0; i < keybinds.Length; i++)
+            {
+                // Section header divider before menu navigation rows
+                if (i == menuNavStartIdx)
+                {
+                    Rect divRect = GUILayoutUtility.GetRect(totalW, 20f, GUILayout.ExpandWidth(true), GUILayout.Height(20f));
+                    DrawRect(divRect, new Color(0.02f, 0.05f, 0.10f, 0.8f));
+                    DrawRect(new Rect(divRect.x, divRect.yMax - 1f, divRect.width, 1f), new Color(ACCENT_GOLD.r, ACCENT_GOLD.g, ACCENT_GOLD.b, 0.4f));
+                    DrawFittedLabel(new Rect(divRect.x + 4f, divRect.y, divRect.width, divRect.height),
+                        "MENU NAVIGATION", thStyle1, ACCENT_GOLD, 10);
+                }
+
+                var row = keybinds[i];
+                Rect rowRect = GUILayoutUtility.GetRect(totalW, 22f, GUILayout.ExpandWidth(true), GUILayout.Height(22f));
+                Color rowBg = (i % 2 == 0) ? new Color(0.04f, 0.08f, 0.14f, 0.55f) : new Color(0.02f, 0.04f, 0.08f, 0.35f);
+                DrawRect(rowRect, rowBg);
+
+                GUI.Label(new Rect(rowRect.x + 4f, rowRect.y, col1W - 6f, rowRect.height), row.action, rowActionStyle);
+                GUI.Label(new Rect(rowRect.x + col1W, rowRect.y, col2W - 6f, rowRect.height), row.kbm, rowKbmStyle);
+                GUI.Label(new Rect(rowRect.x + col1W + col2W, rowRect.y, col3W - 6f, rowRect.height), row.symCtrl, rowSymStyle);
+                GUI.Label(new Rect(rowRect.x + col1W + col2W + col3W, rowRect.y, col4W - 6f, rowRect.height), row.asymCtrl, rowAsymStyle);
+            }
         }
+
 
         private void DrawSelectedLoadoutSummary()
         {
@@ -2419,8 +3723,8 @@ namespace BladeSpinners.Gameplay.UI
 
             float pad = Mathf.Clamp(12f * GetUiScale(), 12f, 24f);
             float logoW = Mathf.Clamp(rect.width * 0.26f, 240f, 400f);
-            float tabsW = Mathf.Clamp(rect.width * 0.44f, 380f, 680f);
-            float badgeW = Mathf.Clamp(rect.width * 0.22f, 180f, 280f);
+            float tabsW = Mathf.Clamp(rect.width * 0.52f, 480f, 860f);
+            float badgeW = Mathf.Clamp(rect.width * 0.20f, 160f, 260f);
 
             Rect brandRect = new Rect(rect.x + pad, rect.y + pad * 0.5f, logoW, rect.height - pad);
             Rect tabsRect = new Rect(brandRect.xMax + pad, rect.y + pad * 0.5f, tabsW, rect.height - pad);
@@ -2428,37 +3732,40 @@ namespace BladeSpinners.Gameplay.UI
 
             DrawBrandLockup(brandRect);
 
-            float gap = Mathf.Clamp(8f * GetUiScale(), 6f, 14f);
-            float tabW = (tabsRect.width - gap * 3f) / 4f;
+            float gap = Mathf.Clamp(6f * GetUiScale(), 5f, 10f);
+            float tabW = (tabsRect.width - gap * 4f) / 5f;
             if (TopTabBtn("GARAGE", new Rect(tabsRect.x, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Home))
                 SetMainMenuPanel(MenuPanel.Home);
             if (TopTabBtn("INVENTORY", new Rect(tabsRect.x + tabW + gap, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Inventory))
                 SetMainMenuPanel(MenuPanel.Inventory);
-            if (TopTabBtn("RECORDS", new Rect(tabsRect.x + (tabW + gap) * 2f, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Records))
+            if (TopTabBtn("SHRINE BLESSINGS", new Rect(tabsRect.x + (tabW + gap) * 2f, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.ShrineCompendium))
+                SetMainMenuPanel(MenuPanel.ShrineCompendium);
+            if (TopTabBtn("RECORDS", new Rect(tabsRect.x + (tabW + gap) * 3f, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Records))
                 SetMainMenuPanel(MenuPanel.Records);
-            if (TopTabBtn("SETTINGS", new Rect(tabsRect.x + (tabW + gap) * 3f, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Settings))
+            if (TopTabBtn("SETTINGS", new Rect(tabsRect.x + (tabW + gap) * 4f, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Settings))
                 SetMainMenuPanel(MenuPanel.Settings);
 
-            // Blader Rank / Status badge on the right
+            // Blader Threat Tier / Status badge on the right
+            int wins = RunDifficultyManager.GetTotalRunWins();
+            string diffName = RunDifficultyManager.GetDifficultyName(wins);
+
             DrawPanelFrame(badgeRect, new Color(0.03f, 0.07f, 0.14f, 0.85f), new Color(0.04f, 0.10f, 0.20f, 0.90f), new Color(ACCENT_YEL.r, ACCENT_YEL.g, ACCENT_YEL.b, 0.6f), 1.5f);
             DrawFrameCorners(badgeRect, ACCENT_YEL, 10f, 1f);
 
-            GUIStyle rankStyle = new GUIStyle(sectionLabelStyle)
-            {
-                fontSize = Mathf.Clamp(Mathf.RoundToInt(13f * GetUiScale()), 10, 18),
-                alignment = TextAnchor.MiddleLeft,
-                fontStyle = FontStyle.Bold
-            };
-            rankStyle.normal.textColor = ACCENT_YEL;
-            GUI.Label(new Rect(badgeRect.x + 10f, badgeRect.y + 2f, badgeRect.width - 20f, badgeRect.height * 0.5f), "RANK: MASTER BLADER", rankStyle);
+            GUIStyle rankStyle = CreateStaticStyle(
+                sectionLabelStyle,
+                ACCENT_YEL,
+                ScaleFont(12f),
+                TextAnchor.MiddleLeft,
+                FontStyle.Bold);
+            GUI.Label(new Rect(badgeRect.x + 10f, badgeRect.y + 2f, badgeRect.width - 20f, badgeRect.height * 0.5f), $"THREAT: {diffName}", rankStyle);
 
-            GUIStyle ptsStyle = new GUIStyle(bodyLabelStyle)
-            {
-                fontSize = Mathf.Clamp(Mathf.RoundToInt(11f * GetUiScale()), 9, 15),
-                alignment = TextAnchor.MiddleLeft
-            };
-            ptsStyle.normal.textColor = ACCENT_CYAN;
-            GUI.Label(new Rect(badgeRect.x + 10f, badgeRect.y + badgeRect.height * 0.48f, badgeRect.width - 20f, badgeRect.height * 0.48f), "2,500 PTS // READY", ptsStyle);
+            GUIStyle ptsStyle = CreateStaticStyle(
+                bodyLabelStyle,
+                ACCENT_CYAN,
+                ScaleFont(11f),
+                TextAnchor.MiddleLeft);
+            GUI.Label(new Rect(badgeRect.x + 10f, badgeRect.y + badgeRect.height * 0.48f, badgeRect.width - 20f, badgeRect.height * 0.48f), $"{wins} RUN WINS // ACTIVE", ptsStyle);
         }
 
         private void DrawBrandLockup(Rect rect)
@@ -2478,41 +3785,40 @@ namespace BladeSpinners.Gameplay.UI
             DrawRect(new Rect(iconRect.center.x - 4f, iconRect.center.y - 4f, 8f, 8f), ACCENT_YEL);
 
             Rect labelRect = new Rect(iconRect.xMax + 10f, rect.y, rect.width - iconRect.width - 10f, rect.height);
-            GUIStyle brandStyle = new GUIStyle(titleBarStyle)
-            {
-                fontSize = Mathf.Clamp(Mathf.RoundToInt(18f * GetUiScale()), 13, 26),
-                alignment = TextAnchor.MiddleLeft,
-                fontStyle = FontStyle.Bold
-            };
-            brandStyle.normal.textColor = Color.white;
+            GUIStyle brandStyle = CreateStaticStyle(
+                titleBarStyle,
+                Color.white,
+                ScaleFont(18f),
+                TextAnchor.MiddleLeft,
+                FontStyle.Bold);
             GUI.Label(new Rect(labelRect.x, labelRect.y + 2f, labelRect.width, labelRect.height * 0.55f), "BLADE SPINNERS", brandStyle);
 
-            GUIStyle subStyle = new GUIStyle(bodyLabelStyle)
-            {
-                fontSize = Mathf.Clamp(Mathf.RoundToInt(10f * GetUiScale()), 8, 14),
-                alignment = TextAnchor.MiddleLeft
-            };
-            subStyle.normal.textColor = new Color(0.55f, 0.82f, 1f, 0.85f);
+            GUIStyle subStyle = CreateStaticStyle(
+                bodyLabelStyle,
+                new Color(0.55f, 0.82f, 1f, 0.85f),
+                ScaleFont(10f),
+                TextAnchor.MiddleLeft);
             GUI.Label(new Rect(labelRect.x, labelRect.y + labelRect.height * 0.52f, labelRect.width, labelRect.height * 0.45f), "NEXT-GEN BEYBLADE GARAGE", subStyle);
         }
 
         private void DrawMainBottomBar(Rect rect)
         {
+            rect = new Rect(Mathf.Round(rect.x), Mathf.Round(rect.y), Mathf.Round(rect.width), Mathf.Round(rect.height));
             DrawPanelFrame(rect, new Color(0.02f, 0.05f, 0.10f, 0.94f), new Color(0.03f, 0.08f, 0.15f, 0.96f), ACCENT_CYAN, 3f);
             DrawFrameCorners(rect, ACCENT_CYAN, 24f, 2f);
 
-            float pad = Mathf.Clamp(10f * GetUiScale(), 10f, 18f);
-            float gap = Mathf.Clamp(12f * GetUiScale(), 10f, 18f);
-            float buttonH = rect.height - pad * 2f;
-            float autoW = Mathf.Clamp(rect.width * 0.18f, 160f, 260f);
-            float saveW = Mathf.Clamp(rect.width * 0.18f, 160f, 260f);
-            float nextSongW = Mathf.Clamp(rect.width * 0.15f, 130f, 200f);
-            float startW = Mathf.Clamp(rect.width * 0.32f, 260f, 440f);
+            float pad = Mathf.Round(Mathf.Clamp(10f * GetUiScale(), 10f, 18f));
+            float gap = Mathf.Round(Mathf.Clamp(12f * GetUiScale(), 10f, 18f));
+            float buttonH = Mathf.Round(rect.height - pad * 2f);
+            float autoW = Mathf.Round(Mathf.Clamp(rect.width * 0.18f, 160f, 260f));
+            float saveW = Mathf.Round(Mathf.Clamp(rect.width * 0.18f, 160f, 260f));
+            float nextSongW = Mathf.Round(Mathf.Clamp(rect.width * 0.15f, 130f, 200f));
+            float startW = Mathf.Round(Mathf.Clamp(rect.width * 0.32f, 260f, 440f));
 
-            Rect autoRect = new Rect(rect.x + pad, rect.y + pad, autoW, buttonH);
-            Rect saveRect = new Rect(autoRect.xMax + gap, rect.y + pad, saveW, buttonH);
-            Rect startRect = new Rect(rect.xMax - pad - startW, rect.y + pad, startW, buttonH);
-            Rect nextSongRect = new Rect(startRect.x - gap - nextSongW, rect.y + pad, nextSongW, buttonH);
+            Rect autoRect = new Rect(Mathf.Round(rect.x + pad), Mathf.Round(rect.y + pad), autoW, buttonH);
+            Rect saveRect = new Rect(Mathf.Round(autoRect.xMax + gap), Mathf.Round(rect.y + pad), saveW, buttonH);
+            Rect startRect = new Rect(Mathf.Round(rect.xMax - pad - startW), Mathf.Round(rect.y + pad), startW, buttonH);
+            Rect nextSongRect = new Rect(Mathf.Round(startRect.x - gap - nextSongW), Mathf.Round(rect.y + pad), nextSongW, buttonH);
 
             if (ActionBtn("AUTO OPTIMIZE", autoRect, ACCENT_CYAN, false))
                 AutoOptimizeCurrentBuild();
@@ -2554,8 +3860,8 @@ namespace BladeSpinners.Gameplay.UI
 
         private void DrawRunMenuShell(string title, string primaryLabel, Action primaryAction)
         {
-            int sw = Screen.width;
-            int sh = Screen.height;
+            int sw = Mathf.RoundToInt(UiWidth);
+            int sh = Mathf.RoundToInt(UiHeight);
             float uiScale = GetUiScale();
             float gutter = Mathf.Clamp(sw * 0.006f, 8f, 18f);
 
@@ -2569,18 +3875,13 @@ namespace BladeSpinners.Gameplay.UI
             float topH = Mathf.Clamp(82f * uiScale, 74f, 118f);
             Rect topRect = new Rect(shell.x + gutter, shell.y + gutter, shell.width - gutter * 2f, topH);
             DrawPanelFrame(topRect, new Color(0.03f, 0.07f, 0.14f, 0.96f), new Color(0.04f, 0.10f, 0.18f, 0.96f), ACCENT_CYAN, 2f);
-            DrawFittedLabel(new Rect(topRect.x + 16f, topRect.y + 8f, topRect.width * 0.28f, topRect.height - 16f), title, titleBarStyle, Color.white, 12);
-            DrawFittedLabel(
-                new Rect(
-                    topRect.x + topRect.width * 0.29f,
-                    topRect.y + 8f,
-                    topRect.width * 0.28f,
-                    topRect.height - 16f),
-                $"RUN {FormatRunTime(runElapsedSeconds)}   " +
-                $"ARENA {FormatRunTime(arenaElapsedSeconds)}",
-                bodyLabelStyle,
-                ACCENT_CYAN,
-                10);
+            DrawFittedLabel(new Rect(topRect.x + 16f, topRect.y + 8f, topRect.width * 0.18f, topRect.height - 16f), title, titleBarStyle, Color.white, 12);
+
+            // Isaac-Style Floor Progression Node Map
+            float mapX = topRect.x + topRect.width * 0.19f;
+            float mapW = topRect.width * 0.45f;
+            Rect mapRect = new Rect(mapX, topRect.y + 6f, mapW, topRect.height - 12f);
+            DrawFloorProgressionMap(mapRect, uiScale);
 
             float actionH = Mathf.Clamp(44f * uiScale, 40f, 58f);
             float actionW = Mathf.Clamp(156f * uiScale, 140f, 220f);
@@ -2645,6 +3946,62 @@ namespace BladeSpinners.Gameplay.UI
             }
         }
 
+        private void DrawFloorProgressionMap(Rect area, float uiScale)
+        {
+            int totalArenas = runContext.Progression != null ? runContext.Progression.TotalArenaCount : 8;
+            if (totalArenas <= 0) totalArenas = 8;
+
+            DrawPanelFrame(area, new Color(0.015f, 0.04f, 0.08f, 0.85f), new Color(0.03f, 0.06f, 0.12f, 0.90f), ACCENT_CYAN, 1.5f);
+
+            float pad = Mathf.Clamp(10f * uiScale, 8f, 18f);
+            float nodeSize = Mathf.Clamp(area.height - pad * 1.5f, 26f, 50f);
+            float availableW = area.width - pad * 2f;
+            float gap = (availableW - nodeSize * totalArenas) / Mathf.Max(1, totalArenas - 1);
+
+            for (int i = 0; i < totalArenas; i++)
+            {
+                float x = area.x + pad + i * (nodeSize + gap);
+                float y = area.center.y - nodeSize * 0.5f;
+                Rect nodeRect = new Rect(x, y, nodeSize, nodeSize);
+
+                // Connector line to next node
+                if (i < totalArenas - 1)
+                {
+                    float lineX = nodeRect.xMax;
+                    float lineW = gap;
+                    float lineH = 3f;
+                    float lineY = area.center.y - lineH * 0.5f;
+                    Color lineColor = (i < arenasClearedThisRun) ? ACCENT_CYAN : new Color(1f, 1f, 1f, 0.12f);
+                    DrawRect(new Rect(lineX, lineY, lineW, lineH), lineColor);
+                }
+
+                bool isCleared = i < arenasClearedThisRun;
+                bool isCurrent = i == arenasClearedThisRun;
+                bool isSemiBoss = i == 3;
+                bool isFinalBoss = i == totalArenas - 1;
+
+                Color nodeBorder = isCurrent
+                    ? ACCENT_GOLD
+                    : (isFinalBoss ? ACCENT_RED : (isSemiBoss ? ACCENT_ORANGE : (isCleared ? ACCENT_CYAN : new Color(0.3f, 0.4f, 0.5f, 0.5f))));
+                Color nodeBg = isCurrent
+                    ? new Color(0.18f, 0.14f, 0.02f, 0.95f)
+                    : (isCleared ? new Color(0.03f, 0.12f, 0.20f, 0.90f) : new Color(0.02f, 0.04f, 0.08f, 0.85f));
+
+                DrawPanelFrame(nodeRect, nodeBg, nodeBg, nodeBorder, 2f);
+                if (isCurrent)
+                {
+                    float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 5f);
+                    DrawFrameCorners(nodeRect, Color.Lerp(ACCENT_GOLD, Color.white, pulse), 8f, 2f);
+                }
+
+                string nodeLabel = isCleared ? "✓" : (isFinalBoss ? "BOSS" : (isSemiBoss ? "MID" : $"F{i + 1}"));
+                Color textColor = isCurrent
+                    ? ACCENT_GOLD
+                    : (isFinalBoss ? ACCENT_RED : (isSemiBoss ? ACCENT_ORANGE : (isCleared ? ACCENT_CYAN : new Color(0.6f, 0.7f, 0.8f, 0.7f))));
+                DrawFittedLabel(nodeRect, nodeLabel, sectionLabelStyle, textColor, 10);
+            }
+        }
+
         private void DrawFramedContentPanel(Rect area, string label, Action drawContent)
         {
             DrawPanelFrame(area, new Color(0.03f, 0.06f, 0.11f, 0.94f), new Color(0.05f, 0.10f, 0.16f, 0.95f), ACCENT_CYAN, 2f);
@@ -2687,11 +4044,11 @@ namespace BladeSpinners.Gameplay.UI
                 14);
 
             DrawFittedLabel(
-                new Rect(headerRect.x + 16f, headerRect.y + headerRect.height * 0.54f, headerRect.width * 0.55f, headerRect.height * 0.40f),
+                new Rect(headerRect.x + 16f, headerRect.y + headerRect.height * 0.50f, headerRect.width * 0.65f, headerRect.height * 0.44f),
                 "Spend combat-earned Blader Points to invoke powerful spirit blessings for your run.",
                 bodyLabelStyle,
-                new Color(0.7f, 0.82f, 0.92f, 0.85f),
-                10);
+                new Color(0.85f, 0.92f, 1f, 0.95f),
+                16);
 
             // Points Balance Badge on right
             float balanceW = Mathf.Clamp(230f * uiScale, 200f, 320f);
@@ -2735,10 +4092,10 @@ namespace BladeSpinners.Gameplay.UI
             float rerollY = contentTop + cardsH + pad * 0.5f;
             float rerollW = Mathf.Clamp(280f * uiScale, 240f, 360f);
             Rect rerollRect = new Rect(area.center.x - rerollW * 0.5f, rerollY, rerollW, rerollH);
-            bool canReroll = shrine.BladerPoints >= 50;
-            if (ActionBtn("REROLL OFFERINGS (50 PTS)", rerollRect, canReroll ? ACCENT_CYAN : new Color(0.4f, 0.4f, 0.4f, 0.6f), false, canReroll))
+            bool canReroll = shrine.BladerPoints >= 100;
+            if (ActionBtn("REROLL OFFERINGS (100 PTS)", rerollRect, canReroll ? ACCENT_CYAN : new Color(0.4f, 0.4f, 0.4f, 0.6f), false, canReroll))
             {
-                shrine.TryReroll(50);
+                shrine.TryReroll(100);
             }
 
             // 4. Active Run Perks Shelf
@@ -2749,61 +4106,66 @@ namespace BladeSpinners.Gameplay.UI
 
         private void DrawOfferingCard(Rect rect, ShrinePerkData perk, BladerShrineRunState shrine, float uiScale)
         {
-            Color rarityColor = perk.Rarity switch
-            {
-                PerkRarity.Common => ACCENT_CYAN,
-                PerkRarity.Rare => new Color(0.25f, 0.65f, 1f, 1f),
-                PerkRarity.Epic => new Color(0.82f, 0.35f, 1f, 1f),
-                PerkRarity.Legendary => ACCENT_GOLD,
-                _ => Color.white
-            };
+            Color rarityColor = GetRarityColor(perk.Rarity);
 
             bool isOwned = shrine.HasPerk(perk.Type);
             bool canAfford = shrine.BladerPoints >= perk.BaseCost;
 
-            DrawPanelFrame(rect, new Color(0.03f, 0.05f, 0.10f, 0.95f), new Color(0.04f, 0.08f, 0.15f, 0.98f), rarityColor, 2f);
-            DrawFrameCorners(rect, rarityColor, 14f, 2.5f);
+            DrawPanelFrame(rect, new Color(0.02f, 0.04f, 0.09f, 0.95f), new Color(0.04f, 0.07f, 0.14f, 0.98f), rarityColor, 2f);
+            DrawFrameCorners(rect, rarityColor, 16f, 2.5f);
 
-            float pad = Mathf.Clamp(10f * uiScale, 8f, 16f);
+            float pad = 16f;
 
-            // Rarity / Category Tag Header
-            Rect tagRect = new Rect(rect.x + pad, rect.y + pad * 0.8f, rect.width - pad * 2f, 22f * uiScale);
-            DrawRect(tagRect, new Color(rarityColor.r * 0.2f, rarityColor.g * 0.2f, rarityColor.b * 0.2f, 0.7f));
-            DrawFittedLabel(tagRect, $"{perk.Rarity.ToString().ToUpperInvariant()} BLESSING // {perk.Category.ToString().ToUpperInvariant()}", bodyLabelStyle, rarityColor, 9);
+            // 1. Rarity / Category Tag Header
+            Rect tagRect = new Rect(rect.x + pad + 2f, rect.y + 14f, rect.width - (pad + 2f) * 2f, 26f);
+            DrawRect(tagRect, new Color(rarityColor.r * 0.2f, rarityColor.g * 0.2f, rarityColor.b * 0.2f, 0.75f));
+            DrawFrameCorners(tagRect, rarityColor, 6f, 1f);
+            DrawFittedLabel(tagRect, $"{perk.Rarity.ToString().ToUpperInvariant()} BLESSING // {perk.Category.ToString().ToUpperInvariant()}", sectionLabelStyle, rarityColor, 12);
 
-            // Icon + Japanese Subtitle + Name
-            float iconSize = Mathf.Clamp(44f * uiScale, 38f, 58f);
-            Rect iconRect = new Rect(rect.x + pad, tagRect.yMax + 8f, iconSize, iconSize);
-            DrawRect(iconRect, new Color(0f, 0f, 0f, 0.4f));
-            DrawFrameCorners(iconRect, rarityColor, 6f, 1.5f);
-            GUIStyle iconStyle = new GUIStyle(titleBarStyle) { fontSize = Mathf.RoundToInt(22f * uiScale), alignment = TextAnchor.MiddleCenter };
+            // 2. Icon + Japanese Subtitle + Bold Name
+            float iconSize = 60f;
+            Rect iconRect = new Rect(rect.x + pad + 2f, tagRect.yMax + 12f, iconSize, iconSize);
+            DrawRect(iconRect, new Color(0f, 0f, 0f, 0.55f));
+            DrawFrameCorners(iconRect, rarityColor, 8f, 2f);
+            GUIStyle iconStyle = new GUIStyle(GUI.skin.label)
+            {
+                fontSize = 24,
+                fontStyle = FontStyle.Bold,
+                alignment = TextAnchor.MiddleCenter,
+                padding = new RectOffset(0, 0, 0, 0),
+                margin = new RectOffset(0, 0, 0, 0),
+                contentOffset = Vector2.zero
+            };
+            iconStyle.normal.textColor = rarityColor;
             GUI.Label(iconRect, perk.IconSymbol, iconStyle);
 
-            Rect titleRect = new Rect(iconRect.xMax + 10f, iconRect.y, rect.width - iconSize - pad * 2f - 10f, iconSize);
-            DrawFittedLabel(new Rect(titleRect.x, titleRect.y, titleRect.width, titleRect.height * 0.48f), perk.JapaneseName, bodyLabelStyle, new Color(0.7f, 0.8f, 0.9f, 0.75f), 9);
-            DrawFittedLabel(new Rect(titleRect.x, titleRect.y + titleRect.height * 0.48f, titleRect.width, titleRect.height * 0.52f), perk.Name, sectionLabelStyle, Color.white, 11);
+            Rect titleRect = new Rect(iconRect.xMax + 14f, iconRect.y, rect.width - iconSize - (pad + 2f) * 2f - 14f, iconSize);
+            DrawFittedLabel(new Rect(titleRect.x, titleRect.y, titleRect.width, 22f), perk.JapaneseName, bodyLabelStyle, new Color(0.75f, 0.85f, 0.95f, 0.80f), 12);
+            DrawFittedLabel(new Rect(titleRect.x, titleRect.y + 22f, titleRect.width, 38f), perk.Name, titleBarStyle, Color.white, 18);
 
-            // Description Box
-            float btnH = Mathf.Clamp(40f * uiScale, 36f, 52f);
-            float descY = iconRect.yMax + 8f;
-            float descH = rect.yMax - descY - btnH - pad * 1.4f;
+            // 3. Buy Button
+            float btnH = 48f;
+            Rect btnRect = new Rect(rect.x + pad, rect.yMax - btnH - pad, rect.width - pad * 2f, btnH);
+
+            // 4. Description & Feature Details Box
+            float descY = iconRect.yMax + 14f;
+            float descH = btnRect.y - descY - 12f;
             Rect descRect = new Rect(rect.x + pad, descY, rect.width - pad * 2f, descH);
-            DrawRect(descRect, new Color(0.01f, 0.02f, 0.05f, 0.5f));
+            DrawPanelFrame(descRect, new Color(0.015f, 0.03f, 0.07f, 0.85f), new Color(0.02f, 0.04f, 0.10f, 0.90f), new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.35f), 1.2f);
 
             GUIStyle descStyle = new GUIStyle(bodyLabelStyle)
             {
                 wordWrap = true,
-                fontSize = Mathf.Clamp(Mathf.RoundToInt(12f * uiScale), 10, 16),
+                fontSize = 17,
+                fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.UpperLeft
             };
-            descStyle.normal.textColor = new Color(0.85f, 0.92f, 1f, 0.9f);
-            GUI.Label(new Rect(descRect.x + 8f, descRect.y + 6f, descRect.width - 16f, descRect.height - 12f), perk.Description, descStyle);
+            descStyle.normal.textColor = new Color(0.92f, 0.96f, 1f, 0.98f);
+            GUI.Label(new Rect(descRect.x + 14f, descRect.y + 14f, descRect.width - 28f, descRect.height - 28f), perk.Description, descStyle);
 
-            // Buy Button
-            Rect btnRect = new Rect(rect.x + pad, rect.yMax - btnH - pad, rect.width - pad * 2f, btnH);
             if (isOwned)
             {
-                ActionBtn("ACQUIRED", btnRect, new Color(0.2f, 0.7f, 0.4f, 0.4f), false, false);
+                ActionBtn("ACQUIRED", btnRect, new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.5f), false, false);
             }
             else
             {
@@ -2822,12 +4184,12 @@ namespace BladeSpinners.Gameplay.UI
 
         private void DrawActivePerksShelf(Rect rect, BladerShrineRunState shrine, float uiScale)
         {
-            DrawPanelFrame(rect, new Color(0.02f, 0.04f, 0.08f, 0.9f), new Color(0.03f, 0.06f, 0.12f, 0.95f), new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.5f), 1.5f);
+            DrawPanelFrame(rect, new Color(0.02f, 0.04f, 0.08f, 0.9f), new Color(0.03f, 0.06f, 0.12f, 0.95f), new Color(0.00f, 0.490f, 0.800f, 0.5f), 1.5f);
             float pad = Mathf.Clamp(8f * uiScale, 6f, 14f);
 
             var active = shrine.ActivePerks;
             string headerText = $"ACTIVE SPIRIT BLESSINGS ({active.Count})";
-            DrawFittedLabel(new Rect(rect.x + pad, rect.y + 4f, rect.width - pad * 2f, 22f), headerText, sectionLabelStyle, ACCENT_CYAN, 10);
+            DrawFittedLabel(new Rect(rect.x + pad, rect.y + 4f, rect.width - pad * 2f, 22f), headerText, sectionLabelStyle, new Color(0.00f, 0.490f, 0.800f, 1f), 10);
 
             if (active.Count == 0)
             {
@@ -2845,10 +4207,11 @@ namespace BladeSpinners.Gameplay.UI
                 Rect bRect = new Rect(rect.x + pad + (badgeW + 8f) * idx, rect.y + 28f, badgeW, badgeH);
                 if (bRect.xMax > rect.xMax - pad) break;
 
+                Color perkRarityColor = GetRarityColor(data.Rarity);
                 DrawRect(bRect, new Color(0.04f, 0.08f, 0.15f, 0.8f));
-                DrawFrameCorners(bRect, data.ThemeColor, 8f, 1.2f);
+                DrawFrameCorners(bRect, perkRarityColor, 8f, 1.2f);
 
-                DrawFittedLabel(new Rect(bRect.x + 6f, bRect.y + 4f, bRect.width - 12f, bRect.height * 0.45f), $"{data.IconSymbol} {data.Name}", sectionLabelStyle, data.ThemeColor, 9);
+                DrawFittedLabel(new Rect(bRect.x + 6f, bRect.y + 4f, bRect.width - 12f, bRect.height * 0.45f), $"{data.IconSymbol} {data.Name}", sectionLabelStyle, perkRarityColor, 9);
                 DrawFittedLabel(new Rect(bRect.x + 6f, bRect.y + bRect.height * 0.45f, bRect.width - 12f, bRect.height * 0.50f), data.JapaneseName, bodyLabelStyle, new Color(0.7f, 0.8f, 0.9f, 0.7f), 8);
                 idx++;
             }
@@ -2871,16 +4234,21 @@ namespace BladeSpinners.Gameplay.UI
             Rect rightRect = new Rect(centerRect.xMax + gap, area.y, rightW, area.height);
 
             BeyStatBlock stats = GetStatsForDisplay(runPlayer);
-            BeyPart hoveredPart = DrawGarageLoadoutPanel(leftRect, loadout, stats, showBuildManagement);
+            DrawGarageLoadoutPanel(leftRect, loadout, stats, showBuildManagement);
             DrawGarageStagePanel(centerRect, loadout, runPlayer != null, runPlayer);
 
-            BeyPart detailPart = hoveredPart;
-            if (detailPart == null && garageSwapSlot.HasValue)
-                loadout.TryGetValue(garageSwapSlot.Value, out detailPart);
+            BeyPart detailPart = null;
+            if (garageInspectSlot.HasValue)
+                loadout.TryGetValue(garageInspectSlot.Value, out detailPart);
+            if (detailPart == null)
+                loadout.TryGetValue(PartType.FaceBolt, out detailPart);
+            if (detailPart == null)
+                loadout.TryGetValue(PartType.EnergyRing, out detailPart);
+
             DrawGarageInfoPanel(rightRect, loadout, detailPart, stats);
         }
 
-        private BeyPart DrawGarageLoadoutPanel(Rect area, Dictionary<PartType, BeyPart> loadout, BeyStatBlock stats, bool showBuildManagement)
+        private void DrawGarageLoadoutPanel(Rect area, Dictionary<PartType, BeyPart> loadout, BeyStatBlock stats, bool showBuildManagement)
         {
             DrawPanelFrame(area, new Color(0.03f, 0.07f, 0.12f, 0.94f), new Color(0.05f, 0.10f, 0.18f, 0.95f), ACCENT_CYAN, 2f);
 
@@ -2909,17 +4277,16 @@ namespace BladeSpinners.Gameplay.UI
             DrawRect(listRect, new Color(0f, 0f, 0f, 0.18f));
 
             float rowH = Mathf.Clamp(58f * GetUiScale(), 50f, 72f);
-            BeyPart hoveredPart = null;
-            Rect hoveredRow = Rect.zero;
             float currentY = listRect.y + 6f;
             foreach (PartType type in PART_DISPLAY_ORDER)
             {
                 Rect row = new Rect(listRect.x + 4f, currentY, listRect.width - 8f, rowH);
                 currentY += rowH + 6f;
                 loadout.TryGetValue(type, out BeyPart part);
+                bool isSelected = garageInspectSlot == type;
                 bool hovered = row.Contains(Event.current.mousePosition);
-                DrawRect(row, hovered ? new Color(0.08f, 0.18f, 0.28f, 0.92f) : new Color(0.04f, 0.08f, 0.14f, 0.88f));
-                DrawRect(new Rect(row.x, row.yMax - 2f, row.width, 2f), hovered ? ACCENT_CYAN : new Color(1f, 1f, 1f, 0.06f));
+                DrawRect(row, isSelected ? new Color(0.10f, 0.25f, 0.40f, 0.95f) : (hovered ? new Color(0.08f, 0.18f, 0.28f, 0.92f) : new Color(0.04f, 0.08f, 0.14f, 0.88f)));
+                DrawRect(new Rect(row.x, row.yMax - 2f, row.width, 2f), (isSelected || hovered) ? ACCENT_CYAN : new Color(1f, 1f, 1f, 0.06f));
 
                 Rect iconRect = new Rect(row.x + 8f, row.y + 7f, row.height - 14f, row.height - 14f);
                 DrawRect(iconRect, new Color(0f, 0f, 0f, 0.26f));
@@ -2937,34 +4304,13 @@ namespace BladeSpinners.Gameplay.UI
                 DrawFittedLabel(subRect, type.ToString().ToUpperInvariant(), bodyLabelStyle, new Color(0.65f, 0.83f, 1f, 0.9f), 10);
                 DrawRarityPill(rarityRect, part != null ? part.Rarity : RarityTier.Common, part != null ? part.Rarity.ToString().ToUpperInvariant() : "NONE");
 
-                if (hovered)
-                {
-                    hoveredPart = part;
-                    hoveredRow = row;
-                }
-
                 if (WithButtonSound(GUI.Button(row, GUIContent.none, GUIStyle.none)))
-                    garageSwapSlot = type;
+                    garageInspectSlot = type;
             }
 
             float statsY = Mathf.Min(currentY + 10f, area.yMax - area.height * 0.28f);
             Rect statsRect = new Rect(area.x + pad, statsY, area.width - pad * 2f, area.yMax - statsY - pad);
             DrawOverallStatBars(statsRect, stats);
-
-            // Draw tooltip last so it renders on top of the stats section
-            if (hoveredPart != null)
-            {
-                float tooltipH = 122f;
-                float tooltipY = hoveredRow.yMax + 4f;
-                // If the tooltip would overlap the stats section, flip it above the hovered row
-                if (tooltipY + tooltipH > statsY)
-                    tooltipY = hoveredRow.y - tooltipH - 4f;
-                tooltipY = Mathf.Clamp(tooltipY, area.y + 4f, area.yMax - tooltipH - 4f);
-                Rect tooltip = new Rect(area.x + pad + 10f, tooltipY, area.width - pad * 2f - 20f, tooltipH);
-                DrawCompactPartTooltip(tooltip, hoveredPart);
-            }
-
-            return hoveredPart;
         }
 
         private void DrawGarageStagePanel(Rect area, Dictionary<PartType, BeyPart> loadout, bool useRunInventory, PlayerManager runPlayer)
@@ -2973,7 +4319,7 @@ namespace BladeSpinners.Gameplay.UI
 
             float pad = Mathf.Clamp(14f * GetUiScale(), 12f, 22f);
             Rect inner = new Rect(area.x + pad, area.y + pad, area.width - pad * 2f, area.height - pad * 2f);
-            DrawFittedLabel(new Rect(inner.x, inner.y, inner.width, 28f), useRunInventory ? "RUN GARAGE" : "GARAGE", sectionLabelStyle, ACCENT_CYAN, 10);
+            DrawFittedLabel(new Rect(inner.x, inner.y, inner.width, 28f), useRunInventory ? "RUN GARAGE // INSPECTION" : "GARAGE // 3D INSPECTION", sectionLabelStyle, ACCENT_CYAN, 10);
 
             Rect previewRect = new Rect(inner.x + inner.width * 0.12f, inner.y + inner.height * 0.15f, inner.width * 0.76f, inner.height * 0.60f);
             DrawRect(new Rect(previewRect.x, previewRect.center.y - 2f, previewRect.width, 4f), new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.18f));
@@ -2991,58 +4337,31 @@ namespace BladeSpinners.Gameplay.UI
             Rect tipRect = new Rect(previewRect.center.x - nodeSize * 0.5f, previewRect.yMax - smallYOffset, nodeSize, nodeSize);
 
             Rect hintRect = new Rect(inner.x, inner.yMax - 42f, inner.width, 28f);
-            DrawFittedLabel(hintRect, garageSwapSlot.HasValue ? $"SWAPPING {garageSwapSlot.Value.ToString().ToUpper()}" : "CLICK A PART NODE TO OPEN ITS SWAP MODAL", bodyLabelStyle, new Color(0.74f, 0.90f, 1f, 0.82f), 10);
+            DrawFittedLabel(hintRect, "CLICK ANY PART NODE TO INSPECT DETAILS // GO TO INVENTORY TO EQUIP PARTS", bodyLabelStyle, new Color(0.74f, 0.90f, 1f, 0.82f), 10);
 
-            Rect swapModalRect = new Rect(area.xMax - Mathf.Clamp(area.width * 0.38f, 260f, 360f), area.y + 18f, Mathf.Clamp(area.width * 0.36f, 250f, 340f), area.height * 0.58f);
+            DrawOrbitSlot(faceBoltRect, PartType.FaceBolt, loadout, "FACE BOLT");
+            DrawOrbitSlot(energyRingRect, PartType.EnergyRing, loadout, "ENERGY RING");
+            DrawOrbitSlot(fusionRect, PartType.FusionWheel, loadout, "FUSION WHEEL");
+            DrawOrbitSlot(trackRect, PartType.Track, loadout, "TRACK");
+            DrawOrbitSlot(tipRect, PartType.Tip, loadout, "TIP");
 
-            bool modalOpen = garageSwapSlot.HasValue;
-            bool suppressBackgroundInteraction = modalOpen
-                && Event.current != null
-                && (Event.current.type == EventType.MouseDown || Event.current.type == EventType.MouseUp || Event.current.type == EventType.MouseDrag)
-                && swapModalRect.Contains(Event.current.mousePosition);
-
-            // Re-draw orbit slots with click suppression when modal overlays this area.
-            // (Keep visuals identical; only disable behind-modal interaction.)
-            DrawOrbitSlot(faceBoltRect, PartType.FaceBolt, loadout, "FACE BOLT", suppressBackgroundInteraction);
-            DrawOrbitSlot(energyRingRect, PartType.EnergyRing, loadout, "ENERGY RING", suppressBackgroundInteraction);
-            DrawOrbitSlot(fusionRect, PartType.FusionWheel, loadout, "FUSION WHEEL", suppressBackgroundInteraction);
-            DrawOrbitSlot(trackRect, PartType.Track, loadout, "TRACK", suppressBackgroundInteraction);
-            DrawOrbitSlot(tipRect, PartType.Tip, loadout, "TIP", suppressBackgroundInteraction);
-
-            // Preview drag handled after orbit buttons so orbit clicks are not consumed first.
-            // Also suppress drag input while interacting with the modal.
-            if (previewTexture != null && !suppressBackgroundInteraction)
+            if (previewTexture != null)
                 HandlePreviewDragInput(previewRect);
-
-            DrawGarageSwapModal(swapModalRect, loadout, useRunInventory, runPlayer);
-
-            if (suppressBackgroundInteraction)
-                Event.current.Use();
-
-            // Close modal when clicking anywhere outside it (orbit slot clicks are already consumed before this point)
-            if (garageSwapSlot.HasValue
-                && Event.current != null
-                && Event.current.type == EventType.MouseDown
-                && !swapModalRect.Contains(Event.current.mousePosition))
-            {
-                garageSwapSlot = null;
-                Event.current.Use();
-            }
         }
 
-        private void DrawOrbitSlot(Rect rect, PartType type, Dictionary<PartType, BeyPart> loadout, string label, bool suppressInteraction = false)
+        private void DrawOrbitSlot(Rect rect, PartType type, Dictionary<PartType, BeyPart> loadout, string label)
         {
             loadout.TryGetValue(type, out BeyPart part);
-            bool active = garageSwapSlot == type;
-            DrawRect(rect, active ? new Color(0.08f, 0.20f, 0.32f, 0.96f) : new Color(0.04f, 0.09f, 0.15f, 0.92f));
-            DrawFrameCorners(rect, active ? ACCENT_CYAN : new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.45f), rect.width * 0.24f, 2f);
-            DrawRect(new Rect(rect.x, rect.yMax - 3f, rect.width, 3f), active ? ACCENT_CYAN : new Color(1f, 1f, 1f, 0.08f));
+            bool isSelected = garageInspectSlot == type;
+            DrawRect(rect, isSelected ? new Color(0.10f, 0.26f, 0.42f, 0.96f) : new Color(0.04f, 0.09f, 0.15f, 0.92f));
+            DrawFrameCorners(rect, isSelected ? ACCENT_CYAN : new Color(ACCENT_CYAN.r, ACCENT_CYAN.g, ACCENT_CYAN.b, 0.45f), rect.width * 0.24f, 2f);
+            DrawRect(new Rect(rect.x, rect.yMax - 3f, rect.width, 3f), isSelected ? ACCENT_CYAN : new Color(1f, 1f, 1f, 0.08f));
 
             Rect labelRect = new Rect(rect.x - 8f, rect.y - 26f, rect.width + 16f, 20f);
-            DrawFittedLabel(labelRect, label, sectionLabelStyle, Color.white, 9);
+            DrawFittedLabel(labelRect, label, sectionLabelStyle, isSelected ? ACCENT_CYAN : Color.white, 9);
 
             float iconSize = Mathf.Min(rect.width * 0.68f, rect.height - 38f);
-            float availableH = rect.height - 26f - 26f; // top padding to bottom label
+            float availableH = rect.height - 26f - 26f;
             Rect iconRect = new Rect(rect.center.x - iconSize * 0.5f, rect.y + 8f + (availableH - iconSize) * 0.5f, iconSize, iconSize);
             if (type != PartType.FaceBolt && partPreviewTextures.TryGetValue(type, out RenderTexture partRT) && partRT != null && partRT.IsCreated())
                 GUI.DrawTexture(iconRect, partRT, ScaleMode.ScaleToFit, true);
@@ -3050,82 +4369,8 @@ namespace BladeSpinners.Gameplay.UI
                 DrawPartSprite(iconRect, part);
             DrawFittedLabel(new Rect(rect.x + 6f, rect.yMax - 26f, rect.width - 12f, 18f), part != null ? PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant() : "EMPTY", bodyLabelStyle, Color.white, 9);
 
-            if (!suppressInteraction
-                && WithButtonSound(GUI.Button(rect, GUIContent.none, GUIStyle.none)))
-                garageSwapSlot = garageSwapSlot == type ? (PartType?)null : type;
-        }
-
-        private void DrawGarageSwapModal(Rect area, Dictionary<PartType, BeyPart> loadout, bool useRunInventory, PlayerManager runPlayer)
-        {
-            if (!garageSwapSlot.HasValue)
-                return;
-
-            PartType slot = garageSwapSlot.Value;
-            List<BeyPart> sourceParts = useRunInventory
-                ? runContext.Player?.GetRunInventory()?.GetAllParts() ?? new List<BeyPart>()
-                : ownedParts;
-            List<BeyPart> parts = GetPartsByType(sourceParts, slot);
-
-            // Queue swap-part 3D previews when the slot changes
-            if (lastRenderedSwapSlot != slot)
-            {
-                foreach (var rt in swapPartPreviewCache.Values)
-                    if (rt != null) rt.Release();
-                swapPartPreviewCache.Clear();
-                lastRenderedSwapSlot = slot;
-                swapPreviewQueue = new List<BeyPart>(parts);
-                swapPreviewsDirty = true;
-            }
-
-            DrawPanelFrame(area, new Color(0.04f, 0.08f, 0.14f, 0.98f), new Color(0.06f, 0.12f, 0.18f, 0.99f), ACCENT_CYAN, 2f);
-            DrawFittedLabel(new Rect(area.x + 10f, area.y + 8f, area.width - 46f, 24f), $"SWAP {slot.ToString().ToUpper()}", sectionLabelStyle, ACCENT_CYAN, 10);
-            Rect closeRect = new Rect(area.xMax - 30f, area.y + 6f, 22f, 22f);
-            if (ActionBtn("X", closeRect, ACCENT_RED, true))
-            {
-                garageSwapSlot = null;
-                return;
-            }
-
-            Rect listRect = new Rect(area.x + 8f, area.y + 38f, area.width - 16f, area.height - 46f);
-            GUILayout.BeginArea(listRect);
-            garageSwapScroll = GUILayout.BeginScrollView(garageSwapScroll, GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
-            if (parts.Count == 0)
-            {
-                GUILayout.Label("NO PARTS AVAILABLE FOR THIS SLOT.", bodyLabelStyle);
-            }
-            else
-            {
-                for (int i = 0; i < parts.Count; i++)
-                {
-                    BeyPart part = parts[i];
-                    if (part == null)
-                        continue;
-
-                    Rect row = GUILayoutUtility.GetRect(10f, Mathf.Clamp(72f * GetUiScale(), 66f, 88f), GUILayout.ExpandWidth(true));
-                    DrawRect(row, new Color(0f, 0f, 0f, 0.22f));
-                    DrawRect(new Rect(row.x, row.yMax - 2f, row.width, 2f), new Color(1f, 1f, 1f, 0.06f));
-
-                    float iconSz = Mathf.Min(row.height - 16f, 44f);
-                    Rect iconRect = new Rect(row.x + 8f, row.center.y - iconSz * 0.5f, iconSz, iconSz);
-                    if (slot != PartType.FaceBolt && swapPartPreviewCache.TryGetValue(part.GetInstanceID(), out RenderTexture swapRT) && swapRT != null && swapRT.IsCreated())
-                        GUI.DrawTexture(iconRect, swapRT, ScaleMode.ScaleToFit, true);
-                    else
-                        DrawPartSprite(iconRect, part);
-                    DrawFittedLabel(new Rect(iconRect.xMax + 8f, row.y + 8f, row.width * 0.48f, 22f), PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant(), bodyLabelStyle, Color.white, 10);
-                    DrawFittedLabel(new Rect(iconRect.xMax + 8f, row.y + 32f, row.width * 0.38f, 18f), $"POWER {Mathf.RoundToInt(GetPartPowerScore(part))}", bodyLabelStyle, new Color(0.70f, 0.88f, 1f, 0.86f), 10);
-                    DrawRarityPill(new Rect(row.xMax - 150f, row.y + 10f, 64f, row.height - 20f), part.Rarity, part.Rarity.ToString().ToUpperInvariant());
-
-                    Rect equipRect = new Rect(row.xMax - 78f, row.y + 10f, 68f, row.height - 20f);
-                    if (ActionBtn("EQUIP", equipRect, ACCENT_CYAN, false))
-                    {
-                        EquipPartFromGarage(slot, part, useRunInventory, runPlayer);
-                        loadout[slot] = part;
-                    }
-                }
-            }
-
-            GUILayout.EndScrollView();
-            GUILayout.EndArea();
+            if (WithButtonSound(GUI.Button(rect, GUIContent.none, GUIStyle.none)))
+                garageInspectSlot = type;
         }
 
         private void DrawGarageInfoPanel(Rect area, Dictionary<PartType, BeyPart> loadout, BeyPart detailPart, BeyStatBlock stats)
@@ -3199,25 +4444,6 @@ namespace BladeSpinners.Gameplay.UI
             }
 
             GUILayout.EndArea();
-        }
-
-        private void DrawCompactPartTooltip(Rect area, BeyPart part)
-        {
-            if (part == null)
-                return;
-
-            DrawPanelFrame(area, new Color(0.05f, 0.09f, 0.15f, 0.98f), new Color(0.06f, 0.12f, 0.18f, 0.98f), ACCENT_CYAN, 2f);
-            float pad = 8f;
-            DrawFittedLabel(new Rect(area.x + pad, area.y + 6f, area.width - pad * 2f, 20f), PartDisplayNameFormatter.ToShortDisplayName(part).ToUpperInvariant(), sectionLabelStyle, Color.white, 10);
-            DrawFittedLabel(new Rect(area.x + pad, area.y + 28f, area.width - pad * 2f, 18f), $"{part.PartType.ToString().ToUpper()}  |  {Mathf.RoundToInt(GetPartPowerScore(part))} PWR", bodyLabelStyle, new Color(0.72f, 0.88f, 1f, 0.85f), 10);
-
-            List<string> lines = BuildPartDetailLines(part);
-            float lineY = area.y + 48f;
-            int count = Mathf.Min(lines.Count, 3);
-            for (int i = 0; i < count; i++)
-            {
-                DrawFittedLabel(new Rect(area.x + pad, lineY + i * 18f, area.width - pad * 2f, 18f), lines[i], bodyLabelStyle, Color.white, 9);
-            }
         }
 
         private void DrawOverallStatBars(Rect area, BeyStatBlock stats)
@@ -3312,25 +4538,64 @@ namespace BladeSpinners.Gameplay.UI
         private void DrawRarityPill(Rect rect, RarityTier rarity, string label)
         {
             Color rarityColor = GetRarityColor(rarity);
-            DrawRect(rect, new Color(rarityColor.r * 0.35f, rarityColor.g * 0.35f, rarityColor.b * 0.35f, 0.95f));
+            DrawRect(rect, new Color(0.02f, 0.05f, 0.10f, 0.85f));
+            DrawFrameCorners(rect, rarityColor, rect.width * 0.28f, 1.5f);
             DrawRect(new Rect(rect.x, rect.yMax - 2f, rect.width, 2f), rarityColor);
-            DrawFittedLabel(rect, label, bodyLabelStyle, Color.white, 8);
+            DrawFittedLabel(rect, label, bodyLabelStyle, rarityColor, 9);
         }
 
         private static Color GetRarityColor(RarityTier rarity)
         {
             switch (rarity)
             {
+                case RarityTier.Common:
+                    return new Color(0.000f, 0.490f, 0.800f, 1f); // #007DCC Bright Teal Blue
                 case RarityTier.Uncommon:
-                    return new Color(0.20f, 0.82f, 0.38f, 1f);
+                    return new Color(0.294f, 0.800f, 0.000f, 1f); // #4BCC00 Lime Green
                 case RarityTier.Rare:
-                    return new Color(0.18f, 0.58f, 1f, 1f);
+                    return new Color(0.875f, 0.000f, 0.000f, 1f); // #DF0000 Racing Red
                 case RarityTier.Epic:
-                    return new Color(0.68f, 0.35f, 0.98f, 1f);
+                    return new Color(0.690f, 0.000f, 0.541f, 1f); // #B0008A Raspberry Plum
                 case RarityTier.Legendary:
-                    return new Color(1f, 0.56f, 0.12f, 1f);
+                    return new Color(1.000f, 0.725f, 0.000f, 1f); // #FFB900 Amber Flame
                 default:
-                    return new Color(0.62f, 0.66f, 0.72f, 1f);
+                    return new Color(0.000f, 0.490f, 0.800f, 1f);
+            }
+        }
+
+        private static Color GetRarityColor(BladeSpinners.Core.AbilityRarity rarity)
+        {
+            switch (rarity)
+            {
+                case BladeSpinners.Core.AbilityRarity.Common:
+                    return new Color(0.000f, 0.490f, 0.800f, 1f); // #007DCC Bright Teal Blue
+                case BladeSpinners.Core.AbilityRarity.Uncommon:
+                    return new Color(0.294f, 0.800f, 0.000f, 1f); // #4BCC00 Lime Green
+                case BladeSpinners.Core.AbilityRarity.Rare:
+                    return new Color(0.875f, 0.000f, 0.000f, 1f); // #DF0000 Racing Red
+                case BladeSpinners.Core.AbilityRarity.Legendary:
+                    return new Color(1.000f, 0.725f, 0.000f, 1f); // #FFB900 Amber Flame
+                default:
+                    return new Color(0.000f, 0.490f, 0.800f, 1f);
+            }
+        }
+
+        private static Color GetRarityColor(PerkRarity rarity)
+        {
+            switch (rarity)
+            {
+                case PerkRarity.Common:
+                    return new Color(0.000f, 0.490f, 0.800f, 1f); // #007DCC Bright Teal Blue
+                case PerkRarity.Uncommon:
+                    return new Color(0.294f, 0.800f, 0.000f, 1f); // #4BCC00 Lime Green
+                case PerkRarity.Rare:
+                    return new Color(0.875f, 0.000f, 0.000f, 1f); // #DF0000 Racing Red
+                case PerkRarity.Epic:
+                    return new Color(0.690f, 0.000f, 0.541f, 1f); // #B0008A Raspberry Plum
+                case PerkRarity.Legendary:
+                    return new Color(1.000f, 0.725f, 0.000f, 1f); // #FFB900 Amber Flame
+                default:
+                    return new Color(0.000f, 0.490f, 0.800f, 1f);
             }
         }
 
@@ -3645,7 +4910,7 @@ namespace BladeSpinners.Gameplay.UI
             mainMenuPanel = MenuPanel.Home;
             pausePanel    = MenuPanel.Home;
             selectedInventorySlot = null;
-            garageSwapSlot = null;
+            garageInspectSlot = PartType.EnergyRing;
             buildSlotPickerOpen = false;
             ResetPreviewRotationState();
             ApplySettingsToCameraController(runContext.CameraController);
@@ -3666,7 +4931,7 @@ namespace BladeSpinners.Gameplay.UI
             mainMenuPanel = MenuPanel.Home;
             pausePanel    = MenuPanel.Home;
             selectedInventorySlot = null;
-            garageSwapSlot = null;
+            garageInspectSlot = PartType.EnergyRing;
             buildSlotPickerOpen = false;
             deathOverlayPreviewPrepared = false;
             lootTransferInitialized = false;
@@ -3710,7 +4975,7 @@ namespace BladeSpinners.Gameplay.UI
                 return;
 
             mainMenuPanel = panel;
-            garageSwapSlot = null;
+            garageInspectSlot = PartType.EnergyRing;
             buildSlotPickerOpen = false;
             ResetPreviewRotationState();
         }
@@ -3721,7 +4986,7 @@ namespace BladeSpinners.Gameplay.UI
                 return;
 
             pausePanel = panel;
-            garageSwapSlot = null;
+            garageInspectSlot = PartType.EnergyRing;
             ResetPreviewRotationState();
         }
 
@@ -3843,7 +5108,6 @@ namespace BladeSpinners.Gameplay.UI
         private void ResetPreviewRotationState()
         {
             previewManualPitch = 0f;
-            previewManualYaw = 0f;
             previewIsDragging = false;
             previewDragPointerId = -1;
             ApplyPreviewManualRotation();
@@ -3867,6 +5131,21 @@ namespace BladeSpinners.Gameplay.UI
 
             if (runContext.Match.CurrentState != MatchManager.MatchState.PlayerWon)
                 return;
+
+            // Check if player wants to skip early after having watched the initial victory burst
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            var mouse = UnityEngine.InputSystem.Mouse.current;
+            var gp = UnityEngine.InputSystem.Gamepad.current;
+            bool skipPressed = (kb != null && (kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame))
+                || (mouse != null && mouse.leftButton.wasPressedThisFrame)
+                || (gp != null && (gp.aButton.wasPressedThisFrame || gp.buttonSouth.wasPressedThisFrame));
+
+            // Victory celebration runs for 5.2s, or can be advanced after 1.5s if skip input is pressed
+            if (runContext.Match.StateTimer > 0f)
+            {
+                if (!skipPressed || runContext.Match.StateTimer > 3.7f)
+                    return;
+            }
 
             RuntimeRunBuilder.RunProgression progression =
                 runContext.Progression;
@@ -3897,9 +5176,17 @@ namespace BladeSpinners.Gameplay.UI
 
             if (!progression.TryAdvance())
             {
-                Debug.Log("[BladeSpinners] Run complete. Transferring all loot and returning to main menu.");
+                Debug.Log("[BladeSpinners] Run complete. Transferring all loot and unlocking blessings.");
                 List<BeyPart> allRunParts = runContext.Player?.GetRunInventory()?.GetAllParts() ?? new List<BeyPart>();
                 TransferPartsToMainInventory(allRunParts);
+
+                // Record run win to increase difficulty progression milestones
+                RunDifficultyManager.RecordRunWin();
+
+                // Roll 3 to 6 new shrine blessings on winning the entire run!
+                lastRunUnlockedBlessings = ShrineBlessingsUnlockManager.OnRunWon(3, 6);
+                showRunVictoryModal = lastRunUnlockedBlessings != null && lastRunUnlockedBlessings.Count > 0;
+
                 ReturnToMainMenu();
                 return;
             }
@@ -4565,7 +5852,8 @@ namespace BladeSpinners.Gameplay.UI
                 Vector2 delta = currentEvent.mousePosition - previewLastPointerPos;
                 previewLastPointerPos = currentEvent.mousePosition;
 
-                previewManualPitch = Mathf.Clamp(previewManualPitch - delta.y * 0.30f, -40f, 40f);
+                // Lock rotation exclusively to pitch tilt (up and down)
+                previewManualPitch = Mathf.Clamp(previewManualPitch - delta.y * 0.35f, -38f, 38f);
 
                 ApplyPreviewManualRotation();
                 previewRenderQueued = true;
@@ -4687,8 +5975,8 @@ namespace BladeSpinners.Gameplay.UI
         private static void DrawDiagonalStripe(float xCenter, float width, Color color, float angleDeg)
         {
             Matrix4x4 saved = GUI.matrix;
-            GUIUtility.RotateAroundPivot(angleDeg, new Vector2(xCenter, Screen.height * 0.5f));
-            DrawRect(new Rect(xCenter - width * 0.5f, -200f, width, Screen.height + 400f), color);
+            GUIUtility.RotateAroundPivot(angleDeg, new Vector2(xCenter, UiHeight * 0.5f));
+            DrawRect(new Rect(xCenter - width * 0.5f, -200f, width, UiHeight + 400f), color);
             GUI.matrix = saved;
         }
 
@@ -4838,11 +6126,16 @@ namespace BladeSpinners.Gameplay.UI
         {
             float usableWidth = Mathf.Max(1f, rect.width - source.padding.horizontal);
             float usableHeight = Mathf.Max(1f, rect.height - source.padding.vertical);
-            GUIStyle fittedStyle = FitLabelStyle(source, label, usableWidth, minFontSize, usableHeight);
-            Color previousColor = GUI.contentColor;
-            GUI.contentColor = textColor;
+            GUIStyle fittedStyle = new GUIStyle(FitLabelStyle(source, label, usableWidth, minFontSize, usableHeight));
+            fittedStyle.normal.textColor = textColor;
+            fittedStyle.hover.textColor = textColor;
+            fittedStyle.active.textColor = textColor;
+            fittedStyle.focused.textColor = textColor;
+            fittedStyle.onNormal.textColor = textColor;
+            fittedStyle.onHover.textColor = textColor;
+            fittedStyle.onActive.textColor = textColor;
+            fittedStyle.onFocused.textColor = textColor;
             GUI.Label(rect, label, fittedStyle);
-            GUI.contentColor = previousColor;
         }
 
         /// <summary>
@@ -4907,26 +6200,46 @@ namespace BladeSpinners.Gameplay.UI
             return WithButtonSound(GUI.Button(rect, GUIContent.none, GUIStyle.none));
         }
 
-        // ══════════════════════════════════════════════════════════════════════════
-        //  STYLE BUILDER
-        // ══════════════════════════════════════════════════════════════════════════
+        private static GUIStyle CreateStaticStyle(GUIStyle baseStyle, Color color, int fontSize, TextAnchor alignment, FontStyle fontStyle = FontStyle.Normal)
+        {
+            GUIStyle s = new GUIStyle(baseStyle)
+            {
+                fontSize = fontSize,
+                alignment = alignment,
+                fontStyle = fontStyle
+            };
+            s.normal.textColor = color;
+            s.hover.textColor = color;
+            s.active.textColor = color;
+            s.focused.textColor = color;
+            s.onNormal.textColor = color;
+            s.onHover.textColor = color;
+            s.onActive.textColor = color;
+            s.onFocused.textColor = color;
+            return s;
+        }
+
+        private static int ScaleFont(float base1080pSize)
+        {
+            return Mathf.RoundToInt(base1080pSize);
+        }
 
         private void EnsureStyles()
         {
-            if (titleBarStyle != null && styleScreenW == Screen.width && styleScreenH == Screen.height)
+            if (titleBarStyle != null && styleScreenW == (int)UiWidth && styleScreenH == (int)UiHeight)
                 return;
 
-            styleScreenW = Screen.width;
-            styleScreenH = Screen.height;
-            float uiScale = GetUiScale();
+            styleScreenW = (int)UiWidth;
+            styleScreenH = (int)UiHeight;
+            float uiScale = 1.0f;
 
-            int bigSize  = Mathf.Clamp(Mathf.RoundToInt(42f * uiScale), 28, 82);
-            int navSize  = Mathf.Clamp(Mathf.RoundToInt(28f * uiScale), 18, 52);
-            int bodySize = Mathf.Clamp(Mathf.RoundToInt(18f * uiScale), 12, 32);
-            int statSize = Mathf.Clamp(Mathf.RoundToInt(17f * uiScale), 11, 30);
-            int inlineButtonSize = Mathf.Clamp(Mathf.RoundToInt(20f * uiScale), 14, 34);
-            int scaledHorizontalPadding = Mathf.RoundToInt(Mathf.Clamp(8f * uiScale, 8f, 18f));
-            int scaledVerticalPadding = Mathf.RoundToInt(Mathf.Clamp(3f * uiScale, 3f, 8f));
+            int bigSize  = 42;
+            int navSize  = 28;
+            int bodySize = 18;
+            int statSize = 17;
+            int inlineButtonSize = 20;
+            int scaledHorizontalPadding = 8;
+            int scaledVerticalPadding = 3;
 
             listTex = MakeTex(LIST_BG);
             sliderTrackTex = MakeTex(new Color(1f, 1f, 1f, 0f));
@@ -5060,14 +6373,7 @@ namespace BladeSpinners.Gameplay.UI
 
         private static float GetUiScale()
         {
-            float widthScale = Screen.width / 1920f;
-            float heightScale = Screen.height / 1080f;
-            float rawScale = Mathf.Min(widthScale, heightScale);
-
-            if (rawScale > 1f)
-                rawScale = 1f + (rawScale - 1f) * 0.72f;
-
-            return Mathf.Clamp(rawScale, 0.85f, 1.8f);
+            return 1.0f;
         }
     }
 }

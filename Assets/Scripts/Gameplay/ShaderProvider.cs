@@ -56,5 +56,26 @@ namespace BladeSpinners.Gameplay
             if (urpUnlit == null)
                 urpUnlit = Shader.Find("Unlit/Color");
         }
+
+        /// <summary>Creates a build-safe emissive lit material.</summary>
+        public static Material CreateEmissiveMaterial(Color color, float emissionMultiplier = 2.0f)
+        {
+            Material mat = new Material(URPLit);
+            mat.SetColor("_BaseColor", color);
+            mat.SetColor("_Color", color);
+            mat.EnableKeyword("_EMISSION");
+            mat.SetColor("_EmissionColor", color * emissionMultiplier);
+            mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+            return mat;
+        }
+
+        /// <summary>Creates a build-safe unlit material.</summary>
+        public static Material CreateUnlitMaterial(Color color)
+        {
+            Material mat = new Material(URPUnlit);
+            mat.SetColor("_BaseColor", color);
+            mat.SetColor("_Color", color);
+            return mat;
+        }
     }
 }

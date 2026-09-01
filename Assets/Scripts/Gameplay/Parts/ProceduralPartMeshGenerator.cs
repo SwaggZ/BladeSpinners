@@ -17,7 +17,7 @@ namespace BladeSpinners.Gameplay.Parts
     /// </summary>
     public static class ProceduralPartMeshGenerator
     {
-        private const int RING_SEGMENTS = 32;
+        private const int RING_SEGMENTS = 48;
         private const int TIP_SEGMENTS = 16;
         private const float FACE_BOLT_RADIUS = 0.038f;
         private const float ENERGY_RING_HOLE_EXTRA_DIAMETER = 0.03f; // hole width must stay slightly larger than face bolt width
@@ -628,51 +628,92 @@ namespace BladeSpinners.Gameplay.Parts
         }
 
         // =====================================================================
-        // TRACK — fluted cylinder, ridge count from seed
+        // TRACK — fluted cylinder & aerodynamic wings/disc, ridge count from seed
         // =====================================================================
 
         private static float GetTrackHeight(BeyPart part)
         {
-            // Use the part's TrackHeight stat directly as the mesh height.
-            // PartSetGenerator produces values in [MIN_TRACK_HEIGHT, MAX_TRACK_HEIGHT].
             return Mathf.Clamp(part.TrackHeight, GameConstants.MIN_TRACK_HEIGHT, GameConstants.MAX_TRACK_HEIGHT);
         }
 
         private static Mesh GenerateTrackMesh(BeyPart part, System.Random rng)
         {
             float height = GetTrackHeight(part);
-            float topRadius = 0.04f;
-            float bottomRadius = 0.03f;
+            float topRadius = 0.044f;
+            float bottomRadius = 0.034f;
 
-            // Symmetry planes (1–2) from seed
-            int symmetryPlanes = 1 + rng.Next(0, 2);
+            // Category & Seed-based architecture
+            // 0 = Fluted Core (100/105), 1 = Aerodynamic Defense Disc (WD145), 2 = Twin Vortex Wings (WA130), 3 = Quad Torsion Fins (145)
+            int styleRoll = rng.Next(0, 4);
 
-            // Seed-based: number of flutes (ridges) along the outside
-            int ridgeCount = rng.Next(0, 7); // 0 = smooth, up to 6 ridges
-            float ridgeDepth = 0.003f + (float)rng.NextDouble() * 0.007f; // 0.003–0.01
-            float taperVariation = 0.9f + (float)rng.NextDouble() * 0.2f;
-            topRadius *= taperVariation;
+            Mesh coreCylinder = GenerateCylinder(topRadius, bottomRadius, height, RING_SEGMENTS, capTop: true, capBottom: true);
 
-            if (ridgeCount == 0)
+            if (styleRoll == 1)
             {
-                return GenerateCylinder(topRadius, bottomRadius, height, RING_SEGMENTS, capTop: true, capBottom: true);
-            }
+                // Defense Ring Track (WD145 style aerodynamic disc)
+                float discRadius = topRadius * 1.55f;
+                float discHeight = height * 0.35f;
+                float discY = height * 0.50f;
+                Mesh discMesh = GenerateRing(discRadius, topRadius * 0.95f, discHeight, RING_SEGMENTS);
 
-            // Fluted track: modulate the radius per segment
-            float[] topRadii = new float[RING_SEGMENTS];
-            float[] bottomRadii = new float[RING_SEGMENTS];
-            for (int i = 0; i < RING_SEGMENTS; i++)
+                CombineInstance[] combine = new CombineInstance[2];
+                combine[0].mesh = coreCylinder;
+                combine[0].transform = Matrix4x4.identity;
+                combine[1].mesh = discMesh;
+                combine[1].transform = Matrix4x4.Translate(new Vector3(0f, discY, 0f));
+
+                Mesh trackMesh = new Mesh { name = "DefenseDiscTrack" };
+                trackMesh.CombineMeshes(combine, true, true);
+                trackMesh.RecalculateNormals();
+                trackMesh.RecalculateBounds();
+                return trackMesh;
+            }
+            else if (styleRoll == 2)
             {
-                float angle = (float)i / RING_SEGMENTS * Mathf.PI * 2f;
-                float ridge = Mathf.Abs(Mathf.Sin(angle * ridgeCount)) * ridgeDepth;
-                topRadii[i] = topRadius + ridge;
-                bottomRadii[i] = bottomRadius + ridge;
+                // Wing Attack Track (WA130 / Vortex Wings)
+                float wingSpan = topRadius * 1.6f;
+                float wingHeight = height * 0.40f;
+                float wingY = height * 0.35f;
+
+                float[] wingRadii = new float[RING_SEGMENTS];
+                for (int i = 0; i < RING_SEGMENTS; i++)
+                {
+                    float a = (float)i / RING_SEGMENTS * Mathf.PI * 2f;
+                    float w = Mathf.Pow(Mathf.Abs(Mathf.Sin(a)), 3f);
+                    wingRadii[i] = Mathf.Lerp(topRadius * 0.9f, wingSpan, w);
+                }
+
+                Mesh wingMesh = GenerateModulatedCylinder(wingRadii, wingRadii, wingHeight, RING_SEGMENTS, capTop: true, capBottom: true);
+                CombineInstance[] combine = new CombineInstance[2];
+                combine[0].mesh = coreCylinder;
+                combine[0].transform = Matrix4x4.identity;
+                combine[1].mesh = wingMesh;
+                combine[1].transform = Matrix4x4.Translate(new Vector3(0f, wingY, 0f));
+
+                Mesh trackMesh = new Mesh { name = "WingAttackTrack" };
+                trackMesh.CombineMeshes(combine, true, true);
+                trackMesh.RecalculateNormals();
+                trackMesh.RecalculateBounds();
+                return trackMesh;
             }
+            else
+            {
+                // Multi-fluted Torsion Track (100 / 145 style reinforced ribs)
+                int flutes = (styleRoll == 3) ? 4 : 6;
+                float fluteDepth = 0.0055f;
+                float[] topRadii = new float[RING_SEGMENTS];
+                float[] bottomRadii = new float[RING_SEGMENTS];
 
-            EnforceSymmetry(topRadii, symmetryPlanes);
-            EnforceSymmetry(bottomRadii, symmetryPlanes);
+                for (int i = 0; i < RING_SEGMENTS; i++)
+                {
+                    float angle = (float)i / RING_SEGMENTS * Mathf.PI * 2f;
+                    float ridge = Mathf.Abs(Mathf.Sin(angle * (flutes * 0.5f))) * fluteDepth;
+                    topRadii[i] = topRadius + ridge;
+                    bottomRadii[i] = bottomRadius + ridge * 0.8f;
+                }
 
-            return GenerateModulatedCylinder(topRadii, bottomRadii, height, RING_SEGMENTS, capTop: true, capBottom: true);
+                return GenerateModulatedCylinder(topRadii, bottomRadii, height, RING_SEGMENTS, capTop: true, capBottom: true);
+            }
         }
 
         // =====================================================================
@@ -690,43 +731,37 @@ namespace BladeSpinners.Gameplay.Parts
             float t = Mathf.InverseLerp(GameConstants.MIN_WEIGHT, GameConstants.MAX_WEIGHT, part.Weight);
             float baseOuterRadius = Mathf.Lerp(0.1f, 0.18f, t);
             float height = GetFusionWheelHeight(part);
-            FusionWheelCombatProfile profile =
-                FusionWheelCombatProfile.FromPart(part);
+            FusionWheelCombatProfile profile = FusionWheelCombatProfile.FromPart(part);
 
-            // Generate per-segment outer radius
+            // Generate per-segment outer radius with smooth cosine blade profile
             float[] outerRadii = new float[RING_SEGMENTS];
             for (int i = 0; i < RING_SEGMENTS; i++)
             {
-                float segAngle = (float)i / RING_SEGMENTS; // 0–1 range
+                float segAngle = (float)i / RING_SEGMENTS;
 
                 float maxBladeFactor = 0f;
                 for (int b = 0; b < profile.BladeCount; b++)
                 {
-                    float bladeCenter =
-                        ((float)b / profile.BladeCount + profile.BladeSweep) % 1f;
+                    float bladeCenter = ((float)b / profile.BladeCount + profile.BladeSweep) % 1f;
                     float dist = Mathf.Abs(segAngle - bladeCenter);
-                    dist = Mathf.Min(dist, 1f - dist); // wrap around
+                    dist = Mathf.Min(dist, 1f - dist);
 
-                    float halfWidth =
-                        profile.BladeWidth / (2f * profile.BladeCount);
+                    float halfWidth = profile.BladeWidth / (2f * profile.BladeCount);
                     if (dist < halfWidth)
                     {
-                        // Smooth falloff from blade center
-                        float bladeFactor = 1f - (dist / halfWidth);
-                        bladeFactor = bladeFactor * bladeFactor; // quadratic falloff for nicer shape
+                        // Smooth cosine easing prevents jagged pinch kinks on blade edges
+                        float normDist = dist / halfWidth;
+                        float bladeFactor = 0.5f + 0.5f * Mathf.Cos(normDist * Mathf.PI);
                         maxBladeFactor = Mathf.Max(maxBladeFactor, bladeFactor);
                     }
                 }
 
-                outerRadii[i] =
-                    baseOuterRadius
-                    + profile.BladeProtrusion * maxBladeFactor;
+                outerRadii[i] = baseOuterRadius + profile.BladeProtrusion * maxBladeFactor;
             }
 
             // Enforce symmetry so blades are evenly mirrored
             EnforceSymmetry(outerRadii, profile.SymmetryPlanes);
 
-            // Fusion Wheels are solid die-cast metal cores with beveled chamfers.
             return GenerateModulatedSolidDisc(outerRadii, height, RING_SEGMENTS);
         }
 
@@ -735,13 +770,12 @@ namespace BladeSpinners.Gameplay.Parts
             Mesh mesh = new Mesh();
             mesh.name = "DieCastFusionWheelMesh";
 
-            // Multi-tiered die-cast metal wheel profile with 5 height levels:
-            // 0: Undercut base (y=0, 72% R)
-            // 1: Lower 45-deg chamfer (y=0.28h, 98% R)
-            // 2: Main contact attack edge (y=0.62h, 100% R)
-            // 3: Upper rim chamfer (y=0.82h, 94% R)
-            // 4: Recessed Energy Ring shelf (y=height, 65% R)
-            const int RINGS = 5;
+            // Multi-tiered die-cast metal wheel profile with 4 height levels:
+            // 0: Undercut base (y=0, 85% R)
+            // 1: Lower 45-deg chamfer (y=0.25h, 98% R)
+            // 2: Main contact attack edge (y=0.60h, 100% R)
+            // 3: Perfectly flat upper deck (y=height, 100% R)
+            const int RINGS = 4;
             int ringVerts = segments + 1;
             int totalVerts = ringVerts * RINGS + 2; // + top center, bottom center
 
@@ -751,8 +785,8 @@ namespace BladeSpinners.Gameplay.Parts
             int topCenter = ringVerts * RINGS;
             int bottomCenter = topCenter + 1;
 
-            float[] ringHeights = new float[] { 0f, height * 0.28f, height * 0.62f, height * 0.82f, height };
-            float[] ringRadiusScales = new float[] { 0.72f, 0.98f, 1.00f, 0.94f, 0.65f };
+            float[] ringHeights = new float[] { 0f, height * 0.25f, height * 0.60f, height };
+            float[] ringRadiusScales = new float[] { 0.85f, 0.98f, 1.00f, 1.00f };
 
             float maxRadius = 0.001f;
             for (int s = 0; s < segments; s++)
@@ -782,7 +816,7 @@ namespace BladeSpinners.Gameplay.Parts
                 }
             }
 
-            vertices[topCenter] = new Vector3(0f, height * 0.90f, 0f);
+            vertices[topCenter] = new Vector3(0f, height, 0f);
             vertices[bottomCenter] = new Vector3(0f, 0f, 0f);
             uvs[topCenter] = new Vector2(0.5f, 0.5f);
             uvs[bottomCenter] = new Vector2(0.5f, 0.5f);
@@ -792,7 +826,7 @@ namespace BladeSpinners.Gameplay.Parts
             int[] triangles = new int[bandTriangles + capTriangles];
             int tri = 0;
 
-            // 4 Side Chamfer Bands
+            // 3 Side Chamfer Bands
             for (int r = 0; r < RINGS - 1; r++)
             {
                 int lowerRingStart = r * ringVerts;
@@ -862,62 +896,41 @@ namespace BladeSpinners.Gameplay.Parts
             float t = Mathf.InverseLerp(GameConstants.MIN_MANA_POOL, GameConstants.MAX_MANA_POOL, part.ManaPoolSize);
             float baseOuterRadius = Mathf.Lerp(0.11f, 0.20f, t);
 
-            // Clamp outer radius so the ring sits inside the FusionWheel with a visible margin
-            const float RING_MARGIN = 0.015f; // inset from fusion wheel edge
+            const float RING_MARGIN = 0.015f;
             baseOuterRadius = Mathf.Min(baseOuterRadius, maxOuterRadius - RING_MARGIN);
 
-            // Inner radius (hole) must always stay slightly wider (diameter) than FaceBolt.
-            // Diameter clearance +0.03 means radius clearance +0.015.
             float minHoleRadiusFromFaceBolt = Mathf.Max(0.005f, faceBoltRadius + ENERGY_RING_HOLE_EXTRA_DIAMETER * 0.5f);
-
-            // Keep some ring thickness even at minimum outer radius.
             float maxAllowedInnerRadius = baseOuterRadius - 0.01f;
 
-            // Start from procedural default, then enforce minimum hole clearance.
             float innerRadius = Mathf.Max(baseOuterRadius * 0.3f, minHoleRadiusFromFaceBolt);
             innerRadius = Mathf.Clamp(innerRadius, 0.005f, maxAllowedInnerRadius);
 
             float height = GetEnergyRingHeight(part);
 
-            // Symmetry planes (1–2) from seed
             int symmetryPlanes = 1 + rng.Next(0, 2);
-
-            // Seed-driven wave pattern
-            int waveCount = 4 + rng.Next(0, 9); // 4–12 waves
-            float waveAmplitude = 0.005f + (float)rng.NextDouble() * 0.015f; // 0.005–0.02
-            bool spiky = rng.NextDouble() > 0.5; // smooth vs angular waves
+            int waveCount = 4 + rng.Next(0, 9);
+            float waveAmplitude = 0.005f + (float)rng.NextDouble() * 0.015f;
+            bool spiky = rng.NextDouble() > 0.5;
 
             float[] outerRadii = new float[RING_SEGMENTS];
             for (int i = 0; i < RING_SEGMENTS; i++)
             {
                 float angle = (float)i / RING_SEGMENTS * Mathf.PI * 2f;
-                float wave;
-                if (spiky)
-                {
-                    // Triangular wave for angular/spiky look
-                    wave = Mathf.Abs(Mathf.Repeat(angle * waveCount / (Mathf.PI * 2f), 1f) * 2f - 1f);
-                }
-                else
-                {
-                    // Smooth sinusoidal wave
-                    wave = (Mathf.Sin(angle * waveCount) + 1f) * 0.5f;
-                }
-                // Clamp each segment so it stays inside the fusion wheel with margin
+                float wave = spiky
+                    ? Mathf.Abs(Mathf.Repeat(angle * waveCount / (Mathf.PI * 2f), 1f) * 2f - 1f)
+                    : (Mathf.Sin(angle * waveCount) + 1f) * 0.5f;
                 outerRadii[i] = Mathf.Min(baseOuterRadius + waveAmplitude * wave, maxOuterRadius - RING_MARGIN);
             }
 
-            // Enforce symmetry so the ring edge is evenly mirrored
             EnforceSymmetry(outerRadii, symmetryPlanes);
-
             return GenerateModulatedRing(outerRadii, innerRadius, height, RING_SEGMENTS);
         }
 
         // =====================================================================
-        // FACE BOLT — shared canonical hex mesh (same geometry for every FaceBolt)
-        // Only color, emblem sprite, name, and ability vary between FaceBolts.
+        // FACE BOLT — authentic 6-sided hex nut with chamfer and emblem dish
         // =====================================================================
 
-        private const float FACE_BOLT_HEIGHT = 0.015f;
+        private const float FACE_BOLT_HEIGHT = 0.018f;
 
         private static float GetFaceBoltHeight()
         {
@@ -926,12 +939,52 @@ namespace BladeSpinners.Gameplay.Parts
 
         private static Mesh GenerateFaceBoltMesh(BeyPart part, System.Random rng)
         {
-            if (sharedFaceBoltMesh == null)
-            {
-                sharedFaceBoltMesh = GenerateCylinder(FACE_BOLT_RADIUS, FACE_BOLT_RADIUS, FACE_BOLT_HEIGHT, 6, capTop: true, capBottom: false);
-                sharedFaceBoltMesh.name = "SharedFaceBoltHex";
-            }
+            if (sharedFaceBoltMesh != null)
+                return sharedFaceBoltMesh;
 
+            // Authentic Beyblade: Metal Fusion Face Bolt
+            // 1. Bottom screw shank cylinder
+            float stemRadius = 0.018f;
+            float stemHeight = 0.007f;
+            Mesh stemMesh = GenerateCylinder(stemRadius, stemRadius, stemHeight, RING_SEGMENTS, capTop: false, capBottom: true);
+
+            // 2. 6-Sided Hexagonal Bolt Nut Head
+            float hexRadius = FACE_BOLT_RADIUS;
+            float hexHeight = 0.008f;
+            Mesh hexBodyMesh = GenerateCylinder(hexRadius, hexRadius, hexHeight, 6, capTop: true, capBottom: true);
+
+            // 3. Top Chamfer Bevel Ring
+            float chamferTopRadius = FACE_BOLT_RADIUS * 0.86f;
+            float chamferBottomRadius = FACE_BOLT_RADIUS;
+            float chamferHeight = 0.003f;
+            Mesh chamferMesh = GenerateCylinder(chamferTopRadius, chamferBottomRadius, chamferHeight, 6, capTop: true, capBottom: false);
+
+            // 4. Recessed Inner Emblem Dish Rim
+            float dishOuterRadius = FACE_BOLT_RADIUS * 0.72f;
+            float dishInnerRadius = FACE_BOLT_RADIUS * 0.65f;
+            float dishDepth = 0.0015f;
+            Mesh dishRimMesh = GenerateRing(dishOuterRadius, dishInnerRadius, dishDepth, RING_SEGMENTS);
+
+            CombineInstance[] combine = new CombineInstance[4];
+            combine[0].mesh = stemMesh;
+            combine[0].transform = Matrix4x4.identity;
+
+            combine[1].mesh = hexBodyMesh;
+            combine[1].transform = Matrix4x4.Translate(new Vector3(0f, stemHeight, 0f));
+
+            combine[2].mesh = chamferMesh;
+            combine[2].transform = Matrix4x4.Translate(new Vector3(0f, stemHeight + hexHeight, 0f));
+
+            combine[3].mesh = dishRimMesh;
+            combine[3].transform = Matrix4x4.Translate(new Vector3(0f, stemHeight + hexHeight + chamferHeight - dishDepth, 0f));
+
+            Mesh boltMesh = new Mesh();
+            boltMesh.name = "AuthenticMetalFusionFaceBolt";
+            boltMesh.CombineMeshes(combine, true, true);
+            boltMesh.RecalculateNormals();
+            boltMesh.RecalculateBounds();
+
+            sharedFaceBoltMesh = boltMesh;
             return sharedFaceBoltMesh;
         }
 

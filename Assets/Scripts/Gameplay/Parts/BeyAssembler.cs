@@ -226,14 +226,19 @@ namespace BladeSpinners.Gameplay.Parts
 
             // First pass: generate all meshes EXCEPT EnergyRing (needs constraints from FW & FB)
             Mesh[] meshes = new Mesh[parts.Length];
-            float totalHeight = 0f;
+            float tipH = 0f, trackH = 0f, fwH = 0f, erH = 0f;
+
             for (int i = 0; i < parts.Length; i++)
             {
                 if (parts[i] == null) continue;
                 if (slots[i] == PartType.EnergyRing) continue; // deferred
                 meshes[i] = ProceduralPartMeshGenerator.GenerateMesh(parts[i]);
                 if (meshes[i] != null)
-                    totalHeight += meshes[i].bounds.size.y;
+                {
+                    if (slots[i] == PartType.Tip) tipH = meshes[i].bounds.size.y;
+                    else if (slots[i] == PartType.Track) trackH = meshes[i].bounds.size.y;
+                    else if (slots[i] == PartType.FusionWheel) fwH = meshes[i].bounds.size.y;
+                }
             }
 
             // Generate EnergyRing constrained by FusionWheel (max width) and FaceBolt (max hole)
@@ -253,13 +258,16 @@ namespace BladeSpinners.Gameplay.Parts
                 meshes[erIndex] = ProceduralPartMeshGenerator.GenerateConstrainedEnergyRing(
                     parts[erIndex], fwMaxRadius, fbRadius);
                 if (meshes[erIndex] != null)
-                    totalHeight += meshes[erIndex].bounds.size.y;
+                    erH = meshes[erIndex].bounds.size.y;
             }
 
-            // Second pass: build, stack using mesh connection points (top of previous = bottom of next)
+            // Second pass: stack parts correctly.
+            // Tip -> Track -> FusionWheel.
+            // Both EnergyRing and FaceBolt sit directly on the FusionWheel top surface, co-planar at the same height.
+            float topTierHeight = Mathf.Max(erH, 0.012f);
+            float totalHeight = tipH + trackH + fwH + topTierHeight;
             float currentY = -totalHeight / 2f;
-            float energyRingLocalY = 0f;
-            bool hasEnergyRingLocalY = false;
+            float fusionWheelTopY = currentY;
 
             for (int i = 0; i < parts.Length; i++)
             {
@@ -268,15 +276,22 @@ namespace BladeSpinners.Gameplay.Parts
 
                 Mesh partMesh = meshes[i];
                 Bounds meshBounds = partMesh.bounds;
-
-                // Connection point: position so this mesh's bottom (bounds.min.y) sits at currentY
                 float meshBottomOffset = meshBounds.min.y;
-                float localY = currentY - meshBottomOffset;
+                float localY;
 
-                // FaceBolt should connect at the same vertical anchor as the EnergyRing.
-                if (slots[i] == PartType.FaceBolt && hasEnergyRingLocalY)
+                if (slots[i] == PartType.EnergyRing)
                 {
-                    localY = energyRingLocalY;
+                    // Sits flush right on top of the flat Fusion Wheel with 0.001m micro-clearance to eliminate depth-buffer coplanar aliasing
+                    localY = fusionWheelTopY + 0.001f - meshBottomOffset;
+                }
+                else if (slots[i] == PartType.FaceBolt)
+                {
+                    // Stem (0.007m) penetrates into the core; hex head base sits flush on the Fusion Wheel at the exact same height as the Energy Ring
+                    localY = fusionWheelTopY + 0.001f - 0.007f;
+                }
+                else
+                {
+                    localY = currentY - meshBottomOffset;
                 }
 
                 GameObject partObj = new GameObject($"Part_{slots[i]}");
@@ -344,36 +359,46 @@ namespace BladeSpinners.Gameplay.Parts
 
                         case PartType.FaceBolt:
                             mat.SetColor("_BaseColor", partColor);
-                            mat.SetFloat("_Metallic", 0.85f);
-                            mat.SetFloat("_Smoothness", 0.92f);
+                            mat.SetFloat("_Metallic", 0.65f);
+                            mat.SetFloat("_Smoothness", 0.94f);
+                            mat.SetColor("_EmissionColor", new Color(partColor.r * 0.18f, partColor.g * 0.18f, partColor.b * 0.18f, 1f));
+                            mat.EnableKeyword("_EMISSION");
                             break;
 
                         case PartType.Track:
                             mat.SetColor("_BaseColor", partColor);
-                            mat.SetFloat("_Metallic", 0.20f);
-                            mat.SetFloat("_Smoothness", 0.52f);
+                            mat.SetFloat("_Metallic", 0.08f);
+                            mat.SetFloat("_Smoothness", 0.85f);
                             break;
 
                         case PartType.Tip:
-                            bool isMetalTip = parts[i].TipBehavior == TipBehaviorType.Spike || parts[i].TipBehavior == TipBehaviorType.Sharp;
-                            bool isRubberTip = (parts[i].PartName != null && (parts[i].PartName.Contains("Rubber") || parts[i].PartName.Contains("Grip")));
+                            bool isMetalTip = parts[i].TipBehavior == TipBehaviorType.Spike 
+                                || parts[i].TipBehavior == TipBehaviorType.Sharp
+                                || parts[i].TipBehavior == TipBehaviorType.MetalSharp_MS
+                                || parts[i].TipBehavior == TipBehaviorType.MetalBall_MB
+                                || parts[i].TipBehavior == TipBehaviorType.BearingDrive_B_D;
+                            bool isRubberTip = parts[i].TipBehavior == TipBehaviorType.RubberFlat
+                                || parts[i].TipBehavior == TipBehaviorType.Rubber2Flat_R2F
+                                || parts[i].TipBehavior == TipBehaviorType.RubberBall_RB
+                                || parts[i].TipBehavior == TipBehaviorType.RubberSharp_RS
+                                || (parts[i].PartName != null && (parts[i].PartName.Contains("Rubber") || parts[i].PartName.Contains("Grip")));
                             if (isMetalTip)
                             {
-                                mat.SetColor("_BaseColor", new Color(0.88f, 0.91f, 0.95f, 1f));
-                                mat.SetFloat("_Metallic", 1.0f);
-                                mat.SetFloat("_Smoothness", 0.94f);
+                                mat.SetColor("_BaseColor", new Color(0.92f, 0.94f, 0.97f, 1f));
+                                mat.SetFloat("_Metallic", 0.98f);
+                                mat.SetFloat("_Smoothness", 0.96f);
                             }
                             else if (isRubberTip)
                             {
-                                mat.SetColor("_BaseColor", new Color(0.12f, 0.14f, 0.16f, 1f));
+                                mat.SetColor("_BaseColor", new Color(0.12f, 0.13f, 0.15f, 1f));
                                 mat.SetFloat("_Metallic", 0.0f);
-                                mat.SetFloat("_Smoothness", 0.12f);
+                                mat.SetFloat("_Smoothness", 0.15f);
                             }
                             else
                             {
                                 mat.SetColor("_BaseColor", partColor);
-                                mat.SetFloat("_Metallic", 0.25f);
-                                mat.SetFloat("_Smoothness", 0.65f);
+                                mat.SetFloat("_Metallic", 0.10f);
+                                mat.SetFloat("_Smoothness", 0.85f);
                             }
                             break;
                     }
@@ -393,19 +418,21 @@ namespace BladeSpinners.Gameplay.Parts
 
                 partObjects[slots[i]] = partObj;
 
-                if (slots[i] == PartType.EnergyRing)
-                {
-                    energyRingLocalY = localY;
-                    hasEnergyRingLocalY = true;
-                }
-
                 if (slots[i] == PartType.FaceBolt && parts[i].FaceBoltEmblem != null)
                 {
                     CreateFaceBoltEmblemVisual(partObj.transform, meshBounds, parts[i].FaceBoltEmblem);
                 }
 
                 // Advance currentY to the top of this mesh (connection point for the next part)
-                currentY += meshBounds.size.y;
+                if (slots[i] == PartType.Tip || slots[i] == PartType.Track)
+                {
+                    currentY += meshBounds.size.y;
+                }
+                else if (slots[i] == PartType.FusionWheel)
+                {
+                    currentY += meshBounds.size.y;
+                    fusionWheelTopY = currentY;
+                }
             }
         }
 

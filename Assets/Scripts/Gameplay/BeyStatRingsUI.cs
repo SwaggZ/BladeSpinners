@@ -101,6 +101,32 @@ namespace BladeSpinners.Gameplay
                 return;
             }
 
+            bool inBladeLock = BladeSpinners.Gameplay.Combat.BladeLockDuelManager.Instance != null && BladeSpinners.Gameplay.Combat.BladeLockDuelManager.Instance.IsInBladeLock;
+            bool inCountdown = MatchManager.Instance != null && MatchManager.Instance.CurrentState == MatchManager.MatchState.WaitingToStart;
+            bool inEndScene = MatchManager.Instance != null && (MatchManager.Instance.CurrentState == MatchManager.MatchState.PlayerWon || MatchManager.Instance.CurrentState == MatchManager.MatchState.PlayerLost);
+            bool inTakedownCam = ThirdPersonCameraController.IsTakedownCamActive;
+            bool inVictoryShowcase = ThirdPersonCameraController.IsVictoryShowcaseActive;
+
+            if (inBladeLock || inCountdown || inEndScene || inTakedownCam || inVictoryShowcase)
+            {
+                if (spinRing.Root != null && spinRing.Root.gameObject.activeSelf)
+                {
+                    spinRing.Root.gameObject.SetActive(false);
+                    manaRing.Root.gameObject.SetActive(false);
+                    speedRing.Root.gameObject.SetActive(false);
+                }
+                return;
+            }
+            else
+            {
+                if (spinRing.Root != null && !spinRing.Root.gameObject.activeSelf)
+                {
+                    spinRing.Root.gameObject.SetActive(true);
+                    manaRing.Root.gameObject.SetActive(true);
+                    speedRing.Root.gameObject.SetActive(true);
+                }
+            }
+
             if (mainCamera == null)
             {
                 mainCamera = Camera.main;
@@ -110,7 +136,6 @@ namespace BladeSpinners.Gameplay
             MoveRoot(spinRing.Root, center);
             MoveRoot(manaRing.Root, center);
             MoveRoot(speedRing.Root, center);
-
             float spinFraction = 0f;
             float manaFraction = 0f;
             float speedFraction = 0f;
@@ -203,7 +228,6 @@ namespace BladeSpinners.Gameplay
         private RingGroup CreateRingGroup(string tag, float radius, Color color, string labelText)
         {
             GameObject rootObject = new GameObject($"Ring_{tag}");
-            rootObject.transform.SetParent(transform, false);
 
             Color darkBaseColor = GetDarkBaseColor(color);
             Color brightFillColor = GetBrightFillColor(color);

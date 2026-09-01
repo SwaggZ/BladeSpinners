@@ -26,7 +26,7 @@ namespace BladeSpinners.Gameplay
         }
 
         [Header("Match Settings")]
-        [SerializeField] private float countdownDuration = 3f;
+        [SerializeField] private float countdownDuration = 10f;
         [SerializeField] private float postMatchDelay = 3f;
         [SerializeField] private bool autoRestartOnPlayerWin = false;
         [SerializeField] private bool autoRestartOnPlayerLoss = false;
@@ -72,15 +72,23 @@ namespace BladeSpinners.Gameplay
         public bool HasPlayerRipped => hasPlayerRipped;
         public float RipAccuracy => ripAccuracy;
         public BladeSpinners.Abilities.LaunchRating RipRating => ripRating;
+        public static MatchManager Instance { get; private set; }
+
         public float RipMultiplier => ripMultiplier;
 
         public MatchState CurrentState => currentState;
         public int EnemiesRemaining => aliveEnemies.Count;
         public float CountdownRemaining => currentState == MatchState.WaitingToStart ? Mathf.Max(0f, stateTimer) : 0f;
         public float CountdownDuration => countdownDuration;
+        public float StateTimer => stateTimer;
         public PlayerDefeatReason LastPlayerDefeatReason => lastPlayerDefeatReason;
         public string LastPlayerDefeatMessage => lastPlayerDefeatMessage;
         public IReadOnlyList<BeyPart> LastKillerParts => lastEnemyAggressorParts;
+
+        private void Awake()
+        {
+            Instance = this;
+        }
 
         public void RegisterPlayer(PlayerManager player)
         {
@@ -127,29 +135,25 @@ namespace BladeSpinners.Gameplay
 
             hasPlayerRipped = true;
 
-            // Needle oscillates 0..1. Sweet spot is centered around [0.85..0.98] (peak tension)
             bool hasTurboRip = playerManager != null && playerManager.BeyConfiguration != null && playerManager.BeyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.TurboRip);
-            float optimal = 0.90f;
-            float dist = Mathf.Abs(needlePosition01 - optimal);
-            float window = hasTurboRip ? 0.57f : 0.38f;
-            ripAccuracy = Mathf.Clamp01(1f - (dist / window));
+            ripAccuracy = Mathf.Clamp01(needlePosition01);
 
-            if (ripAccuracy >= 0.88f)
+            if (ripAccuracy >= 0.85f)
             {
                 ripRating = BladeSpinners.Abilities.LaunchRating.Perfect;
                 ripMultiplier = hasTurboRip ? 1.40f : 1.25f;
                 if (playerManager?.BeyConfiguration?.ShrineState != null)
-                    playerManager.BeyConfiguration.ShrineState.AddPoints(50);
+                    playerManager.BeyConfiguration.ShrineState.AddPoints(25);
             }
-            else if (ripAccuracy >= 0.62f)
+            else if (ripAccuracy >= 0.60f)
             {
                 ripRating = BladeSpinners.Abilities.LaunchRating.Great;
                 ripMultiplier = hasTurboRip ? 1.18f : 1.08f;
             }
-            else if (ripAccuracy >= 0.32f)
+            else if (ripAccuracy >= 0.30f)
             {
                 ripRating = BladeSpinners.Abilities.LaunchRating.Good;
-                ripMultiplier = 0.92f;
+                ripMultiplier = 0.95f;
             }
             else
             {
@@ -275,20 +279,18 @@ namespace BladeSpinners.Gameplay
                     break;
 
                 case MatchState.PlayerWon:
-                    if (autoRestartOnPlayerWin)
+                    stateTimer -= Time.unscaledDeltaTime;
+                    if (autoRestartOnPlayerWin && stateTimer <= 0f)
                     {
-                        stateTimer -= Time.deltaTime;
-                        if (stateTimer <= 0f)
-                            RestartMatch();
+                        RestartMatch();
                     }
                     break;
 
                 case MatchState.PlayerLost:
-                    if (autoRestartOnPlayerLoss)
+                    stateTimer -= Time.unscaledDeltaTime;
+                    if (autoRestartOnPlayerLoss && stateTimer <= 0f)
                     {
-                        stateTimer -= Time.deltaTime;
-                        if (stateTimer <= 0f)
-                            RestartMatch();
+                        RestartMatch();
                     }
                     break;
             }
@@ -480,8 +482,8 @@ namespace BladeSpinners.Gameplay
                 burstEffect.TriggerBurst();
             }
 
-            TriggerSlowMoFinish(0.18f, 0.8f);
-            ThirdPersonCameraController.TriggerScreenShake(0.65f, 0.4f);
+            TriggerSlowMoFinish(0.18f, 2.5f);
+            ThirdPersonCameraController.TriggerScreenShake(0.75f, 0.5f);
 
             lastPlayerDefeatReason = reason;
             lastPlayerDefeatMessage = string.IsNullOrWhiteSpace(message) ? "You were defeated." : message;
@@ -489,7 +491,7 @@ namespace BladeSpinners.Gameplay
 
             SetCombatControllersEnabled(false);
             SetState(MatchState.PlayerLost);
-            stateTimer = postMatchDelay;
+            stateTimer = 3.2f;
         }
 
         private void HandleEnemyBurst(EnemyBeyController enemy)
@@ -497,12 +499,13 @@ namespace BladeSpinners.Gameplay
             Debug.Log($"💥 {enemy.gameObject.name} BURST!");
             if (playerManager != null && playerManager.BeyConfiguration?.ShrineState != null)
             {
-                playerManager.BeyConfiguration.ShrineState.AddPoints(75);
+                playerManager.BeyConfiguration.ShrineState.AddPoints(40);
             }
             TryDropPartFromEnemy(enemy);
             enemy.OnBurst();
-            TriggerSlowMoFinish(0.22f, 0.6f);
-            ThirdPersonCameraController.TriggerScreenShake(0.55f, 0.35f);
+
+            ThirdPersonCameraController.TriggerTakedownCam(enemy.transform, 1.35f);
+            TriggerSlowMoFinish(0.20f, 1.15f);
         }
 
         private void TryDropPartFromEnemy(EnemyBeyController enemy)
@@ -612,14 +615,21 @@ namespace BladeSpinners.Gameplay
                 playerManager.BeyConfiguration.SetSpinDrainPaused(true);
                 if (playerManager.BeyConfiguration.ShrineState != null)
                 {
-                    playerManager.BeyConfiguration.ShrineState.AddPoints(200);
+                    playerManager.BeyConfiguration.ShrineState.AddPoints(150);
                 }
             }
 
             AutoCollectAllDroppedParts();
             SetCombatControllersEnabled(false);
+
+            if (playerManager != null)
+            {
+                ThirdPersonCameraController.TriggerVictoryShowcase(playerManager.transform, 5.2f);
+            }
+            TriggerSlowMoFinish(0.30f, 2.4f);
+
             SetState(MatchState.PlayerWon);
-            stateTimer = autoRestartOnPlayerWin ? postMatchDelay : 0f;
+            stateTimer = 5.2f;
         }
 
         private void SetCombatControllersEnabled(bool enabled)
@@ -753,6 +763,9 @@ namespace BladeSpinners.Gameplay
 
         private void OnDestroy()
         {
+            if (Instance == this)
+                Instance = null;
+
             Time.timeScale = 1f;
             Time.fixedDeltaTime = 0.02f;
         }

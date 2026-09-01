@@ -247,7 +247,17 @@ namespace BladeSpinners.Gameplay.Parts
 
             if (HasShrinePerk(ShrinePerkType.HeavyweightCore))
             {
-                cachedStats.Weight += 35f;
+                cachedStats.Weight += 25f;
+            }
+
+            if (HasShrinePerk(ShrinePerkType.IronPlating))
+            {
+                cachedStats.Defense += 20f;
+            }
+
+            if (HasShrinePerk(ShrinePerkType.IronFortress))
+            {
+                cachedStats.Defense += 35f;
             }
         }
 
@@ -317,12 +327,14 @@ namespace BladeSpinners.Gameplay.Parts
             if (spinDrainPaused)
                 return;
 
-            BeyStatBlock stats = GetStatBlock();
+            BeyStatBlock stats = GetStatBlock();            
             float gmDrain = GameManager.GetForBey(IsEnemy, g => g.spinDrainMultiplier, g => g.enemySpinDrainMultiplier);
             float drain = stats.TotalStaminaDrainRate * deltaTime * boostMultiplier * gmDrain;
             drain =
                 energyRingPassiveRuntime.ModifyPassiveSpinDrain(
                     drain);
+            if (HasShrinePerk(ShrinePerkType.StaminaConservation) && !IsEnemy)
+                drain *= 0.80f;
             SetSpin(currentSpin - drain);
         }
 
@@ -342,6 +354,9 @@ namespace BladeSpinners.Gameplay.Parts
                     GameConstants.MAX_SPIN);
             }
         }
+
+        public float MaxSpin => GameConstants.MAX_SPIN;
+
         public bool IsBurst => currentSpin <= 0;
         public bool IsSpinDrainPaused => spinDrainPaused;
 
@@ -380,6 +395,11 @@ namespace BladeSpinners.Gameplay.Parts
         /// </summary>
         public void RegenMana(float deltaTime)
         {
+            UpdateManaRegen(deltaTime);
+        }
+
+        public void UpdateManaRegen(float deltaTime)
+        {
             if (manaRegenDelayRemaining > 0f)
             {
                 manaRegenDelayRemaining = Mathf.Max(0f, manaRegenDelayRemaining - deltaTime);
@@ -393,7 +413,13 @@ namespace BladeSpinners.Gameplay.Parts
                 energyRingPassiveRuntime.ModifyManaRegeneration(
                     regen);
             if (HasShrinePerk(ShrinePerkType.OverdriveCore))
-                regen *= 1.50f;
+                regen *= 1.25f;
+            if (HasShrinePerk(ShrinePerkType.ManaSiphon) && !IsEnemy)
+                regen += 3f * deltaTime;
+            if (HasShrinePerk(ShrinePerkType.CentrifugalClutch) && (currentSpin / MaxSpin) >= 0.70f)
+                regen *= 1.35f;
+            if (HasShrinePerk(ShrinePerkType.DragonHeart) && !IsEnemy)
+                regen *= 2.0f;
             SetMana(currentMana + regen);
         }
 
@@ -406,10 +432,13 @@ namespace BladeSpinners.Gameplay.Parts
                     IsEnemy,
                     g => g.manaPoolMultiplier,
                     g => g.enemyManaPoolMultiplier);
-                return Mathf.Max(
+                float basePool = Mathf.Max(
                     GameConstants.MIN_MANA,
                     GetStatBlock().ManaPoolSize
                     * Mathf.Max(0f, multiplier));
+                if (HasShrinePerk(ShrinePerkType.OverchargeCapacitor) && !IsEnemy)
+                    basePool += 25f;
+                return basePool;
             }
         }
 
@@ -426,6 +455,11 @@ namespace BladeSpinners.Gameplay.Parts
             lifeStealUsesThisMatch = 0;
             manaRegenDelayRemaining = 0f;
             energyRingPassiveRuntime.ResetForMatch();
+        }
+
+        public void ModifyMana(float amount)
+        {
+            SetMana(currentMana + amount);
         }
 
         /// <summary>

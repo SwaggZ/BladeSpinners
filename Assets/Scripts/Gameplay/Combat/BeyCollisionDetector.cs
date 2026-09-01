@@ -59,6 +59,14 @@ namespace BladeSpinners.Gameplay.Combat
             if (otherBeyCollider == null || otherBeyCollider == this)
                 return;
 
+            // Block all collision damage during active Blade Lock clashes (invulnerability for dueling Beys and bystanders)
+            if (BladeLockDuelManager.Instance != null && BladeLockDuelManager.Instance.IsInBladeLock)
+                return;
+
+            // Block collision damage during pre-match countdown
+            if (MatchManager.Instance != null && MatchManager.Instance.CurrentState == MatchManager.MatchState.WaitingToStart)
+                return;
+
             if (beyConfiguration != null && beyConfiguration.IsBurst)
                 return;
 
@@ -81,7 +89,6 @@ namespace BladeSpinners.Gameplay.Combat
 
         private void HandleCollision(BeyCollisionDetector otherBey)
         {
-            // Guard against missing references (reflection-wired fields may be null)
             if (beyConfiguration == null || otherBey.beyConfiguration == null) return;
             if (movementController == null || otherBey.movementController == null) return;
 
@@ -213,9 +220,43 @@ namespace BladeSpinners.Gameplay.Combat
             float knockbackOnOther = baseKnockback * (thisWeight / Mathf.Max(otherWeight, 1f))
                                    * (1f + relSpeed * 0.05f);
 
-            if (beyConfiguration != null && beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.HeavyweightCore) && !beyConfiguration.IsEnemy)
+            if (beyConfiguration != null && !beyConfiguration.IsEnemy)
             {
-                knockbackOnOther *= 1.25f;
+                if (beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.HeavyweightCore))
+                    knockbackOnOther *= 1.30f;
+                if (beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.RubberDampener))
+                    knockbackOnThis *= 0.65f;
+                if (beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.BladeSharpening) && otherBey.beyConfiguration != null)
+                    otherBey.beyConfiguration.SetSpin(otherBey.beyConfiguration.CurrentSpin - 6f);
+                if (beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.SpikeTread) && otherBey.beyConfiguration != null)
+                    otherBey.beyConfiguration.SetSpin(otherBey.beyConfiguration.CurrentSpin - 6f);
+                if (beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.SparkIgnition) && otherBey.beyConfiguration != null)
+                {
+                    BladeSpinners.Abilities.EpicAbilityVFXHelper.SpawnSparkBurst(otherBey.transform.position, new Color(1f, 0.9f, 0.2f, 1f), 10);
+                }
+                if (beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.FlankStriker) && otherBey.beyConfiguration != null)
+                {
+                    Vector3 toOther = (otherBey.transform.position - transform.position).normalized;
+                    if (Vector3.Dot(otherBey.transform.forward, toOther) > 0.15f)
+                    {
+                        otherBey.beyConfiguration.SetSpin(otherBey.beyConfiguration.CurrentSpin - 10f);
+                        BladeSpinners.Gameplay.UI.RuntimeGameUiController.SpawnComicPopup("FLANK STRIKE!", new Color(0.3f, 0.8f, 0.0f, 1f), 1.1f);
+                    }
+                }
+                if (beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.TitanCrusher) && relSpeed >= 5.8f && otherBey.beyConfiguration != null)
+                {
+                    otherBey.beyConfiguration.SetSpin(otherBey.beyConfiguration.CurrentSpin - 18f);
+                    BladeSpinners.Abilities.EpicAbilityVFXHelper.SpawnParticleBurst(otherBey.transform.position, 12, Color.yellow, Color.red, 1.2f);
+                }
+                if (beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.PlasmaCoil) && otherBey.beyConfiguration != null)
+                {
+                    otherBey.beyConfiguration.SetSpin(otherBey.beyConfiguration.CurrentSpin - (otherBey.beyConfiguration.CurrentSpin * 0.25f));
+                    BladeSpinners.Abilities.EpicAbilityVFXHelper.SpawnSparkBurst(otherBey.transform.position, new Color(0.9f, 0.2f, 1f, 1f), 12);
+                }
+                if (beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.SpiritSurge) && relSpeed >= 6f)
+                {
+                    beyConfiguration.SetMana(beyConfiguration.CurrentMana + beyConfiguration.GetStatBlock().ManaPoolSize * 0.40f);
+                }
             }
 
             SpawnPlaceholderHitParticle(otherBey, relSpeed);

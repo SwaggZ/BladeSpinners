@@ -8,6 +8,7 @@ using BladeSpinners.Gameplay.Combat;
 using BladeSpinners.Gameplay.Movement;
 using BladeSpinners.Gameplay.Parts;
 using BladeSpinners.Gameplay.Shrine;
+using BladeSpinners.Gameplay.Progression;
 using BladeSpinners.World;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -17,8 +18,8 @@ namespace BladeSpinners.Gameplay.UI
 {
     public static class RuntimeRunBuilder
     {
-        private const int DefaultLevelCount = 3;
-        private const int DefaultArenasPerLevel = 3;
+        private const int DefaultLevelCount = 2;
+        private const int DefaultArenasPerLevel = 4; // 4 arenas per act: 3 normal + 1 boss. Total = 8 arenas.
 
         public sealed class RunProgression
         {
@@ -89,19 +90,39 @@ namespace BladeSpinners.Gameplay.UI
                 ?? new RunProgression(seed, DefaultLevelCount, DefaultArenasPerLevel);
             int depthIndex = activeProgression.DepthIndex;
             int arenaSeed = ComputeArenaSeed(activeProgression.RunSeed, depthIndex);
-            int depthScaledEnemyCount = Mathf.Clamp(enemyCount + depthIndex / 2, 2, GameConstants.ENEMY_MAX_PER_COMBAT_ROOM);
+
+            bool isSemiBoss = depthIndex == 3;
+            bool isFinalBoss = depthIndex == 7 || activeProgression.IsLastArena;
+
+            RoomType roomType = (isFinalBoss || isSemiBoss) ? RoomType.Boss : RoomType.Combat;
+            int depthScaledEnemyCount;
+            if (isFinalBoss)
+            {
+                depthScaledEnemyCount = 1; // Solo Colossal Boss
+            }
+            else if (isSemiBoss)
+            {
+                depthScaledEnemyCount = 1; // Solo Elite Semi-Boss
+            }
+            else
+            {
+                int actOffset = depthIndex > 3 ? (depthIndex - 4) : depthIndex;
+                depthScaledEnemyCount = Mathf.Clamp(2 + (depthIndex > 3 ? 1 : 0) + (actOffset >= 2 ? 1 : 0), 2, GameConstants.ENEMY_MAX_PER_COMBAT_ROOM);
+            }
 
             EnsureGameManager();
             int spinPickupCount = Mathf.Max(depthScaledEnemyCount + 1, 3);
             int staminaPickupCount = Mathf.Max(1, depthScaledEnemyCount / 2);
             GameObject arena = ProceduralArenaGenerator.Generate(
                 arenaSeed,
-                RoomType.Combat,
+                roomType,
                 -1,
                 -1,
                 staminaPickupCount,
                 spinPickupCount);
-            arena.name = $"Arena_L{activeProgression.CurrentLevelOneBased}_A{activeProgression.CurrentArenaOneBased}";
+            arena.name = isFinalBoss
+                ? $"Arena_FINAL_BOSS_L2_A4"
+                : (isSemiBoss ? $"Arena_SEMI_BOSS_L1_A4" : $"Arena_L{activeProgression.CurrentLevelOneBased}_A{activeProgression.CurrentArenaOneBased}");
 
             GameObject playerObj = CreatePlayerBey(selectedLoadout);
             PlayerManager playerManager = playerObj.GetComponent<PlayerManager>();
@@ -372,10 +393,47 @@ namespace BladeSpinners.Gameplay.UI
             typeof(BeyAssembler).GetField("beyModelTransform", Flags)?.SetValue(assembler, spinChild.transform);
 
             assembler.SetConfiguration(config);
+            bool isSemiBoss = depthIndex == 3;
+            bool isFinalBoss = depthIndex == 7 || depthIndex >= totalArenaCount - 1;
+            bool isBoss = isSemiBoss || isFinalBoss;
+
             int enemySeed = ComputeArenaSeed(runSeed, 9000 + index * 97 + depthIndex * 211);
-            ApplyLoadoutToAssembler(assembler, GetRandomLoadout(catalog, enemySeed, depthIndex, totalArenaCount));
+            ApplyLoadoutToAssembler(assembler, GetRandomLoadout(catalog, enemySeed, depthIndex, totalArenaCount, isBoss));
             float depth01 = Mathf.Clamp01(totalArenaCount <= 1 ? 1f : (float)depthIndex / (totalArenaCount - 1));
             enemy.Initialize(config, playerTarget, depth01, index, totalEnemies);
+
+            int runWins = RunDifficultyManager.GetTotalRunWins();
+            System.Random enemyRng = new System.Random(enemySeed);
+
+            // Roll and equip Shrine Blessings for this enemy
+            List<ShrinePerkType> enemyBlessings = RunDifficultyManager.RollEnemyBlessings(runWins, depth01, enemyRng, isSemiBoss, isFinalBoss);
+            if (enemyBlessings != null && enemyBlessings.Count > 0)
+            {
+                BladerShrineRunState enemyShrine = new BladerShrineRunState();
+                for (int b = 0; b < enemyBlessings.Count; b++)
+                {
+                    enemyShrine.GrantPerk(enemyBlessings[b]);
+                }
+                config.ShrineState = enemyShrine;
+            }
+
+            if (isFinalBoss)
+            {
+                RunDifficultyManager.BossScalingData bossData = RunDifficultyManager.GetBossScaling(runWins, true);
+                root.name = $"FinalBoss_Bey";
+                root.transform.localScale = Vector3.one * bossData.Scale;
+                rb.mass = 1.0f * bossData.MassMultiplier;
+                config.SetSpin(GameConstants.MAX_SPIN * bossData.SpinMultiplier);
+            }
+            else if (isSemiBoss)
+            {
+                RunDifficultyManager.BossScalingData bossData = RunDifficultyManager.GetBossScaling(runWins, false);
+                root.name = $"SemiBoss_Bey";
+                root.transform.localScale = Vector3.one * bossData.Scale;
+                rb.mass = 1.0f * bossData.MassMultiplier;
+                config.SetSpin(GameConstants.MAX_SPIN * bossData.SpinMultiplier);
+            }
+
             SetLayerRecursive(root, GetRequiredLayer("Bey"));
 
             return root;
@@ -514,7 +572,7 @@ namespace BladeSpinners.Gameplay.UI
             }
         }
 
-        private static Dictionary<PartType, BeyPart> GetRandomLoadout(List<BeyPart> catalog, int seed, int depthIndex, int totalArenaCount)
+        private static Dictionary<PartType, BeyPart> GetRandomLoadout(List<BeyPart> catalog, int seed, int depthIndex, int totalArenaCount, bool isBoss)
         {
             if (catalog == null)
                 catalog = new List<BeyPart>();
@@ -536,18 +594,28 @@ namespace BladeSpinners.Gameplay.UI
             }
 
             System.Random rng = new System.Random(seed);
+            int runWins = RunDifficultyManager.GetTotalRunWins();
             Dictionary<PartType, BeyPart> loadout = new Dictionary<PartType, BeyPart>();
             float depth01 = Mathf.Clamp01(totalArenaCount <= 1 ? 1f : (float)depthIndex / (totalArenaCount - 1));
+
             foreach (PartType type in Enum.GetValues(typeof(PartType)))
             {
+                RarityTier targetRarity = RunDifficultyManager.RollEnemyPartRarity(runWins, depth01, rng, isBoss);
                 List<BeyPart> list = byType[type];
-                if (list.Count == 0)
+
+                List<BeyPart> matching = list.FindAll(p => p != null && p.Rarity == targetRarity);
+                if (matching.Count > 0)
+                {
+                    loadout[type] = matching[rng.Next(matching.Count)];
+                }
+                else if (list.Count > 0)
+                {
+                    loadout[type] = ChoosePartForDepth(list, rng, depth01);
+                }
+                else
                 {
                     loadout[type] = RuntimePartFactory.CreateTemporaryPart(type, seed + (int)type * 1000 + rng.Next(1, 9999));
-                    continue;
                 }
-
-                loadout[type] = ChoosePartForDepth(list, rng, depth01);
             }
 
             return loadout;

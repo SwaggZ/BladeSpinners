@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using BladeSpinners.Core;
@@ -219,7 +219,15 @@ namespace BladeSpinners.Abilities
             if (faceBolt.EquippedAbility != null)
                 return faceBolt.EquippedAbility;
 
-            // 1. Try exact name match
+            // 1. Try formatted short display name match (e.g. "Jade Fang", "Arctic Fox", "Ashen Wolf")
+            string shortName = PartDisplayNameFormatter.ToShortDisplayName(faceBolt);
+            if (!string.IsNullOrEmpty(shortName) && NameToAbilityType.TryGetValue(shortName, out Type shortType))
+            {
+                if (InstanceMap.TryGetValue(shortType, out BeyAbility namedAbility))
+                    return namedAbility;
+            }
+
+            // 2. Try normalized PartName / PartID
             string partName = NormalizeFaceBoltName(faceBolt.PartName, faceBolt.PartID);
             if (!string.IsNullOrEmpty(partName) && NameToAbilityType.TryGetValue(partName, out Type abilityType))
             {
@@ -227,10 +235,29 @@ namespace BladeSpinners.Abilities
                     return namedAbility;
             }
 
+            // 3. Try asset name (faceBolt.name)
+            string assetName = NormalizeFaceBoltName(faceBolt.name, string.Empty);
+            if (!string.IsNullOrEmpty(assetName) && NameToAbilityType.TryGetValue(assetName, out Type assetType))
+            {
+                if (InstanceMap.TryGetValue(assetType, out BeyAbility namedAbility))
+                    return namedAbility;
+            }
+
+            // 4. Try fuzzy substring search against known FaceBolt names
+            string searchTarget = $"{faceBolt.name} {faceBolt.PartName} {faceBolt.PartID}".Replace('_', ' ');
+            foreach (var kvp in NameToAbilityType)
+            {
+                if (!string.IsNullOrEmpty(kvp.Key) && searchTarget.IndexOf(kvp.Key, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    if (InstanceMap.TryGetValue(kvp.Value, out BeyAbility matchedAbility))
+                        return matchedAbility;
+                }
+            }
+
             if (AbilityPool.Count == 0)
                 return null;
 
-            // 2. Fall back to deterministic hash assignment (unique per bolt where possible)
+            // 5. Fall back to deterministic hash assignment (unique per bolt where possible)
             string key = BuildFaceBoltKey(faceBolt);
             if (AssignedByFaceBoltId.TryGetValue(key, out BeyAbility existing) && existing != null)
                 return existing;
@@ -343,9 +370,9 @@ namespace BladeSpinners.Abilities
 
         private static string BuildFaceBoltKey(BeyPart faceBolt)
         {
-            string id = string.IsNullOrWhiteSpace(faceBolt.PartID) ? "NO_ID" : faceBolt.PartID.Trim();
-            string name = string.IsNullOrWhiteSpace(faceBolt.PartName) ? "NO_NAME" : faceBolt.PartName.Trim();
-            return id + "|" + name;
+            string id = string.IsNullOrWhiteSpace(faceBolt.PartID) ? (string.IsNullOrWhiteSpace(faceBolt.name) ? "NO_ID" : faceBolt.name) : faceBolt.PartID.Trim();
+            string name = string.IsNullOrWhiteSpace(faceBolt.PartName) ? faceBolt.name : faceBolt.PartName.Trim();
+            return id + "|" + name + "|" + faceBolt.GetInstanceID();
         }
 
         private static string NormalizeFaceBoltName(string partName, string partId)

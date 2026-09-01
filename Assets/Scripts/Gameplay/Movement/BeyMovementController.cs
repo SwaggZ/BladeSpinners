@@ -90,6 +90,7 @@ namespace BladeSpinners.Gameplay.Movement
 
         // True if this bey belongs to an enemy (auto-detected in Start)
         private bool isEnemy = false;
+        public bool IsEnemy => isEnemy;
 
         // === Knockback hitstun ===
         // Brief window after being knocked back where movement forces are suppressed,
@@ -224,10 +225,17 @@ namespace BladeSpinners.Gameplay.Movement
                         float closingSpeed = -Vector3.Dot(rb.linearVelocity, wallNormal);
                         if (closingSpeed > 0.4f)
                         {
-                            // Rebound / ricochet impulse away from wall
-                            float bounceFactor = 1.35f * (beyConfiguration != null && beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.HeavyweightCore) ? 1.40f : 1.0f);
+                            float bounceFactor = 1.35f * (beyConfiguration != null && beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.HeavyweightCore) ? 1.30f : 1.0f);
+                            if (beyConfiguration != null && beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.CounterWeight) && !isEnemy)
+                                bounceFactor *= 1.20f;
                             Vector3 rebound = wallNormal * (closingSpeed * bounceFactor);
                             rb.AddForce(rebound, ForceMode.VelocityChange);
+
+                            // Kinetic Battery perk: +5 instant Mana on wall rebounds
+                            if (!isEnemy && beyConfiguration != null && beyConfiguration.HasShrinePerk(BladeSpinners.Gameplay.Shrine.ShrinePerkType.KineticBattery))
+                            {
+                                beyConfiguration.SetMana(beyConfiguration.CurrentMana + 5f);
+                            }
 
                             // Screen shake on heavy wall impact for player
                             if (!isEnemy && closingSpeed > 3.5f)
@@ -521,6 +529,25 @@ namespace BladeSpinners.Gameplay.Movement
             }
             desiredDirection.y = 0;
             desiredDirection.Normalize();
+
+            // --- Steering Assist towards focused / targeted enemy Beys ---
+            // If the player is driving forward towards an enemy in their forward view cone,
+            // subtly pull the movement angle towards that enemy so hits connect reliably.
+            if (!isEnemy && !overrideForwardDirection.HasValue && desiredDirection.sqrMagnitude > 0.01f)
+            {
+                BeyMovementController targetedEnemy = FindClosestEnemyInForwardCone(transform.position, desiredDirection, 45f, 18f);
+                if (targetedEnemy != null)
+                {
+                    Vector3 toEnemy = (targetedEnemy.transform.position - transform.position);
+                    toEnemy.y = 0;
+                    if (toEnemy.sqrMagnitude > 0.01f)
+                    {
+                        float dist = toEnemy.magnitude;
+                        float assistWeight = Mathf.Lerp(0.35f, 0.08f, Mathf.Clamp01(dist / 18f));
+                        desiredDirection = Vector3.Slerp(desiredDirection, toEnemy.normalized, assistWeight).normalized;
+                    }
+                }
+            }
 
             float inputSign = Mathf.Sign(forceAmount);
             Vector3 forceDirection = desiredDirection * inputSign;
@@ -1157,11 +1184,11 @@ namespace BladeSpinners.Gameplay.Movement
             }
         }
 
-        /// <summary>Draws a full faint ring as background reference.</summary>
+        /// <summary>Draws a full 360-degree background ring wireframe on the XZ plane.</summary>
         private void DrawArcRingBackground(Vector3 center, float radius, Color color)
         {
             Gizmos.color = color;
-            Vector3 prev = center + new Vector3(0, 0, radius);
+            Vector3 prev = center + new Vector3(Mathf.Sin(0) * radius, 0, Mathf.Cos(0) * radius);
             for (int i = 1; i <= RING_RESOLUTION; i++)
             {
                 float angle = (float)i / RING_RESOLUTION * Mathf.PI * 2f;
@@ -1169,6 +1196,36 @@ namespace BladeSpinners.Gameplay.Movement
                 Gizmos.DrawLine(prev, next);
                 prev = next;
             }
+        }
+
+        /// <summary>Finds the closest enemy Bey within a forward cone angle and distance.</summary>
+        private static BeyMovementController FindClosestEnemyInForwardCone(Vector3 origin, Vector3 forwardDir, float maxAngleDeg, float maxDist)
+        {
+            BeyMovementController[] allBeys = Object.FindObjectsByType<BeyMovementController>(FindObjectsSortMode.None);
+            BeyMovementController bestTarget = null;
+            float minDot = Mathf.Cos(maxAngleDeg * Mathf.Deg2Rad);
+            float closestDistSq = maxDist * maxDist;
+
+            for (int i = 0; i < allBeys.Length; i++)
+            {
+                BeyMovementController candidate = allBeys[i];
+                if (candidate == null || !candidate.IsEnemy) continue;
+
+                Vector3 offset = candidate.transform.position - origin;
+                offset.y = 0f;
+                float distSq = offset.sqrMagnitude;
+                if (distSq > closestDistSq || distSq < 0.25f) continue;
+
+                Vector3 dir = offset.normalized;
+                float dot = Vector3.Dot(forwardDir, dir);
+                if (dot >= minDot)
+                {
+                    bestTarget = candidate;
+                    closestDistSq = distSq;
+                }
+            }
+
+            return bestTarget;
         }
     }
 }

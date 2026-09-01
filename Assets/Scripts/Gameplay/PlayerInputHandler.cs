@@ -42,83 +42,81 @@ namespace BladeSpinners.Gameplay
 
         private void ReadInput()
         {
-            if (Gamepad.current != null)
+            float fwd = 0f;
+            float str = 0f;
+            bool boost = false;
+            bool brake = false;
+            bool jump = false;
+            bool ability = false;
+
+            // 1. Keyboard & Mouse Input
+            var keyboard = Keyboard.current;
+            var mouse = Mouse.current;
+            if (keyboard != null)
             {
-                ReadGamepadInput();
+                if (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed) fwd += 1f;
+                if (keyboard.sKey.isPressed || keyboard.downArrowKey.isPressed) fwd -= 1f;
+                if (keyboard.aKey.isPressed || keyboard.leftArrowKey.isPressed) str -= 1f;
+                if (keyboard.dKey.isPressed || keyboard.rightArrowKey.isPressed) str += 1f;
+
+                if (keyboard.leftShiftKey.isPressed) boost = true;
+                if (keyboard.cKey.isPressed) brake = true;
+                if (keyboard.spaceKey.wasPressedThisFrame) jump = true;
+                if (keyboard.eKey.wasPressedThisFrame || keyboard.fKey.wasPressedThisFrame) ability = true;
+            }
+            if (mouse != null)
+            {
+                if (mouse.rightButton.isPressed) boost = true;
+            }
+
+            // 2. Gamepad Input (Xbox & PlayStation / Generic)
+            var gamepad = Gamepad.current;
+            if (gamepad != null)
+            {
+                Vector2 stick = gamepad.leftStick.ReadValue();
+                Vector2 dpad = gamepad.dpad.ReadValue();
+                if (stick.sqrMagnitude > 0.04f)
+                {
+                    fwd += stick.y;
+                    str += stick.x;
+                }
+                else if (dpad.sqrMagnitude > 0.04f)
+                {
+                    fwd += dpad.y;
+                    str += dpad.x;
+                }
+
+                if (gamepad.rightTrigger.isPressed || gamepad.rightShoulder.isPressed) boost = true;
+                if (gamepad.leftTrigger.isPressed || gamepad.leftShoulder.isPressed) brake = true;
+                if (gamepad.aButton.wasPressedThisFrame || gamepad.buttonSouth.wasPressedThisFrame) jump = true;
+                if (gamepad.yButton.wasPressedThisFrame || gamepad.xButton.wasPressedThisFrame || gamepad.buttonWest.wasPressedThisFrame || gamepad.buttonNorth.wasPressedThisFrame) ability = true;
+            }
+
+            currentForwardInput = Mathf.Clamp(fwd, -1f, 1f);
+            currentSteeringInput = Mathf.Clamp(str, -1f, 1f);
+
+            if (boost)
+            {
+                beyMovementController.StartBoost();
+                isBootsActive = true;
             }
             else
             {
-                ReadKeyboardInput();
+                beyMovementController.StopBoost();
+                isBootsActive = false;
             }
+
+            if (brake)
+                beyMovementController.ApplyBrake();
+
+            if (jump)
+                beyMovementController.Jump();
+
+            if (ability)
+                TryActivateAbility();
 
             if (debugInput && (currentForwardInput != 0 || currentSteeringInput != 0))
                 Debug.Log($"[PlayerInput] INPUT READ - Forward: {currentForwardInput:F2}, Steering: {currentSteeringInput:F2}");
-        }
-
-        private void ReadGamepadInput()
-        {
-            var gamepad = Gamepad.current;
-            if (gamepad == null) return;
-
-            currentForwardInput = gamepad.leftStick.ReadValue().y;
-            currentSteeringInput = gamepad.leftStick.ReadValue().x;
-
-            if (gamepad.rightTrigger.isPressed)
-            {
-                beyMovementController.StartBoost();
-                isBootsActive = true;
-            }
-            else
-            {
-                beyMovementController.StopBoost();
-                isBootsActive = false;
-            }
-
-            if (gamepad.leftTrigger.isPressed)
-                beyMovementController.ApplyBrake();
-
-            if (gamepad.aButton.wasPressedThisFrame)
-                beyMovementController.Jump();
-
-            if (gamepad.yButton.wasPressedThisFrame)
-                TryActivateAbility();
-        }
-
-        private void ReadKeyboardInput()
-        {
-            var keyboard = Keyboard.current;
-            if (keyboard == null) return;
-
-            float horizontalInput = 0;
-            float verticalInput = 0;
-
-            if (keyboard.aKey.isPressed) horizontalInput = -1;
-            if (keyboard.dKey.isPressed) horizontalInput = 1;
-            if (keyboard.wKey.isPressed) verticalInput = 1;
-            if (keyboard.sKey.isPressed) verticalInput = -1;
-
-            currentForwardInput = verticalInput;
-            currentSteeringInput = horizontalInput;
-
-            if (keyboard.leftShiftKey.isPressed)
-            {
-                beyMovementController.StartBoost();
-                isBootsActive = true;
-            }
-            else
-            {
-                beyMovementController.StopBoost();
-                isBootsActive = false;
-            }
-
-            if (keyboard.cKey.wasPressedThisFrame)
-                beyMovementController.ApplyBrake();
-
-            if (keyboard.spaceKey.wasPressedThisFrame)
-                beyMovementController.Jump();
-
-            if (keyboard.eKey.wasPressedThisFrame)
-                TryActivateAbility();
         }
 
         private void ApplyMovement()

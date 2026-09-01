@@ -181,6 +181,283 @@ namespace BladeSpinners.Gameplay
             }
         }
 
+        // ── TAKEDOWN FOCUS CAMERA (Asphalt 8 / Burnout Takedown Cam) ────────────
+        private static bool isTakedownCamActive;
+        private static Transform takedownTargetTransform;
+        private static float takedownTimer;
+        private static float takedownDuration = 1.35f;
+        public static bool IsTakedownCamActive => isTakedownCamActive && takedownTimer > 0f;
+
+        public static void TriggerTakedownCam(Transform enemyBurstTarget, float duration = 1.35f)
+        {
+            if (enemyBurstTarget == null) return;
+            takedownTargetTransform = enemyBurstTarget;
+            takedownDuration = Mathf.Max(0.5f, duration);
+            takedownTimer = takedownDuration;
+            isTakedownCamActive = true;
+            TriggerScreenShake(0.55f, 0.35f);
+        }
+
+        private void UpdateTakedownCamera()
+        {
+            if (takedownTargetTransform == null || takedownTimer <= 0f)
+            {
+                isTakedownCamActive = false;
+                SyncYawPitchFromCurrentRotation();
+                return;
+            }
+
+            takedownTimer -= Time.unscaledDeltaTime;
+            float progress = 1f - Mathf.Clamp01(takedownTimer / takedownDuration);
+
+            Vector3 targetPos = takedownTargetTransform.position;
+            // Dramatic Asphalt 8 Takedown orbit around the bursting opponent
+            float angle = Mathf.Lerp(25f, 115f, progress) * Mathf.Deg2Rad;
+            float dist = Mathf.Lerp(1.85f, 2.75f, progress);
+            float height = Mathf.Lerp(0.35f, 0.70f, progress);
+
+            Vector3 camPos = targetPos + new Vector3(Mathf.Sin(angle) * dist, height, Mathf.Cos(angle) * dist);
+            Vector3 lookTarget = targetPos + Vector3.up * 0.12f;
+
+            transform.position = Vector3.Lerp(transform.position, camPos, Time.unscaledDeltaTime * 14f);
+            Quaternion targetRot = Quaternion.LookRotation((lookTarget - transform.position).normalized, Vector3.up);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.unscaledDeltaTime * 16f);
+
+            if (controlledCamera != null)
+                controlledCamera.fieldOfView = Mathf.Lerp(controlledCamera.fieldOfView, 40f, Time.unscaledDeltaTime * 10f);
+        }
+
+        // ── VICTORY MULTI-ANGLE SHOWCASE CAMERA ─────────────────────────────────
+        private static bool isVictoryShowcaseActive;
+        private static Transform victoryPlayerTransform;
+        private static float victoryTimer;
+        private static float victoryDuration = 5.2f;
+        private int lastVictoryShotIndex = -1;
+
+        public static bool IsVictoryShowcaseActive => isVictoryShowcaseActive && victoryTimer > 0f;
+
+        public static void TriggerVictoryShowcase(Transform playerTransform, float duration = 5.2f)
+        {
+            if (playerTransform == null) return;
+            victoryPlayerTransform = playerTransform;
+            victoryDuration = Mathf.Max(1.0f, duration);
+            victoryTimer = victoryDuration;
+            isVictoryShowcaseActive = true;
+        }
+
+        private void UpdateVictoryShowcaseCamera()
+        {
+            if (victoryPlayerTransform == null || victoryTimer <= 0f)
+            {
+                isVictoryShowcaseActive = false;
+                lastVictoryShotIndex = -1;
+                return;
+            }
+
+            victoryTimer -= Time.unscaledDeltaTime;
+            float elapsed = victoryDuration - victoryTimer;
+
+            float shotDuration = victoryDuration / 3f;
+            int shotIndex = Mathf.Clamp(Mathf.FloorToInt(elapsed / shotDuration), 0, 2);
+            float shotT = Mathf.Clamp01((elapsed - shotIndex * shotDuration) / shotDuration);
+            float smoothT = Mathf.SmoothStep(0f, 1f, shotT);
+
+            Vector3 playerPos = victoryPlayerTransform.position;
+            Vector3 camPos;
+            Vector3 lookTarget = playerPos + Vector3.up * 0.10f;
+            float targetFov = 44f;
+
+            switch (shotIndex)
+            {
+                case 0:
+                    // Shot 1: Low-Angle heroic spin zoom
+                    float a1 = Mathf.Lerp(-50f, 30f, smoothT) * Mathf.Deg2Rad;
+                    float d1 = Mathf.Lerp(1.55f, 1.15f, smoothT);
+                    float h1 = Mathf.Lerp(0.16f, 0.26f, smoothT);
+                    camPos = playerPos + new Vector3(Mathf.Sin(a1) * d1, h1, Mathf.Cos(a1) * d1);
+                    targetFov = 38f;
+                    break;
+
+                case 1:
+                    // Shot 2: Close-up Rotating Hero Orbit
+                    float a2 = Mathf.Lerp(110f, 230f, smoothT) * Mathf.Deg2Rad;
+                    float d2 = 0.90f;
+                    float h2 = 0.48f;
+                    camPos = playerPos + new Vector3(Mathf.Sin(a2) * d2, h2, Mathf.Cos(a2) * d2);
+                    targetFov = 42f;
+                    break;
+
+                default:
+                    // Shot 3: High Stadium Pull-Back Sweep
+                    float a3 = Mathf.Lerp(190f, 170f, smoothT) * Mathf.Deg2Rad;
+                    float d3 = Mathf.Lerp(2.2f, 4.0f, smoothT);
+                    float h3 = Mathf.Lerp(1.2f, 2.5f, smoothT);
+                    camPos = playerPos + new Vector3(Mathf.Sin(a3) * d3, h3, Mathf.Cos(a3) * d3);
+                    targetFov = 58f;
+                    break;
+            }
+
+            if (shotIndex != lastVictoryShotIndex)
+            {
+                transform.position = camPos;
+                transform.rotation = Quaternion.LookRotation((lookTarget - camPos).normalized, Vector3.up);
+                if (controlledCamera != null) controlledCamera.fieldOfView = targetFov;
+                lastVictoryShotIndex = shotIndex;
+            }
+            else
+            {
+                transform.position = Vector3.Lerp(transform.position, camPos, Time.unscaledDeltaTime * 10f);
+                Quaternion targetRot = Quaternion.LookRotation((lookTarget - transform.position).normalized, Vector3.up);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.unscaledDeltaTime * 12f);
+                if (controlledCamera != null)
+                    controlledCamera.fieldOfView = Mathf.Lerp(controlledCamera.fieldOfView, targetFov, Time.unscaledDeltaTime * 8f);
+            }
+        }
+
+        private void UpdateDefeatCamera()
+        {
+            Vector3 beyPos = beyTransform != null ? beyTransform.position : transform.position;
+            Vector3 camPos = beyPos - transform.forward * 2.0f + Vector3.up * 0.65f;
+            Vector3 lookTarget = beyPos + Vector3.up * 0.08f;
+
+            transform.position = Vector3.Lerp(transform.position, camPos, Time.unscaledDeltaTime * 6f);
+            Quaternion targetRot = Quaternion.LookRotation((lookTarget - transform.position).normalized, Vector3.up);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.unscaledDeltaTime * 8f);
+
+            if (controlledCamera != null)
+                controlledCamera.fieldOfView = Mathf.Lerp(controlledCamera.fieldOfView, 36f, Time.unscaledDeltaTime * 4f);
+        }
+
+        private int lastShowcaseShotIndex = -1;
+
+        private void UpdateLaunchCinematicOrbitCamera()
+        {
+            if (activeMatchManager == null)
+                activeMatchManager = FindFirstObjectByType<MatchManager>();
+
+            if (activeMatchManager == null || activeMatchManager.CurrentState != MatchManager.MatchState.WaitingToStart)
+            {
+                lastShowcaseShotIndex = -1;
+                return;
+            }
+
+            Vector3 beyPos = beyTransform.position;
+            float total = Mathf.Max(0.1f, activeMatchManager.CountdownDuration);
+            float remaining = activeMatchManager.CountdownRemaining;
+            float elapsed = total - remaining;
+
+            // Phase 1: 4-Angle Showcase Presentation (e.g. first 7.0s of a 10s intro)
+            float showcaseDuration = Mathf.Max(0.1f, total - 3.0f);
+            if (elapsed < showcaseDuration)
+            {
+                float shotDuration = showcaseDuration / 4f;
+                int shotIndex = Mathf.Clamp(Mathf.FloorToInt(elapsed / shotDuration), 0, 3);
+                float shotT = Mathf.Clamp01((elapsed - shotIndex * shotDuration) / shotDuration);
+                float smoothT = Mathf.SmoothStep(0f, 1f, shotT);
+
+                Vector3 camPos;
+                Vector3 lookTarget;
+                float targetFov;
+
+                switch (shotIndex)
+                {
+                    case 0:
+                        // Shot 1: Low-Angle Fusion Wheel Rim Track (Rear-left sweeping to side)
+                        float a1 = Mathf.Lerp(-60f, 20f, smoothT) * Mathf.Deg2Rad;
+                        float d1 = Mathf.Lerp(1.05f, 1.25f, smoothT);
+                        float h1 = Mathf.Lerp(0.16f, 0.24f, smoothT);
+                        camPos = beyPos + new Vector3(Mathf.Sin(a1) * d1, h1, Mathf.Cos(a1) * d1);
+                        lookTarget = beyPos + Vector3.up * 0.06f;
+                        targetFov = 42f;
+                        break;
+
+                    case 1:
+                        // Shot 2: Face Bolt & Energy Ring Emblem Macro Orbit (Top-down close-up)
+                        float a2 = Mathf.Lerp(110f, 210f, smoothT) * Mathf.Deg2Rad;
+                        float d2 = Mathf.Lerp(0.72f, 0.58f, smoothT);
+                        float h2 = Mathf.Lerp(0.68f, 0.48f, smoothT);
+                        camPos = beyPos + new Vector3(Mathf.Sin(a2) * d2, h2, Mathf.Cos(a2) * d2);
+                        lookTarget = beyPos + Vector3.up * 0.08f;
+                        targetFov = 38f;
+                        break;
+
+                    case 2:
+                        // Shot 3: Dynamic 45° Hero Sweep (Front-right rotating around)
+                        float a3 = Mathf.Lerp(-140f, -50f, smoothT) * Mathf.Deg2Rad;
+                        float d3 = Mathf.Lerp(1.70f, 1.35f, smoothT);
+                        float h3 = Mathf.Lerp(0.38f, 0.58f, smoothT);
+                        camPos = beyPos + new Vector3(Mathf.Sin(a3) * d3, h3, Mathf.Cos(a3) * d3);
+                        lookTarget = beyPos + Vector3.up * 0.15f;
+                        targetFov = 50f;
+                        break;
+
+                    default:
+                        // Shot 4: Stadium Elevation Overview (High pull-back showcasing arena)
+                        float a4 = Mathf.Lerp(175f, 185f, smoothT) * Mathf.Deg2Rad;
+                        float d4 = Mathf.Lerp(3.20f, 2.30f, smoothT);
+                        float h4 = Mathf.Lerp(1.85f, 1.15f, smoothT);
+                        camPos = beyPos + new Vector3(Mathf.Sin(a4) * d4, h4, Mathf.Cos(a4) * d4);
+                        lookTarget = beyPos + Vector3.up * 0.20f;
+                        targetFov = 58f;
+                        break;
+                }
+
+                // If switching to a new shot, snap camera immediately for a crisp cinematic video cut
+                if (shotIndex != lastShowcaseShotIndex)
+                {
+                    transform.position = camPos;
+                    transform.rotation = Quaternion.LookRotation((lookTarget - camPos).normalized, Vector3.up);
+                    if (controlledCamera != null) controlledCamera.fieldOfView = targetFov;
+                    lastShowcaseShotIndex = shotIndex;
+                }
+                else
+                {
+                    transform.position = Vector3.Lerp(transform.position, camPos, Time.unscaledDeltaTime * 12f);
+                    Quaternion targetRot = Quaternion.LookRotation((lookTarget - transform.position).normalized, Vector3.up);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.unscaledDeltaTime * 14f);
+                    if (controlledCamera != null)
+                    {
+                        controlledCamera.fieldOfView = Mathf.Lerp(controlledCamera.fieldOfView, targetFov, Time.unscaledDeltaTime * 8f);
+                    }
+                }
+            }
+            else
+            {
+                // Phase 2: Final 3-2-1 Countdown & Launch (Over-the-shoulder Ready Cam)
+                if (lastShowcaseShotIndex != 4)
+                {
+                    Vector3 initialLaunchBack = -beyTransform.forward * 2.1f + Vector3.up * 0.85f;
+                    transform.position = beyPos + initialLaunchBack;
+                    lastShowcaseShotIndex = 4;
+                }
+
+                float countT = Mathf.Clamp01((elapsed - showcaseDuration) / 3.0f);
+                float pushIn = Mathf.Lerp(2.0f, 1.6f, countT);
+                float pushH = Mathf.Lerp(0.80f, 0.65f, countT);
+
+                Vector3 launchBack = -beyTransform.forward * pushIn + Vector3.up * pushH;
+                Vector3 targetPos = beyPos + launchBack;
+                Vector3 lookTarget = beyPos + beyTransform.forward * 0.8f + Vector3.up * 0.12f;
+
+                transform.position = Vector3.Lerp(transform.position, targetPos, Time.unscaledDeltaTime * 10f);
+                Quaternion targetRot = Quaternion.LookRotation((lookTarget - transform.position).normalized, Vector3.up);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.unscaledDeltaTime * 12f);
+
+                if (controlledCamera != null)
+                {
+                    float targetFov = activeMatchManager.HasPlayerRipped ? 65f : Mathf.Lerp(52f, 58f, countT);
+                    controlledCamera.fieldOfView = Mathf.Lerp(controlledCamera.fieldOfView, targetFov, Time.unscaledDeltaTime * 8f);
+                }
+            }
+        }
+
+        private bool IsCountdownStateActive()
+        {
+            if (activeMatchManager == null)
+                activeMatchManager = FindFirstObjectByType<MatchManager>();
+            return activeMatchManager != null && activeMatchManager.CurrentState == MatchManager.MatchState.WaitingToStart;
+        }
+
         private void LateUpdate()
         {
             if (beyTransform == null)
@@ -197,12 +474,38 @@ namespace BladeSpinners.Gameplay
                 return;
             }
 
+            if (isTakedownCamActive)
+            {
+                UpdateTakedownCamera();
+                UpdateOccluderFading();
+                ApplyScreenShake();
+                return;
+            }
+
+            if (isVictoryShowcaseActive)
+            {
+                UpdateVictoryShowcaseCamera();
+                UpdateOccluderFading();
+                ApplyScreenShake();
+                return;
+            }
+
+            if (IsCountdownStateActive())
+            {
+                UpdateLaunchCinematicOrbitCamera();
+                UpdateOccluderFading();
+                ApplyScreenShake();
+                return;
+            }
+
             if (IsPlayerLostStateActive())
             {
+                UpdateDefeatCamera();
                 lockedToEnemy = false;
                 lockedEnemyTransform = null;
                 UpdateFocusedArrow();
                 FadeAllTrackedToOpaque();
+                ApplyScreenShake();
                 return;
             }
 
@@ -313,13 +616,18 @@ namespace BladeSpinners.Gameplay
                 return;
 
             var mouse = Mouse.current;
-            if (mouse == null)
-                return;
+            var keyboard = Keyboard.current;
+            var gamepad = Gamepad.current;
 
-            // Middle-click: toggle lock-on
-            if (mouse.middleButton.wasPressedThisFrame)
+            // Lock-on Toggle: Middle-click, Tab / Q, Right Stick Click (R3)
+            bool toggleLockPressed = false;
+            if (mouse != null && mouse.middleButton.wasPressedThisFrame) toggleLockPressed = true;
+            if (keyboard != null && (keyboard.tabKey.wasPressedThisFrame || keyboard.qKey.wasPressedThisFrame)) toggleLockPressed = true;
+            if (gamepad != null && (gamepad.rightStickButton.wasPressedThisFrame || gamepad.leftStickButton.wasPressedThisFrame)) toggleLockPressed = true;
+
+            if (toggleLockPressed)
             {
-                Debug.Log($"[Camera] Middle-click detected. lockedToEnemy={lockedToEnemy}, enemyCount={enemyTransforms.Count}");
+                Debug.Log($"[Camera] Lock-on toggle detected. lockedToEnemy={lockedToEnemy}, enemyCount={enemyTransforms.Count}");
                 if (lockedToEnemy)
                 {
                     // Release lock — return to free camera
@@ -340,19 +648,26 @@ namespace BladeSpinners.Gameplay
                 }
             }
 
-            // Scroll wheel: cycle enemies (only while locked or auto-lock)
-            if (enemyTransforms.Count > 0)
+            // Target Cycling: Mouse Scroll, D-Pad Left/Right, Bumpers (L1/R1)
+            int cycleDir = 0;
+            if (mouse != null)
             {
                 float scrollY = mouse.scroll.ReadValue().y;
-                if (Mathf.Abs(scrollY) > 0.1f)
-                {
-                    if (scrollY > 0f) enemyTargetIndex++;
-                    else enemyTargetIndex--;
+                if (scrollY > 0.1f) cycleDir = 1;
+                else if (scrollY < -0.1f) cycleDir = -1;
+            }
+            if (gamepad != null)
+            {
+                if (gamepad.dpad.right.wasPressedThisFrame || gamepad.rightShoulder.wasPressedThisFrame) cycleDir = 1;
+                else if (gamepad.dpad.left.wasPressedThisFrame || gamepad.leftShoulder.wasPressedThisFrame) cycleDir = -1;
+            }
 
-                    ClampEnemyIndex();
-                    lockedToEnemy = true;
-                    lockedEnemyTransform = enemyTransforms[enemyTargetIndex];
-                }
+            if (cycleDir != 0 && enemyTransforms.Count > 0)
+            {
+                enemyTargetIndex += cycleDir;
+                ClampEnemyIndex();
+                lockedToEnemy = true;
+                lockedEnemyTransform = enemyTransforms[enemyTargetIndex];
             }
 
             // If locked enemy has burst (spin=0), destroyed, or deactivated — switch target immediately
