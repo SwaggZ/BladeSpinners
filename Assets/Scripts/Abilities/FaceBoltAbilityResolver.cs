@@ -213,6 +213,18 @@ namespace BladeSpinners.Abilities
 
         public static BeyAbility Resolve(BeyPart faceBolt)
         {
+            BeyAbility resolved = ResolveInternal(faceBolt);
+            if (resolved != null && faceBolt != null)
+            {
+                Sprite emblem = faceBolt.FaceBoltEmblem != null ? faceBolt.FaceBoltEmblem : faceBolt.Icon;
+                if (emblem != null)
+                    resolved.SetIcon(emblem);
+            }
+            return resolved;
+        }
+
+        private static BeyAbility ResolveInternal(BeyPart faceBolt)
+        {
             if (faceBolt == null || faceBolt.PartType != PartType.FaceBolt)
                 return null;
 

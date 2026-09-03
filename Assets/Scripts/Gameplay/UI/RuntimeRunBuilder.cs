@@ -111,15 +111,16 @@ namespace BladeSpinners.Gameplay.UI
             }
 
             EnsureGameManager();
-            int spinPickupCount = Mathf.Max(depthScaledEnemyCount + 1, 3);
-            int staminaPickupCount = Mathf.Max(1, depthScaledEnemyCount / 2);
+            // Pickups: balanced distribution with slightly more Mana than Health (Spin)
+            int manaPickupCount = Mathf.Clamp(depthScaledEnemyCount + 1, 3, 5);
+            int healthPickupCount = Mathf.Clamp(manaPickupCount - 1, 2, 4);
             GameObject arena = ProceduralArenaGenerator.Generate(
                 arenaSeed,
                 roomType,
                 -1,
                 -1,
-                staminaPickupCount,
-                spinPickupCount);
+                healthPickupCount,
+                manaPickupCount);
             arena.name = isFinalBoss
                 ? $"Arena_FINAL_BOSS_L2_A4"
                 : (isSemiBoss ? $"Arena_SEMI_BOSS_L1_A4" : $"Arena_L{activeProgression.CurrentLevelOneBased}_A{activeProgression.CurrentArenaOneBased}");
@@ -320,6 +321,17 @@ namespace BladeSpinners.Gameplay.UI
 
             assembler.SetConfiguration(config);
             ApplyLoadoutToAssembler(assembler, selectedLoadout);
+            if (selectedLoadout != null)
+            {
+                foreach (KeyValuePair<PartType, BeyPart> kv in selectedLoadout)
+                {
+                    if (kv.Value != null)
+                    {
+                        config.EquipPart(kv.Value);
+                        manager.AddPartToInventory(kv.Value);
+                    }
+                }
+            }
 
             // RewireStatRings MUST be called after all reflection field-sets above,
             // because PlayerManager.Awake() (triggered by AddComponent) captured an

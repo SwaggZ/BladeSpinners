@@ -177,7 +177,15 @@ namespace BladeSpinners.Gameplay.Parts
 
         public string PartName => partName;
         public PartType PartType => partType;
-        public List<PartType> OccupiesSlots => occupiesSlots ?? new List<PartType>();
+        public List<PartType> OccupiesSlots
+        {
+            get
+            {
+                if (occupiesSlots != null && occupiesSlots.Count > 0)
+                    return occupiesSlots;
+                return new List<PartType> { partType };
+            }
+        }
         public RarityTier Rarity => rarity;
         public List<PartTag> Tags => tags;
         public string PartID => partID;

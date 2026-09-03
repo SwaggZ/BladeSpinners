@@ -149,14 +149,14 @@ namespace BladeSpinners.World
                 int totalRandom = GetPickupCount(roomType, rng);
                 if (stamCount < 0 && manaCount < 0)
                 {
-                    // Split randomly
-                    stamCount = totalRandom / 2;
-                    manaCount = totalRandom - stamCount;
+                    // Balanced distribution: slightly more mana than health (spin)
+                    stamCount = Mathf.Max(2, Mathf.RoundToInt(totalRandom * 0.42f));
+                    manaCount = Mathf.Max(stamCount, totalRandom - stamCount);
                 }
                 else if (stamCount < 0)
-                    stamCount = totalRandom;
+                    stamCount = Mathf.Max(2, totalRandom - manaCount);
                 else
-                    manaCount = totalRandom;
+                    manaCount = Mathf.Max(stamCount, totalRandom - stamCount);
             }
 
             int totalPickups = stamCount + manaCount;
@@ -819,23 +819,36 @@ namespace BladeSpinners.World
             trigger.isTrigger = true;
             trigger.radius = GameConstants.PICKUP_TRIGGER_RADIUS;
 
-            // Visual: billboard sprite (Fire_Focus for mana, Lightning_Focus for spin/stamina)
+            // Visual: billboard sprite (Mana_Pickup for mana, Heal_Pickup for spin/heal)
             GameObject visual = new GameObject("Visual");
             visual.transform.SetParent(pickup.transform, false);
-            visual.transform.localScale = Vector3.one * 0.075f;
+            visual.transform.localScale = Vector3.one * 0.13f; // ~1.33m wide in world space for high visibility
 
             SpriteRenderer sr = visual.AddComponent<SpriteRenderer>();
-            string spriteName = isMana ? "Fire_Focus" : "Lightning_Focus";
+            string spriteName = isMana ? "Mana_Pickup" : "Heal_Pickup";
             Texture2D tex = Resources.Load<Texture2D>(spriteName);
+            if (tex == null)
+            {
+                // Fallback to legacy names if needed
+                tex = Resources.Load<Texture2D>(isMana ? "Fire_Focus" : "Lightning_Focus");
+            }
             if (tex != null)
             {
                 sr.sprite = Sprite.Create(tex,
                     new Rect(0, 0, tex.width, tex.height),
                     new Vector2(0.5f, 0.5f), 100f);
             }
-            sr.color = new Color(1f, 1f, 1f, 0.4f); // 40% opacity
+            sr.color = Color.white; // 100% full opacity, bright and crisp
             sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             sr.receiveShadows = false;
+
+            // Radiant ground illumination
+            Light pl = pickup.AddComponent<Light>();
+            pl.type = LightType.Point;
+            pl.color = isMana ? new Color(0f, 0.85f, 1f) : new Color(1f, 0.82f, 0.12f);
+            pl.range = 4.2f;
+            pl.intensity = 2.4f;
+            pl.shadows = LightShadows.None;
 
             // Add the placeholder tag component
             pickup.AddComponent<PickupPlaceholder>().Initialize(

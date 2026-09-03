@@ -82,14 +82,18 @@ namespace BladeSpinners.Gameplay.Parts
             if (part == null)
                 return;
 
+            List<PartType> slots = part.OccupiesSlots;
+            if (slots == null || slots.Count == 0)
+                slots = new List<PartType> { part.PartType };
+
             // Remove any existing parts that would conflict with hybrid slots
-            foreach (PartType slot in part.OccupiesSlots)
+            foreach (PartType slot in slots)
             {
                 equippedParts[slot] = null;
             }
 
             // Equip the new part to all its slots
-            foreach (PartType slot in part.OccupiesSlots)
+            foreach (PartType slot in slots)
             {
                 equippedParts[slot] = part;
             }

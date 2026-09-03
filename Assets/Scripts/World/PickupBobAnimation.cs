@@ -16,6 +16,7 @@ namespace BladeSpinners.World
         private PickupPlaceholder pickup;
         private SpriteRenderer spriteRenderer;
         private Transform visualTransform;
+        private Light pointLight;
 
         private void Start()
         {
@@ -23,6 +24,7 @@ namespace BladeSpinners.World
             mainCamera = Camera.main;
             pickup = GetComponent<PickupPlaceholder>();
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+            pointLight = GetComponentInChildren<Light>();
             visualTransform =
                 spriteRenderer != null
                     ? spriteRenderer.transform
@@ -48,8 +50,12 @@ namespace BladeSpinners.World
             if (spriteRenderer != null)
             {
                 Color color = spriteRenderer.color;
-                color.a = Mathf.Lerp(0.12f, 0.55f, charge);
+                color.a = Mathf.Lerp(0.20f, 1.0f, charge);
                 spriteRenderer.color = color;
+            }
+            if (pointLight != null)
+            {
+                pointLight.intensity = Mathf.Lerp(0.15f, 2.4f, charge);
             }
 
             // Billboard — always face camera

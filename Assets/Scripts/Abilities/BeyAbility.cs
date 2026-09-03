@@ -40,6 +40,12 @@ namespace BladeSpinners.Abilities
         public Core.AbilityRarity Rarity => rarity;
         public Sprite Icon => icon;
 
+        public void SetIcon(Sprite newIcon)
+        {
+            if (newIcon != null)
+                icon = newIcon;
+        }
+
         /// <summary>
         /// Provides useful per-ability defaults without requiring every existing asset
         /// to be reauthored. Individual assets can override the serialized duration.

@@ -35,6 +35,7 @@ namespace BladeSpinners.Gameplay.UI
             Home,
             Inventory,
             ShrineCompendium,
+            Minigames,
             Records,
             Settings,
             Keybinds,
@@ -363,6 +364,15 @@ namespace BladeSpinners.Gameplay.UI
                     pendingResolutionIndex = -1;
                     revertResolutionTimer = 0f;
                 }
+            }
+
+            // Minigame Arcade Session Update
+            if (rootState == RootUiState.MainMenu && mainMenuPanel == MenuPanel.Minigames && MinigameArcadeManager.State == ArcadeState.Playing)
+            {
+                Mouse mouse = Mouse.current;
+                bool lmbPressed = mouse != null && mouse.leftButton.wasPressedThisFrame;
+                bool lmbHeld = mouse != null && mouse.leftButton.isPressed;
+                MinigameArcadeManager.UpdateSession(lmbPressed, lmbHeld, Time.unscaledDeltaTime);
             }
 
 
@@ -897,9 +907,12 @@ namespace BladeSpinners.Gameplay.UI
             int sw = Mathf.RoundToInt(UiWidth);
             int sh = Mathf.RoundToInt(UiHeight);
 
+            bool isOrbital = duel.CurrentMinigame == ClashMinigameType.OrbitalCrosshair;
             float panelW = Mathf.Clamp(620f * uiScale, 500f, 920f);
-            float panelH = Mathf.Clamp(200f * uiScale, 170f, 290f);
-            Rect panel = new Rect(sw * 0.5f - panelW * 0.5f, sh * 0.72f - panelH * 0.5f, panelW, panelH);
+            float panelH = isOrbital
+                ? Mathf.Clamp(290f * uiScale, 260f, 380f)
+                : Mathf.Clamp(200f * uiScale, 170f, 290f);
+            Rect panel = new Rect(sw * 0.5f - panelW * 0.5f, sh * 0.70f - panelH * 0.5f, panelW, panelH);
 
             Color frameColor = meter >= 0.5f
                 ? Color.Lerp(ACCENT_GOLD, ACCENT_CYAN, (meter - 0.5f) * 2f)
@@ -922,7 +935,7 @@ namespace BladeSpinners.Gameplay.UI
                     break;
                 case ClashMinigameType.RhythmBeat:
                     minigameTitle = "BLADE LOCK CLASH // RHYTHM COMBO [連続撃]";
-                    minigamePrompt = $"CLICK [LMB] AS THE RING CLOSES! [BEAT {duel.CurrentBeatIndex + 1}/{duel.TotalBeats}]";
+                    minigamePrompt = "CLICK [LEFT MOUSE BUTTON] AS ORBS PASS OVER THE TARGET CIRCLE!";
                     break;
                 case ClashMinigameType.TensionBalance:
                     minigameTitle = "BLADE LOCK CLASH // TENSION BALANCE [拮抗維持]";
@@ -930,14 +943,14 @@ namespace BladeSpinners.Gameplay.UI
                     break;
                 case ClashMinigameType.OrbitalCrosshair:
                     minigameTitle = "BLADE LOCK CLASH // ORBITAL LOCK [旋風追尾]";
-                    minigamePrompt = "CLICK [LMB] WHEN ORBITING SPARK OVERLAPS RETICLE!";
+                    minigamePrompt = "CLICK [LMB] WHEN ORBITING SPARK OVERLAPS CIRCULAR RETICLE!";
                     break;
                 case ClashMinigameType.ReflexTrigger:
                     minigameTitle = "BLADE LOCK CLASH // QUICK-DRAW REFLEX [瞬撃拔刀]";
                     if (duel.FalseStart)
-                        minigamePrompt = "⚠ FALSE START! CLICKED PREMATURELY! ⚠";
+                        minigamePrompt = "FALSE START! CLICKED PREMATURELY!";
                     else if (duel.ReflexSignalActive)
-                        minigamePrompt = "⚡⚡ STRIKE NOW! CLICK [LEFT MOUSE BUTTON]! ⚡⚡";
+                        minigamePrompt = ">>> STRIKE NOW! CLICK [LEFT MOUSE BUTTON]! <<<";
                     else
                         minigamePrompt = "STAND BY... WAIT FOR THE STRIKE SIGNAL (DO NOT CLICK!)";
                     break;
@@ -953,7 +966,9 @@ namespace BladeSpinners.Gameplay.UI
 
             // 2. Interactive Minigame Gauge Area
             float barY = headerRect.yMax + 6f;
-            float barH = Mathf.Clamp(42f * uiScale, 34f, 54f);
+            float barH = isOrbital
+                ? Mathf.Clamp(154f * uiScale, 136f, 190f)
+                : Mathf.Clamp(54f * uiScale, 48f, 68f);
             Rect gaugeRect = new Rect(panel.x + pad, barY, panel.width - pad * 2f, barH);
 
             DrawRect(gaugeRect, new Color(0.05f, 0.05f, 0.08f, 0.9f));
@@ -969,7 +984,7 @@ namespace BladeSpinners.Gameplay.UI
                     Rect sweetRect = new Rect(sweetX1, gaugeRect.y + 2f, sweetW, gaugeRect.height - 4f);
                     DrawRect(sweetRect, new Color(0.2f, 0.95f, 0.45f, 0.45f));
                     DrawFrameCorners(sweetRect, ACCENT_GOLD, 6f, 2f);
-                    DrawFittedLabel(sweetRect, "TARGET ZONE", bodyLabelStyle, ACCENT_GOLD, 9);
+                    DrawSidewaysLabel(sweetRect, "TARGET ZONE", bodyLabelStyle, ACCENT_GOLD);
 
                     // Oscillating Needle
                     float needleX = gaugeRect.x + gaugeRect.width * duel.NeedlePos;
@@ -979,32 +994,40 @@ namespace BladeSpinners.Gameplay.UI
                     break;
 
                 case ClashMinigameType.RhythmBeat:
-                    float centerBx = gaugeRect.center.x;
-                    float centerBy = gaugeRect.center.y;
-                    float targetNodeSize = 24f * uiScale;
-                    Rect targetNodeRect = new Rect(centerBx - targetNodeSize * 0.5f, centerBy - targetNodeSize * 0.5f, targetNodeSize, targetNodeSize);
-                    DrawPanelFrame(targetNodeRect, new Color(0.1f, 0.4f, 0.8f, 0.9f), new Color(0.05f, 0.1f, 0.2f, 0.9f), ACCENT_CYAN, 2f);
+                    // Taiko-no-Tatsujin Conveyor Track Line
+                    float trackY = gaugeRect.center.y;
+                    DrawRect(new Rect(gaugeRect.x + 8f, trackY - 2f, gaugeRect.width - 16f, 4f), new Color(0.25f, 0.45f, 0.7f, 0.7f));
 
-                    float ringScale = Mathf.Lerp(gaugeRect.width * 0.45f, targetNodeSize * 0.6f, duel.BeatProgress);
-                    Rect ringRect = new Rect(centerBx - ringScale, centerBy - ringScale * 0.4f, ringScale * 2f, ringScale * 0.8f);
-                    Color ringColor = duel.BeatProgress >= 0.78f ? ACCENT_GOLD : ACCENT_CYAN;
-                    DrawPanelFrame(ringRect, Color.clear, Color.clear, ringColor, 2f);
+                    // Target Drum Circle on Left
+                    float targetX = gaugeRect.x + gaugeRect.width * BladeLockDuelManager.RhythmTargetX;
+                    float hitRadius = Mathf.Clamp(gaugeRect.height * 0.38f, 18f, 26f);
+                    Rect targetZoneRect = new Rect(targetX - hitRadius, trackY - hitRadius, hitRadius * 2f, hitRadius * 2f);
+                    DrawPanelFrame(targetZoneRect, new Color(0.1f, 0.35f, 0.7f, 0.5f), Color.clear, ACCENT_GOLD, 3f);
+                    DrawFrameCorners(targetZoneRect, ACCENT_GOLD, 10f, 2f);
+                    DrawFittedLabel(targetZoneRect, "HIT", sectionLabelStyle, ACCENT_GOLD, 11);
 
-                    for (int b = 0; b < duel.TotalBeats; b++)
+                    // Moving Notes
+                    for (int b = 0; b < duel.ActiveNotes.Count; b++)
                     {
-                        float bX = gaugeRect.x + 20f + b * 24f;
-                        Rect bRect = new Rect(bX, gaugeRect.y + 8f, 14f, 14f);
-                        Color bCol = b < duel.CurrentBeatIndex ? ACCENT_CYAN : (b == duel.CurrentBeatIndex ? ACCENT_GOLD : new Color(0.4f, 0.4f, 0.5f, 0.6f));
-                        DrawRect(bRect, bCol);
+                        float noteX = gaugeRect.x + gaugeRect.width * duel.ActiveNotes[b];
+                        if (noteX >= gaugeRect.x - 20f && noteX <= gaugeRect.xMax + 20f)
+                        {
+                            float noteR = hitRadius * 0.75f;
+                            Rect noteRect = new Rect(noteX - noteR, trackY - noteR, noteR * 2f, noteR * 2f);
+                            DrawRect(noteRect, new Color(1f, 0.40f, 0.08f, 0.95f));
+                            DrawFrameCorners(noteRect, Color.white, 6f, 2f);
+                            DrawFittedLabel(noteRect, "BEAT", bodyLabelStyle, Color.white, 8);
+                        }
                     }
                     break;
 
                 case ClashMinigameType.TensionBalance:
                     float bTargetX = gaugeRect.x + gaugeRect.width * duel.BalanceTargetPos;
-                    float bZoneW = gaugeRect.width * 0.26f;
+                    float bZoneW = gaugeRect.width * 0.44f;
                     Rect bZoneRect = new Rect(bTargetX - bZoneW * 0.5f, gaugeRect.y + 3f, bZoneW, gaugeRect.height - 6f);
                     DrawRect(bZoneRect, new Color(0.2f, 0.9f, 0.5f, 0.4f));
                     DrawFrameCorners(bZoneRect, ACCENT_GOLD, 6f, 2f);
+                    DrawSidewaysLabel(bZoneRect, "BALANCE ZONE", bodyLabelStyle, ACCENT_GOLD);
 
                     float pBobX = gaugeRect.x + gaugeRect.width * duel.BalanceBobberPos;
                     Rect pBobRect = new Rect(pBobX - 10f, gaugeRect.y - 2f, 20f, gaugeRect.height + 4f);
@@ -1013,21 +1036,53 @@ namespace BladeSpinners.Gameplay.UI
                     break;
 
                 case ClashMinigameType.OrbitalCrosshair:
-                    float targetX = gaugeRect.x + (duel.TargetLockAngle / 360f) * gaugeRect.width;
-                    Rect crossRect = new Rect(targetX - 12f, gaugeRect.y + 2f, 24f, gaugeRect.height - 4f);
-                    DrawPanelFrame(crossRect, new Color(0.9f, 0.3f, 0.1f, 0.3f), Color.clear, ACCENT_GOLD, 2f);
-                    DrawFittedLabel(crossRect, "LOCK", bodyLabelStyle, ACCENT_GOLD, 9);
+                    Vector2 dialCenter = gaugeRect.center;
+                    float dialRadius = gaugeRect.height * 0.40f;
 
-                    float orbX = gaugeRect.x + (duel.OrbitAngle / 360f) * gaugeRect.width;
-                    Rect orbRect = new Rect(orbX - 8f, gaugeRect.y - 2f, 16f, gaugeRect.height + 4f);
-                    DrawRect(orbRect, ACCENT_CYAN);
+                    // Circular Radar Track (crosshairs + radar frame)
+                    DrawRect(new Rect(dialCenter.x - dialRadius - 14f, dialCenter.y - 1f, (dialRadius + 14f) * 2f, 2f), new Color(0.2f, 0.5f, 0.8f, 0.45f));
+                    DrawRect(new Rect(dialCenter.x - 1f, dialCenter.y - dialRadius - 14f, 2f, (dialRadius + 14f) * 2f), new Color(0.2f, 0.5f, 0.8f, 0.45f));
+                    
+                    // Outer radar ring frame
+                    Rect dialBounds = new Rect(dialCenter.x - dialRadius, dialCenter.y - dialRadius, dialRadius * 2f, dialRadius * 2f);
+                    DrawPanelFrame(dialBounds, new Color(0.04f, 0.08f, 0.16f, 0.75f), Color.clear, new Color(0.3f, 0.65f, 0.95f, 0.7f), 2f);
+                    DrawFrameCorners(dialBounds, ACCENT_CYAN, 16f, 2f);
+
+                    // Inner decorative radar ring
+                    float innerRadius = dialRadius * 0.55f;
+                    Rect innerBounds = new Rect(dialCenter.x - innerRadius, dialCenter.y - innerRadius, innerRadius * 2f, innerRadius * 2f);
+                    DrawPanelFrame(innerBounds, Color.clear, Color.clear, new Color(0.25f, 0.5f, 0.75f, 0.35f), 1f);
+
+                    // Circular Lock Target Zone on the perimeter
+                    float tRad = duel.TargetLockAngle * Mathf.Deg2Rad;
+                    Vector2 tPos = dialCenter + new Vector2(Mathf.Cos(tRad), Mathf.Sin(tRad)) * dialRadius;
+                    float lockSz = Mathf.Clamp(48f * uiScale, 42f, 56f);
+                    Rect lockCircleRect = new Rect(tPos.x - lockSz * 0.5f, tPos.y - lockSz * 0.5f, lockSz, lockSz);
+                    DrawPanelFrame(lockCircleRect, new Color(0.9f, 0.4f, 0.1f, 0.65f), new Color(0.18f, 0.09f, 0.02f, 0.9f), ACCENT_GOLD, 3f);
+                    DrawFrameCorners(lockCircleRect, ACCENT_GOLD, 12f, 2f);
+                    DrawFittedLabel(lockCircleRect, "LOCK", titleBarStyle, ACCENT_GOLD, 15);
+
+                    // Orbiting Spark along the perimeter
+                    float oRad = duel.OrbitAngle * Mathf.Deg2Rad;
+                    Vector2 oPos = dialCenter + new Vector2(Mathf.Cos(oRad), Mathf.Sin(oRad)) * dialRadius;
+                    float orbSz = Mathf.Clamp(24f * uiScale, 20f, 30f);
+                    Rect orbCircleRect = new Rect(oPos.x - orbSz * 0.5f, oPos.y - orbSz * 0.5f, orbSz, orbSz);
+                    DrawRect(orbCircleRect, ACCENT_CYAN);
+                    DrawFrameCorners(orbCircleRect, Color.white, 6f, 2f);
+
+                    // Alignment proximity glow
+                    float angleDiff = Mathf.Abs(Mathf.DeltaAngle(duel.OrbitAngle, duel.TargetLockAngle));
+                    if (angleDiff <= 32f)
+                    {
+                        DrawPanelFrame(lockCircleRect, new Color(1f, 0.8f, 0.2f, 0.4f), Color.clear, Color.white, 3f);
+                    }
                     break;
 
                 case ClashMinigameType.ReflexTrigger:
                     if (duel.ReflexSignalActive && !duel.FalseStart)
                     {
                         DrawRect(gaugeRect, new Color(1f, 0.85f, 0.1f, 0.85f));
-                        DrawFittedLabel(gaugeRect, "⚡⚡ CLICK LEFT MOUSE BUTTON NOW! ⚡⚡", titleBarStyle, Color.black, 14);
+                        DrawFittedLabel(gaugeRect, "[ STRIKE NOW! CLICK LEFT MOUSE BUTTON! ]", titleBarStyle, Color.black, 14);
                     }
                     else if (duel.FalseStart)
                     {
@@ -1488,6 +1543,12 @@ namespace BladeSpinners.Gameplay.UI
             BeyPart faceBolt = config.GetEquippedPart(PartType.FaceBolt);
             if (faceBolt == null && runContext.Player != null)
             {
+                BeyAssembler assembler = runContext.Player.GetComponent<BeyAssembler>();
+                if (assembler != null)
+                    faceBolt = assembler.GetEquippedPart(PartType.FaceBolt);
+            }
+            if (faceBolt == null && runContext.Player != null)
+            {
                 var loadout = GetCurrentRunLoadout(runContext.Player);
                 if (loadout != null && loadout.TryGetValue(PartType.FaceBolt, out BeyPart fb))
                     faceBolt = fb;
@@ -1495,6 +1556,10 @@ namespace BladeSpinners.Gameplay.UI
             if (faceBolt == null && selectedMainMenuLoadout != null && selectedMainMenuLoadout.TryGetValue(PartType.FaceBolt, out BeyPart mainFb))
             {
                 faceBolt = mainFb;
+            }
+            if (faceBolt == null && ability != null)
+            {
+                faceBolt = FindFaceBoltForAbility(ability);
             }
 
             float size = Mathf.Clamp(sh * 0.12f, 85f, 130f);
@@ -1528,6 +1593,14 @@ namespace BladeSpinners.Gameplay.UI
             if (emblem == null && ability != null)
             {
                 emblem = ability.Icon;
+            }
+            if (emblem == null && ability != null)
+            {
+                BeyPart matchedBolt = FindFaceBoltForAbility(ability);
+                if (matchedBolt != null)
+                {
+                    emblem = matchedBolt.FaceBoltEmblem != null ? matchedBolt.FaceBoltEmblem : matchedBolt.Icon;
+                }
             }
 
             if (emblem != null && emblem.texture != null)
@@ -2199,10 +2272,14 @@ namespace BladeSpinners.Gameplay.UI
             if (tex == null)
                 return;
 
+            Color prevColor = GUI.color;
+            GUI.color = Color.white;
+
             // Direct standard IMGUI rendering for full texture sprites (our icons/emblems)
             if (sprite.rect.width >= tex.width && sprite.rect.height >= tex.height)
             {
                 GUI.DrawTexture(rect, tex, ScaleMode.ScaleToFit, true);
+                GUI.color = prevColor;
                 return;
             }
 
@@ -2221,6 +2298,7 @@ namespace BladeSpinners.Gameplay.UI
             {
                 GUI.DrawTexture(rect, tex, ScaleMode.ScaleToFit, true);
             }
+            GUI.color = prevColor;
         }
 
         // ══════════════════════════════════════════════════════════════════════════
@@ -2256,6 +2334,10 @@ namespace BladeSpinners.Gameplay.UI
 
                 case MenuPanel.ShrineCompendium:
                     DrawShrineBlessingsCompendium(contentRect);
+                    break;
+
+                case MenuPanel.Minigames:
+                    DrawMinigamesArcade(contentRect);
                     break;
 
                 case MenuPanel.Records:
@@ -2422,15 +2504,15 @@ namespace BladeSpinners.Gameplay.UI
                 DrawFittedLabel(new Rect(labelX, row.y + 32f, labelW, 20f), $"POWER {Mathf.RoundToInt(GetPartPowerScore(part))}  //  WT {part.Weight:0.0}G", bodyLabelStyle, new Color(0.70f, 0.88f, 1f, 0.85f), 10);
 
                 // Rarity Pill
-                DrawRarityPill(new Rect(row.xMax - 180f, row.y + 12f, 70f, row.height - 24f), part.Rarity, part.Rarity.ToString().ToUpperInvariant());
+                DrawRarityPill(new Rect(row.xMax - 196f, row.y + 12f, 86f, row.height - 24f), part.Rarity, part.Rarity.ToString().ToUpperInvariant());
 
                 // Equip / Status button
-                Rect btnRect = new Rect(row.xMax - 96f, row.y + 12f, 88f, row.height - 24f);
+                Rect btnRect = new Rect(row.xMax - 100f, row.y + 12f, 92f, row.height - 24f);
                 if (isEquipped)
                 {
                     DrawRect(btnRect, new Color(0.12f, 0.35f, 0.22f, 0.90f));
                     DrawRect(new Rect(btnRect.x, btnRect.yMax - 2f, btnRect.width, 2f), new Color(0.25f, 0.95f, 0.45f, 1f));
-                    DrawFittedLabel(btnRect, "EQUIPPED", bodyLabelStyle, new Color(0.4f, 1f, 0.55f, 1f), 10);
+                    DrawFittedLabel(btnRect, "EQUIPPED", bodyLabelStyle, new Color(0.4f, 1f, 0.55f, 1f), 9);
                 }
                 else
                 {
@@ -2545,6 +2627,319 @@ namespace BladeSpinners.Gameplay.UI
                 detailRect,
                 selectedInventoryPart,
                 "PART SPECIFICATIONS");
+        }
+
+        private void DrawMinigamesArcade(Rect area)
+        {
+            float uiScale = GetUiScale();
+            float pad = Mathf.Clamp(14f * uiScale, 12f, 22f);
+
+            DrawPanelFrame(area, new Color(0.015f, 0.035f, 0.07f, 0.96f), new Color(0.03f, 0.07f, 0.14f, 0.98f), ACCENT_CYAN, 2f);
+            DrawFrameCorners(area, ACCENT_CYAN, 24f, 2f);
+
+            if (MinigameArcadeManager.State == ArcadeState.Browser)
+            {
+                // ── HEADER ────────────────────────────────────────────────────────
+                float headerH = 54f;
+                Rect headerRect = new Rect(area.x + pad, area.y + 10f, area.width - pad * 2f, headerH);
+                DrawFittedLabel(new Rect(headerRect.x, headerRect.y, headerRect.width, 28f),
+                    "CLASH ARCADE // MINIGAME DOJO [試練道場]", titleBarStyle, ACCENT_CYAN, 18);
+                DrawFittedLabel(new Rect(headerRect.x, headerRect.y + 28f, headerRect.width, 22f),
+                    "TRAIN CLASH DUEL MECHANICS STANDALONE • EARN HIGH SCORES • EXCLUSIVE LEFT MOUSE BUTTON CONTROLS",
+                    sectionLabelStyle, ACCENT_GOLD, 12);
+
+                // ── GRID (3 columns x 2 rows) ─────────────────────────────────────
+                float topY = headerRect.yMax + 10f;
+                Rect gridArea = new Rect(area.x + pad, topY, area.width - pad * 2f, area.yMax - topY - pad);
+                float cardGap = 14f;
+                float cardW = (gridArea.width - cardGap * 2f) / 3f;
+                float cardH = (gridArea.height - cardGap) / 2f;
+
+                for (int i = 0; i < 6; i++)
+                {
+                    ClashMinigameType type = (ClashMinigameType)i;
+                    var info = MinigameArcadeManager.GetMinigameInfo(type);
+                    int highScore = MinigameArcadeManager.GetHighScore(type);
+
+                    int col = i % 3;
+                    int row = i / 3;
+                    Rect cRect = new Rect(gridArea.x + col * (cardW + cardGap), gridArea.y + row * (cardH + cardGap), cardW, cardH);
+
+                    Color cardAccent = highScore > 0 ? ACCENT_GOLD : ACCENT_CYAN;
+                    DrawPanelFrame(cRect, new Color(0.025f, 0.055f, 0.11f, 0.92f), new Color(0.04f, 0.08f, 0.16f, 0.95f), cardAccent, 1.5f);
+                    DrawFrameCorners(cRect, cardAccent, 12f, 1.5f);
+
+                    float cPad = 12f;
+                    // Tag
+                    DrawFittedLabel(new Rect(cRect.x + cPad, cRect.y + 8f, cRect.width - cPad * 2f, 18f),
+                        info.category, sectionLabelStyle, new Color(0.40f, 0.85f, 1f, 0.95f), 12);
+
+                    // Title
+                    DrawFittedLabel(new Rect(cRect.x + cPad, cRect.y + 28f, cRect.width - cPad * 2f, 26f),
+                        $"{info.title}  {info.jp}", titleBarStyle, Color.white, 16);
+
+                    // Description
+                    float btnH = 38f;
+                    float scoreH = 26f;
+                    float descTop = cRect.y + 56f;
+                    float descH = cRect.yMax - btnH - scoreH - 24f - descTop;
+                    Rect descRect = new Rect(cRect.x + cPad, descTop, cRect.width - cPad * 2f, descH);
+                    GUIStyle descStyle = new GUIStyle(bodyLabelStyle)
+                    {
+                        wordWrap = true,
+                        clipping = TextClipping.Clip,
+                        fontSize = 13
+                    };
+                    GUI.Label(descRect, info.desc, descStyle);
+
+                    // High score bar
+                    Rect scoreRect = new Rect(cRect.x + cPad, cRect.yMax - btnH - scoreH - 12f, cRect.width - cPad * 2f, scoreH);
+                    DrawRect(scoreRect, new Color(0f, 0f, 0f, 0.45f));
+                    string scoreText = highScore > 0
+                        ? $"TOP RECORD: {highScore:N0} PTS"
+                        : "NO RECORD SET YET";
+                    Color scoreColor = highScore > 0 ? ACCENT_GOLD : new Color(0.6f, 0.7f, 0.8f, 0.75f);
+                    DrawFittedLabel(scoreRect, scoreText, sectionLabelStyle, scoreColor, 12);
+
+                    // Play button
+                    Rect btnRect = new Rect(cRect.x + cPad, cRect.yMax - btnH - 8f, cRect.width - cPad * 2f, btnH);
+                    if (ActionBtn("START PRACTICE DRILL", btnRect, ACCENT_CYAN, false))
+                    {
+                        MinigameArcadeManager.StartSession(type);
+                    }
+                }
+            }
+            else if (MinigameArcadeManager.State == ArcadeState.Playing)
+            {
+                var info = MinigameArcadeManager.GetMinigameInfo(MinigameArcadeManager.SelectedMinigame);
+
+                // ── PLAYING HUD HEADER ────────────────────────────────────────────
+                float headH = 46f;
+                Rect topHead = new Rect(area.x + pad, area.y + 12f, area.width - pad * 2f, headH);
+                DrawFittedLabel(new Rect(topHead.x, topHead.y, topHead.width * 0.45f, 26f),
+                    $"{info.title}  {info.jp}", titleBarStyle, ACCENT_CYAN, 14);
+
+                // Score + Streak badge
+                string scoreStr = $"SCORE: {MinigameArcadeManager.CurrentScore:N0} PTS";
+                if (MinigameArcadeManager.Streak > 1)
+                    scoreStr += $"  [STREAK x{MinigameArcadeManager.Streak}]";
+                DrawFittedLabel(new Rect(topHead.x + topHead.width * 0.45f, topHead.y, topHead.width * 0.55f, 26f),
+                    scoreStr, titleBarStyle, ACCENT_GOLD, 14);
+
+                // Timer Bar
+                float timePct = Mathf.Clamp01(MinigameArcadeManager.TimeRemaining / MinigameArcadeManager.TotalDuration);
+                Rect timeBarBg = new Rect(topHead.x, topHead.y + 30f, topHead.width, 14f);
+                DrawRect(timeBarBg, new Color(0.04f, 0.08f, 0.15f, 0.9f));
+                DrawRect(new Rect(timeBarBg.x, timeBarBg.y, timeBarBg.width * timePct, timeBarBg.height),
+                    timePct > 0.25f ? ACCENT_CYAN : ACCENT_RED);
+                DrawFittedLabel(timeBarBg, $"TIME REMAINING: {MinigameArcadeManager.TimeRemaining:0.0}s", bodyLabelStyle, Color.white, 9);
+
+                // ── INTERACTIVE MINIGAME GAUGE AREA ──────────────────────────────
+                bool isOrbital = MinigameArcadeManager.SelectedMinigame == ClashMinigameType.OrbitalCrosshair;
+                float gaugeW = isOrbital ? 340f : Mathf.Clamp(area.width * 0.72f, 480f, 780f);
+                float gaugeH = isOrbital ? 250f : 64f;
+                Rect gaugeRect = new Rect(area.center.x - gaugeW * 0.5f, area.center.y - gaugeH * 0.5f, gaugeW, gaugeH);
+
+                DrawRect(gaugeRect, new Color(0.05f, 0.05f, 0.08f, 0.92f));
+                DrawPanelFrame(gaugeRect, new Color(0f, 0f, 0f, 0.8f), new Color(0.05f, 0.05f, 0.08f, 0.9f), new Color(0.4f, 0.5f, 0.6f, 0.6f), 1.5f);
+
+                switch (MinigameArcadeManager.SelectedMinigame)
+                {
+                    case ClashMinigameType.RapidMash:
+                        // Fill meter
+                        Rect fillRect = new Rect(gaugeRect.x + 3f, gaugeRect.y + 3f, (gaugeRect.width - 6f) * MinigameArcadeManager.ClashMeter, gaugeRect.height - 6f);
+                        Color fillCol = Color.Lerp(ACCENT_RED, ACCENT_CYAN, MinigameArcadeManager.ClashMeter);
+                        DrawRect(fillRect, fillCol);
+                        DrawFittedLabel(gaugeRect, $"RAPID MASH // CLICKS: {MinigameArcadeManager.MashCount}", bodyLabelStyle, Color.white, 11);
+                        break;
+
+                    case ClashMinigameType.PrecisionTiming:
+                        float sweetX1 = gaugeRect.x + gaugeRect.width * MinigameArcadeManager.SweetSpotMin;
+                        float sweetW = gaugeRect.width * (MinigameArcadeManager.SweetSpotMax - MinigameArcadeManager.SweetSpotMin);
+                        Rect sweetRect = new Rect(sweetX1, gaugeRect.y + 2f, sweetW, gaugeRect.height - 4f);
+                        DrawRect(sweetRect, new Color(0.2f, 0.95f, 0.45f, 0.45f));
+                        DrawFrameCorners(sweetRect, ACCENT_GOLD, 6f, 2f);
+                        DrawSidewaysLabel(sweetRect, "TARGET ZONE", bodyLabelStyle, ACCENT_GOLD);
+
+                        float needleX = gaugeRect.x + gaugeRect.width * MinigameArcadeManager.NeedlePos;
+                        Rect needleRect = new Rect(needleX - 3f, gaugeRect.y - 4f, 6f, gaugeRect.height + 8f);
+                        DrawRect(needleRect, ACCENT_RED);
+                        DrawFrameCorners(needleRect, Color.white, 4f, 1.5f);
+                        break;
+
+                    case ClashMinigameType.RhythmBeat:
+                        // Taiko Conveyor Track Line
+                        float trackY = gaugeRect.center.y;
+                        DrawRect(new Rect(gaugeRect.x + 8f, trackY - 2f, gaugeRect.width - 16f, 4f), new Color(0.25f, 0.45f, 0.7f, 0.7f));
+
+                        // Target drum circle on left
+                        float targetX = gaugeRect.x + gaugeRect.width * MinigameArcadeManager.RhythmTargetX;
+                        float hitRadius = Mathf.Clamp(gaugeRect.height * 0.38f, 20f, 30f);
+                        Rect targetZoneRect = new Rect(targetX - hitRadius, trackY - hitRadius, hitRadius * 2f, hitRadius * 2f);
+                        DrawPanelFrame(targetZoneRect, new Color(0.1f, 0.35f, 0.7f, 0.5f), Color.clear, ACCENT_GOLD, 3f);
+                        DrawFrameCorners(targetZoneRect, ACCENT_GOLD, 10f, 2f);
+                        DrawFittedLabel(targetZoneRect, "HIT", sectionLabelStyle, ACCENT_GOLD, 12);
+
+                        // Moving rhythm notes
+                        for (int n = 0; n < MinigameArcadeManager.ActiveNotes.Count; n++)
+                        {
+                            float noteX = gaugeRect.x + gaugeRect.width * MinigameArcadeManager.ActiveNotes[n];
+                            if (noteX >= gaugeRect.x - 20f && noteX <= gaugeRect.xMax + 20f)
+                            {
+                                float noteR = hitRadius * 0.75f;
+                                Rect noteRect = new Rect(noteX - noteR, trackY - noteR, noteR * 2f, noteR * 2f);
+                                DrawRect(noteRect, new Color(1f, 0.40f, 0.08f, 0.95f));
+                                DrawFrameCorners(noteRect, Color.white, 6f, 2f);
+                                DrawFittedLabel(noteRect, "BEAT", bodyLabelStyle, Color.white, 9);
+                            }
+                        }
+                        break;
+
+                    case ClashMinigameType.TensionBalance:
+                        float bTargetX = gaugeRect.x + gaugeRect.width * MinigameArcadeManager.BalanceTargetPos;
+                        float bZoneW = gaugeRect.width * 0.44f;
+                        Rect bZoneRect = new Rect(bTargetX - bZoneW * 0.5f, gaugeRect.y + 3f, bZoneW, gaugeRect.height - 6f);
+                        DrawRect(bZoneRect, new Color(0.2f, 0.9f, 0.5f, 0.4f));
+                        DrawFrameCorners(bZoneRect, ACCENT_GOLD, 6f, 2f);
+                        DrawSidewaysLabel(bZoneRect, "BALANCE ZONE", bodyLabelStyle, ACCENT_GOLD);
+
+                        float pBobX = gaugeRect.x + gaugeRect.width * MinigameArcadeManager.BalanceBobberPos;
+                        Rect pBobRect = new Rect(pBobX - 10f, gaugeRect.y - 2f, 20f, gaugeRect.height + 4f);
+                        DrawRect(pBobRect, ACCENT_CYAN);
+                        DrawFrameCorners(pBobRect, Color.white, 4f, 1.5f);
+                        break;
+
+                    case ClashMinigameType.OrbitalCrosshair:
+                        Vector2 dialCenter = gaugeRect.center;
+                        float dialRadius = gaugeH * 0.40f;
+
+                        // Circular Radar Track (crosshairs + radar frame)
+                        DrawRect(new Rect(dialCenter.x - dialRadius - 16f, dialCenter.y - 1f, (dialRadius + 16f) * 2f, 2f), new Color(0.2f, 0.5f, 0.8f, 0.45f));
+                        DrawRect(new Rect(dialCenter.x - 1f, dialCenter.y - dialRadius - 16f, 2f, (dialRadius + 16f) * 2f), new Color(0.2f, 0.5f, 0.8f, 0.45f));
+                        
+                        // Outer radar frame
+                        Rect dialBounds = new Rect(dialCenter.x - dialRadius, dialCenter.y - dialRadius, dialRadius * 2f, dialRadius * 2f);
+                        DrawPanelFrame(dialBounds, new Color(0.04f, 0.08f, 0.16f, 0.75f), Color.clear, new Color(0.3f, 0.65f, 0.95f, 0.7f), 2f);
+                        DrawFrameCorners(dialBounds, ACCENT_CYAN, 18f, 2f);
+
+                        // Inner decorative radar ring
+                        float innerRadius = dialRadius * 0.55f;
+                        Rect innerBounds = new Rect(dialCenter.x - innerRadius, dialCenter.y - innerRadius, innerRadius * 2f, innerRadius * 2f);
+                        DrawPanelFrame(innerBounds, Color.clear, Color.clear, new Color(0.25f, 0.5f, 0.75f, 0.35f), 1f);
+
+                        // Circular Lock Target Zone on the perimeter
+                        float tRad = MinigameArcadeManager.TargetLockAngle * Mathf.Deg2Rad;
+                        Vector2 tPos = dialCenter + new Vector2(Mathf.Cos(tRad), Mathf.Sin(tRad)) * dialRadius;
+                        float lockSz = 52f;
+                        Rect lockCircleRect = new Rect(tPos.x - lockSz * 0.5f, tPos.y - lockSz * 0.5f, lockSz, lockSz);
+                        DrawPanelFrame(lockCircleRect, new Color(0.9f, 0.4f, 0.1f, 0.65f), new Color(0.18f, 0.09f, 0.02f, 0.9f), ACCENT_GOLD, 3f);
+                        DrawFrameCorners(lockCircleRect, ACCENT_GOLD, 12f, 2f);
+                        DrawFittedLabel(lockCircleRect, "LOCK", titleBarStyle, ACCENT_GOLD, 15);
+
+                        // Orbiting Spark along the perimeter
+                        float oRad = MinigameArcadeManager.OrbitAngle * Mathf.Deg2Rad;
+                        Vector2 oPos = dialCenter + new Vector2(Mathf.Cos(oRad), Mathf.Sin(oRad)) * dialRadius;
+                        float orbSz = 26f;
+                        Rect orbCircleRect = new Rect(oPos.x - orbSz * 0.5f, oPos.y - orbSz * 0.5f, orbSz, orbSz);
+                        DrawRect(orbCircleRect, ACCENT_CYAN);
+                        DrawFrameCorners(orbCircleRect, Color.white, 6f, 2f);
+
+                        // Proximity glow
+                        float angleDiffArcade = Mathf.Abs(Mathf.DeltaAngle(MinigameArcadeManager.OrbitAngle, MinigameArcadeManager.TargetLockAngle));
+                        if (angleDiffArcade <= 32f)
+                        {
+                            DrawPanelFrame(lockCircleRect, new Color(1f, 0.8f, 0.2f, 0.4f), Color.clear, Color.white, 3f);
+                        }
+                        break;
+
+                    case ClashMinigameType.ReflexTrigger:
+                        if (MinigameArcadeManager.ReflexSignalActive && !MinigameArcadeManager.FalseStart)
+                        {
+                            DrawRect(gaugeRect, new Color(1f, 0.85f, 0.1f, 0.85f));
+                            DrawFittedLabel(gaugeRect, "[ STRIKE NOW! CLICK LEFT MOUSE BUTTON! ]", titleBarStyle, Color.black, 15);
+                        }
+                        else if (MinigameArcadeManager.FalseStart)
+                        {
+                            DrawRect(gaugeRect, new Color(0.8f, 0.1f, 0.1f, 0.85f));
+                            DrawFittedLabel(gaugeRect, "FALSE START // PREMATURE CLICK!", titleBarStyle, Color.white, 13);
+                        }
+                        else
+                        {
+                            float standbyPulse = 0.4f + 0.3f * Mathf.Sin(Time.unscaledTime * 12f);
+                            DrawRect(gaugeRect, new Color(0.8f, 0.2f, 0.1f, standbyPulse));
+                            DrawFittedLabel(gaugeRect, "STAND BY... DO NOT CLICK!", sectionLabelStyle, Color.white, 13);
+                        }
+                        break;
+                }
+
+                // ── POPUP FEEDBACK ────────────────────────────────────────────────
+                if (MinigameArcadeManager.FeedbackTimer > 0f && !string.IsNullOrEmpty(MinigameArcadeManager.FeedbackText))
+                {
+                    Rect feedbackRect = new Rect(gaugeRect.x, gaugeRect.y - 40f, gaugeRect.width, 32f);
+                    DrawFittedLabel(feedbackRect, MinigameArcadeManager.FeedbackText, titleBarStyle, MinigameArcadeManager.FeedbackColor, 15);
+                }
+
+                // Instructions prompt
+                Rect promptRect = new Rect(gaugeRect.x, gaugeRect.yMax + 14f, gaugeRect.width, 24f);
+                DrawFittedLabel(promptRect, info.desc, bodyLabelStyle, new Color(0.8f, 0.9f, 1f, 0.9f), 11);
+
+                // Abort Button
+                Rect abortRect = new Rect(area.center.x - 120f, area.yMax - 48f, 240f, 36f);
+                if (ActionBtn("ABORT DRILL & RETURN", abortRect, ACCENT_RED, false))
+                {
+                    MinigameArcadeManager.AbortSession();
+                }
+            }
+            else if (MinigameArcadeManager.State == ArcadeState.RoundOver)
+            {
+                var info = MinigameArcadeManager.GetMinigameInfo(MinigameArcadeManager.SelectedMinigame);
+                float modalW = Mathf.Clamp(area.width * 0.52f, 440f, 560f);
+                float modalH = 340f;
+                Rect modalRect = new Rect(area.center.x - modalW * 0.5f, area.center.y - modalH * 0.5f, modalW, modalH);
+
+                DrawPanelFrame(modalRect, new Color(0.02f, 0.05f, 0.10f, 0.98f), new Color(0.04f, 0.09f, 0.18f, 0.98f), ACCENT_GOLD, 3f);
+                DrawFrameCorners(modalRect, ACCENT_GOLD, 20f, 2f);
+
+                DrawFittedLabel(new Rect(modalRect.x, modalRect.y + 16f, modalRect.width, 28f),
+                    $"DRILL COMPLETED // {info.title}", titleBarStyle, ACCENT_CYAN, 14);
+
+                if (MinigameArcadeManager.IsNewHighScore)
+                {
+                    DrawRect(new Rect(modalRect.x + 30f, modalRect.y + 52f, modalRect.width - 60f, 32f), new Color(0.8f, 0.6f, 0.1f, 0.35f));
+                    DrawFittedLabel(new Rect(modalRect.x, modalRect.y + 54f, modalRect.width, 28f),
+                        "*** NEW TOP RECORD SET! ***", titleBarStyle, ACCENT_GOLD, 15);
+                }
+                else
+                {
+                    DrawFittedLabel(new Rect(modalRect.x, modalRect.y + 54f, modalRect.width, 24f),
+                        $"PERSONAL BEST: {MinigameArcadeManager.BestScore:N0} PTS", bodyLabelStyle, new Color(0.7f, 0.85f, 1f, 0.85f), 12);
+                }
+
+                // Giant Final Score
+                Rect scoreRect = new Rect(modalRect.x, modalRect.y + 104f, modalRect.width, 60f);
+                GUIStyle giantScoreStyle = new GUIStyle(titleBarStyle)
+                {
+                    fontSize = 36,
+                    alignment = TextAnchor.MiddleCenter
+                };
+                giantScoreStyle.normal.textColor = ACCENT_GOLD;
+                GUI.Label(scoreRect, $"{MinigameArcadeManager.CurrentScore:N0} PTS", giantScoreStyle);
+
+                // Buttons
+                float btnW = (modalRect.width - 40f) * 0.48f;
+                float btnY = modalRect.yMax - 54f;
+                Rect playAgainRect = new Rect(modalRect.x + 16f, btnY, btnW, 40f);
+                Rect backRect = new Rect(modalRect.xMax - 16f - btnW, btnY, btnW, 40f);
+
+                if (ActionBtn("PLAY AGAIN", playAgainRect, ACCENT_CYAN, false))
+                {
+                    MinigameArcadeManager.StartSession(MinigameArcadeManager.SelectedMinigame);
+                }
+                if (ActionBtn("RETURN TO ARCADE", backRect, PANEL_STEEL, false))
+                {
+                    MinigameArcadeManager.AbortSession();
+                }
+            }
         }
 
         private void DrawPersonalBestPanel(Rect area)
@@ -3316,6 +3711,56 @@ namespace BladeSpinners.Gameplay.UI
             }
         }
 
+        private BeyPart FindFaceBoltForAbility(BladeSpinners.Abilities.BeyAbility ability)
+        {
+            if (ability == null) return null;
+            if (ownedParts != null)
+            {
+                for (int i = 0; i < ownedParts.Count; i++)
+                {
+                    BeyPart p = ownedParts[i];
+                    if (p != null && p.PartType == PartType.FaceBolt)
+                    {
+                        var res = BladeSpinners.Abilities.FaceBoltAbilityResolver.Resolve(p);
+                        if (res != null && (res.GetType() == ability.GetType() || res.AbilityName == ability.AbilityName))
+                            return p;
+                    }
+                }
+            }
+            if (enemyParts != null)
+            {
+                for (int i = 0; i < enemyParts.Count; i++)
+                {
+                    BeyPart p = enemyParts[i];
+                    if (p != null && p.PartType == PartType.FaceBolt)
+                    {
+                        var res = BladeSpinners.Abilities.FaceBoltAbilityResolver.Resolve(p);
+                        if (res != null && (res.GetType() == ability.GetType() || res.AbilityName == ability.AbilityName))
+                            return p;
+                    }
+                }
+            }
+            StarterPartsConfig starterCfg = LoadStarterConfig();
+            if (starterCfg != null)
+            {
+                var starterOwned = starterCfg.GetOwnedStarterParts();
+                if (starterOwned != null)
+                {
+                    for (int i = 0; i < starterOwned.Count; i++)
+                    {
+                        BeyPart p = starterOwned[i];
+                        if (p != null && p.PartType == PartType.FaceBolt)
+                        {
+                            var res = BladeSpinners.Abilities.FaceBoltAbilityResolver.Resolve(p);
+                            if (res != null && (res.GetType() == ability.GetType() || res.AbilityName == ability.AbilityName))
+                                return p;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
         private static BeyAbility ResolveAbilityForPart(BeyPart part)
         {
             if (part == null || part.PartType != PartType.FaceBolt)
@@ -3592,7 +4037,10 @@ namespace BladeSpinners.Gameplay.UI
             // 3. Reset shrine blessings to starter pool
             ShrineBlessingsUnlockManager.ResetToStarterPool();
 
-            // 4. Reset resolution dropdown state
+            // 4. Reset arcade high scores
+            MinigameArcadeManager.ResetAllHighScores();
+
+            // 5. Reset resolution dropdown state
             pendingResolutionIndex = -1;
             confirmedResolutionIndex = -1;
             revertResolutionTimer = 0f;
@@ -3733,16 +4181,18 @@ namespace BladeSpinners.Gameplay.UI
             DrawBrandLockup(brandRect);
 
             float gap = Mathf.Clamp(6f * GetUiScale(), 5f, 10f);
-            float tabW = (tabsRect.width - gap * 4f) / 5f;
+            float tabW = (tabsRect.width - gap * 5f) / 6f;
             if (TopTabBtn("GARAGE", new Rect(tabsRect.x, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Home))
                 SetMainMenuPanel(MenuPanel.Home);
             if (TopTabBtn("INVENTORY", new Rect(tabsRect.x + tabW + gap, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Inventory))
                 SetMainMenuPanel(MenuPanel.Inventory);
             if (TopTabBtn("SHRINE BLESSINGS", new Rect(tabsRect.x + (tabW + gap) * 2f, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.ShrineCompendium))
                 SetMainMenuPanel(MenuPanel.ShrineCompendium);
-            if (TopTabBtn("RECORDS", new Rect(tabsRect.x + (tabW + gap) * 3f, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Records))
+            if (TopTabBtn("MINIGAMES", new Rect(tabsRect.x + (tabW + gap) * 3f, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Minigames))
+                SetMainMenuPanel(MenuPanel.Minigames);
+            if (TopTabBtn("RECORDS", new Rect(tabsRect.x + (tabW + gap) * 4f, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Records))
                 SetMainMenuPanel(MenuPanel.Records);
-            if (TopTabBtn("SETTINGS", new Rect(tabsRect.x + (tabW + gap) * 4f, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Settings))
+            if (TopTabBtn("SETTINGS", new Rect(tabsRect.x + (tabW + gap) * 5f, tabsRect.y, tabW, tabsRect.height), mainMenuPanel == MenuPanel.Settings))
                 SetMainMenuPanel(MenuPanel.Settings);
 
             // Blader Threat Tier / Status badge on the right
@@ -4541,7 +4991,7 @@ namespace BladeSpinners.Gameplay.UI
             DrawRect(rect, new Color(0.02f, 0.05f, 0.10f, 0.85f));
             DrawFrameCorners(rect, rarityColor, rect.width * 0.28f, 1.5f);
             DrawRect(new Rect(rect.x, rect.yMax - 2f, rect.width, 2f), rarityColor);
-            DrawFittedLabel(rect, label, bodyLabelStyle, rarityColor, 9);
+            DrawFittedLabel(rect, label, bodyLabelStyle, rarityColor, 8);
         }
 
         private static Color GetRarityColor(RarityTier rarity)
@@ -5925,7 +6375,11 @@ namespace BladeSpinners.Gameplay.UI
 
         private static GUIStyle FitLabelStyle(GUIStyle source, string text, float maxWidth, int minFontSize, float maxHeight = float.PositiveInfinity)
         {
-            GUIStyle fitted = new GUIStyle(source);
+            GUIStyle fitted = new GUIStyle(source)
+            {
+                wordWrap = false,
+                clipping = TextClipping.Clip
+            };
             if (string.IsNullOrEmpty(text) || maxWidth <= 0f)
                 return fitted;
 
@@ -6126,7 +6580,11 @@ namespace BladeSpinners.Gameplay.UI
         {
             float usableWidth = Mathf.Max(1f, rect.width - source.padding.horizontal);
             float usableHeight = Mathf.Max(1f, rect.height - source.padding.vertical);
-            GUIStyle fittedStyle = new GUIStyle(FitLabelStyle(source, label, usableWidth, minFontSize, usableHeight));
+            GUIStyle fittedStyle = new GUIStyle(FitLabelStyle(source, label, usableWidth, minFontSize, usableHeight))
+            {
+                wordWrap = false,
+                clipping = TextClipping.Clip
+            };
             fittedStyle.normal.textColor = textColor;
             fittedStyle.hover.textColor = textColor;
             fittedStyle.active.textColor = textColor;
@@ -6136,6 +6594,25 @@ namespace BladeSpinners.Gameplay.UI
             fittedStyle.onActive.textColor = textColor;
             fittedStyle.onFocused.textColor = textColor;
             GUI.Label(rect, label, fittedStyle);
+        }
+
+        private static void DrawSidewaysLabel(Rect rect, string text, GUIStyle sourceStyle, Color color, float angle = -90f)
+        {
+            Matrix4x4 origMatrix = GUI.matrix;
+            Vector2 pivot = rect.center;
+            GUIUtility.RotateAroundPivot(angle, pivot);
+            Rect rotatedRect = new Rect(pivot.x - rect.height * 0.5f, pivot.y - rect.width * 0.5f, rect.height, rect.width);
+            GUIStyle style = new GUIStyle(sourceStyle)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                wordWrap = false,
+                clipping = TextClipping.Overflow,
+                fontStyle = FontStyle.Bold,
+                fontSize = Mathf.Clamp(Mathf.RoundToInt(rect.width * 0.26f), 9, 13)
+            };
+            style.normal.textColor = color;
+            GUI.Label(rotatedRect, text, style);
+            GUI.matrix = origMatrix;
         }
 
         /// <summary>

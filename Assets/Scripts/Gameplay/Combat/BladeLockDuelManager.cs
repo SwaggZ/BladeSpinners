@@ -51,12 +51,10 @@ namespace BladeSpinners.Gameplay.Combat
         private float needleSpeed = 2.8f;
         private float needleDir = 1f;
 
-        // Rhythm Beat
-        public int CurrentBeatIndex { get; private set; } = 0;
-        public int TotalBeats { get; private set; } = 3;
-        public float BeatProgress { get; private set; } = 0f; // 0 (start) to 1 (hit window)
-        private float beatDuration = 0.70f;
-        private float currentBeatTimer = 0f;
+        // Rhythm Beat (Taiko-no-Tatsujin Conveyor)
+        public const float RhythmTargetX = 0.20f;
+        public readonly System.Collections.Generic.List<float> ActiveNotes = new System.Collections.Generic.List<float>();
+        private float noteSpeed = 0.52f;
 
         // Tension Balance
         public float BalanceBobberPos { get; private set; } = 0.5f;
@@ -237,16 +235,17 @@ namespace BladeSpinners.Gameplay.Combat
                 case ClashMinigameType.PrecisionTiming:
                     NeedlePos = 0f;
                     needleDir = 1f;
-                    needleSpeed = UnityEngine.Random.Range(2.4f, 3.2f);
-                    SweetSpotMin = UnityEngine.Random.Range(0.35f, 0.45f);
-                    SweetSpotMax = SweetSpotMin + UnityEngine.Random.Range(0.18f, 0.25f);
+                    needleSpeed = UnityEngine.Random.Range(1.3f, 1.7f);
+                    SweetSpotMin = UnityEngine.Random.Range(0.25f, 0.45f);
+                    SweetSpotMax = SweetSpotMin + UnityEngine.Random.Range(0.24f, 0.30f);
                     break;
 
                 case ClashMinigameType.RhythmBeat:
-                    CurrentBeatIndex = 0;
-                    TotalBeats = 3;
-                    currentBeatTimer = 0f;
-                    beatDuration = 0.72f;
+                    ActiveNotes.Clear();
+                    ActiveNotes.Add(0.55f);
+                    ActiveNotes.Add(0.90f);
+                    ActiveNotes.Add(1.25f);
+                    ActiveNotes.Add(1.60f);
                     break;
 
                 case ClashMinigameType.TensionBalance:
@@ -408,92 +407,110 @@ namespace BladeSpinners.Gameplay.Combat
                 bool isHit = NeedlePos >= SweetSpotMin && NeedlePos <= SweetSpotMax;
                 if (isHit)
                 {
-                    ClashMeter = Mathf.Clamp01(ClashMeter + 0.38f);
+                    ClashMeter = Mathf.Clamp01(ClashMeter + 0.42f);
                     ThirdPersonCameraController.TriggerScreenShake(0.35f, 0.12f);
                     SoundManager.PlayUiConfirm();
-                    RuntimeGameUiController.SpawnGlobalComicPopup("PERFECT STRIKE! (+38%)", new Color(0.2f, 1f, 0.6f), 1.2f);
+                    RuntimeGameUiController.SpawnGlobalComicPopup("PERFECT STRIKE! (+42%)", new Color(0.2f, 1f, 0.6f), 1.2f);
                     
                     // Reposition sweet spot
-                    SweetSpotMin = UnityEngine.Random.Range(0.25f, 0.65f);
-                    SweetSpotMax = SweetSpotMin + UnityEngine.Random.Range(0.16f, 0.22f);
+                    SweetSpotMin = UnityEngine.Random.Range(0.20f, 0.50f);
+                    SweetSpotMax = SweetSpotMin + UnityEngine.Random.Range(0.24f, 0.32f);
                 }
                 else
                 {
-                    ClashMeter = Mathf.Clamp01(ClashMeter - 0.14f);
+                    ClashMeter = Mathf.Clamp01(ClashMeter - 0.06f);
                     SoundManager.PlayBeyHit(ClashPosition, 1f);
                     RuntimeGameUiController.SpawnGlobalComicPopup("MISSED TIMING!", new Color(1f, 0.2f, 0.2f), 1f);
                 }
             }
 
             // Slight enemy pressure
-            ClashMeter = Mathf.Clamp01(ClashMeter - (EnemyPushRate * 0.4f) * Time.unscaledDeltaTime);
+            ClashMeter = Mathf.Clamp01(ClashMeter - (EnemyPushRate * 0.20f) * Time.unscaledDeltaTime);
         }
 
-        // ── 3. Rhythm Beat Minigame ──────────────────────────────────
+        // ── 3. Rhythm Beat Minigame (Taiko Conveyor) ─────────────────
         private void UpdateRhythmBeat(bool lmbPressed)
         {
-            currentBeatTimer += Time.unscaledDeltaTime;
-            BeatProgress = Mathf.Clamp01(currentBeatTimer / beatDuration);
+            float dt = Time.unscaledDeltaTime;
+            for (int i = 0; i < ActiveNotes.Count; i++)
+            {
+                ActiveNotes[i] -= noteSpeed * dt;
+            }
 
             if (lmbPressed)
             {
-                // Sweet timing window is near completion of beat (0.80..1.0)
-                if (BeatProgress >= 0.78f && BeatProgress <= 1.0f)
+                float bestDist = float.MaxValue;
+                int bestIdx = -1;
+                for (int i = 0; i < ActiveNotes.Count; i++)
                 {
-                    ClashMeter = Mathf.Clamp01(ClashMeter + 0.32f);
-                    ThirdPersonCameraController.TriggerScreenShake(0.30f, 0.10f);
-                    SoundManager.PlayUiConfirm();
-                    RuntimeGameUiController.SpawnGlobalComicPopup($"PERFECT BEAT [{CurrentBeatIndex + 1}/{TotalBeats}]!", new Color(0.2f, 1f, 0.8f), 1f);
-                }
-                else
-                {
-                    ClashMeter = Mathf.Clamp01(ClashMeter - 0.12f);
-                    SoundManager.PlayBeyHit(ClashPosition, 0.9f);
-                    RuntimeGameUiController.SpawnGlobalComicPopup("OFF BEAT!", new Color(1f, 0.3f, 0.3f), 0.9f);
+                    float d = Mathf.Abs(ActiveNotes[i] - RhythmTargetX);
+                    if (d < bestDist)
+                    {
+                        bestDist = d;
+                        bestIdx = i;
+                    }
                 }
 
-                AdvanceNextBeat();
+                if (bestIdx >= 0)
+                {
+                    if (bestDist <= 0.045f)
+                    {
+                        // PERFECT MATCH
+                        ClashMeter = Mathf.Clamp01(ClashMeter + 0.38f);
+                        ThirdPersonCameraController.TriggerScreenShake(0.32f, 0.10f);
+                        SoundManager.PlayUiConfirm();
+                        RuntimeGameUiController.SpawnGlobalComicPopup("PERFECT MATCH! (+38%)", new Color(0.2f, 1f, 0.5f), 1.2f);
+                        ActiveNotes.RemoveAt(bestIdx);
+                    }
+                    else if (bestDist <= 0.095f)
+                    {
+                        // GREAT MATCH
+                        ClashMeter = Mathf.Clamp01(ClashMeter + 0.22f);
+                        ThirdPersonCameraController.TriggerScreenShake(0.20f, 0.08f);
+                        SoundManager.PlayUiConfirm();
+                        RuntimeGameUiController.SpawnGlobalComicPopup("GREAT MATCH! (+22%)", new Color(0.2f, 0.85f, 1f), 1.0f);
+                        ActiveNotes.RemoveAt(bestIdx);
+                    }
+                    else if (bestDist <= 0.16f)
+                    {
+                        ClashMeter = Mathf.Clamp01(ClashMeter - 0.08f);
+                        SoundManager.PlayBeyHit(ClashPosition, 0.8f);
+                        RuntimeGameUiController.SpawnGlobalComicPopup("OFF BEAT!", new Color(1f, 0.3f, 0.3f), 0.8f);
+                        ActiveNotes.RemoveAt(bestIdx);
+                    }
+                }
             }
-            else if (currentBeatTimer >= beatDuration + 0.12f)
-            {
-                // Missed the beat entirely
-                ClashMeter = Mathf.Clamp01(ClashMeter - 0.15f);
-                AdvanceNextBeat();
-            }
-        }
 
-        private void AdvanceNextBeat()
-        {
-            CurrentBeatIndex++;
-            currentBeatTimer = 0f;
-            BeatProgress = 0f;
-            if (CurrentBeatIndex >= TotalBeats)
+            for (int i = ActiveNotes.Count - 1; i >= 0; i--)
             {
-                // Completed all beats!
-                DurationRemaining = 0f; // trigger resolution
+                if (ActiveNotes[i] < RhythmTargetX - 0.08f)
+                {
+                    ActiveNotes.RemoveAt(i);
+                    ClashMeter = Mathf.Clamp01(ClashMeter - 0.10f);
+                }
             }
         }
 
         // ── 4. Tension Balance Minigame ──────────────────────────────
         private void UpdateTensionBalance(bool lmbHeld)
         {
-            // Gliding target
-            BalanceTargetPos = 0.5f + 0.38f * Mathf.Sin(Time.unscaledTime * 3.5f);
+            // Gentle swaying target
+            BalanceTargetPos = 0.5f + 0.30f * Mathf.Sin(Time.unscaledTime * 1.3f) + 0.08f * Mathf.Cos(Time.unscaledTime * 2.1f);
 
-            // Bobber physics (holds = upwards thrust, releases = gravity)
-            float thrust = lmbHeld ? 4.5f : -4.0f;
+            // Responsive physics
+            float thrust = lmbHeld ? 3.8f : -3.2f;
             balanceBobberVel += thrust * Time.unscaledDeltaTime;
-            balanceBobberVel *= 0.90f; // damping
+            balanceBobberVel *= 0.84f; // damping
             BalanceBobberPos = Mathf.Clamp01(BalanceBobberPos + balanceBobberVel * Time.unscaledDeltaTime);
 
-            bool inZone = Mathf.Abs(BalanceBobberPos - BalanceTargetPos) <= 0.14f;
+            bool inZone = Mathf.Abs(BalanceBobberPos - BalanceTargetPos) <= 0.22f;
             if (inZone)
             {
-                ClashMeter = Mathf.Clamp01(ClashMeter + 0.42f * Time.unscaledDeltaTime);
+                ClashMeter = Mathf.Clamp01(ClashMeter + 0.55f * Time.unscaledDeltaTime);
             }
             else
             {
-                ClashMeter = Mathf.Clamp01(ClashMeter - 0.28f * Time.unscaledDeltaTime);
+                ClashMeter = Mathf.Clamp01(ClashMeter - 0.10f * Time.unscaledDeltaTime);
             }
         }
 
