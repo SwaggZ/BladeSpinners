@@ -74,6 +74,8 @@ namespace BladeSpinners.Editor
             int explicitReferenceCount = 0;
             int faceBoltCount = 0;
 
+            FaceBoltAbilityResolver.EnsureInitialized();
+
             string[] guids = AssetDatabase.FindAssets("t:BeyPart", new[] { FaceBoltFolder });
             for (int i = 0; i < guids.Length; i++)
             {

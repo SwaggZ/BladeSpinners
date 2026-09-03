@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using BladeSpinners.Core;
 using BladeSpinners.Gameplay.Parts;
@@ -10,8 +11,19 @@ namespace BladeSpinners.Abilities
     public static class FaceBoltAbilityResolver
     {
         private static readonly Dictionary<string, BeyAbility> AssignedByFaceBoltId = new Dictionary<string, BeyAbility>();
-        private static readonly List<BeyAbility> AbilityPool = AbilityFactory.CreateRuntimeAbilityPool();
-        private static readonly Dictionary<Type, BeyAbility> InstanceMap = AbilityFactory.CreateAbilityInstanceMap();
+        private static List<BeyAbility> AbilityPool;
+        private static Dictionary<Type, BeyAbility> InstanceMap;
+
+        public static void EnsureInitialized()
+        {
+            if (AbilityPool == null || AbilityPool.Count == 0 || AbilityPool.Any(a => a == null)
+                || InstanceMap == null || InstanceMap.Count == 0 || InstanceMap.Values.Any(v => v == null))
+            {
+                AssignedByFaceBoltId.Clear();
+                AbilityPool = AbilityFactory.CreateRuntimeAbilityPool();
+                InstanceMap = AbilityFactory.CreateAbilityInstanceMap();
+            }
+        }
 
         /// <summary>
         /// Maps face bolt names (case-insensitive) to specific ability types.
@@ -231,11 +243,13 @@ namespace BladeSpinners.Abilities
             if (faceBolt.EquippedAbility != null)
                 return faceBolt.EquippedAbility;
 
+            EnsureInitialized();
+
             // 1. Try formatted short display name match (e.g. "Jade Fang", "Arctic Fox", "Ashen Wolf")
             string shortName = PartDisplayNameFormatter.ToShortDisplayName(faceBolt);
             if (!string.IsNullOrEmpty(shortName) && NameToAbilityType.TryGetValue(shortName, out Type shortType))
             {
-                if (InstanceMap.TryGetValue(shortType, out BeyAbility namedAbility))
+                if (InstanceMap != null && InstanceMap.TryGetValue(shortType, out BeyAbility namedAbility) && namedAbility != null)
                     return namedAbility;
             }
 
@@ -243,7 +257,7 @@ namespace BladeSpinners.Abilities
             string partName = NormalizeFaceBoltName(faceBolt.PartName, faceBolt.PartID);
             if (!string.IsNullOrEmpty(partName) && NameToAbilityType.TryGetValue(partName, out Type abilityType))
             {
-                if (InstanceMap.TryGetValue(abilityType, out BeyAbility namedAbility))
+                if (InstanceMap != null && InstanceMap.TryGetValue(abilityType, out BeyAbility namedAbility) && namedAbility != null)
                     return namedAbility;
             }
 
@@ -251,7 +265,7 @@ namespace BladeSpinners.Abilities
             string assetName = NormalizeFaceBoltName(faceBolt.name, string.Empty);
             if (!string.IsNullOrEmpty(assetName) && NameToAbilityType.TryGetValue(assetName, out Type assetType))
             {
-                if (InstanceMap.TryGetValue(assetType, out BeyAbility namedAbility))
+                if (InstanceMap != null && InstanceMap.TryGetValue(assetType, out BeyAbility namedAbility) && namedAbility != null)
                     return namedAbility;
             }
 
@@ -261,13 +275,17 @@ namespace BladeSpinners.Abilities
             {
                 if (!string.IsNullOrEmpty(kvp.Key) && searchTarget.IndexOf(kvp.Key, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    if (InstanceMap.TryGetValue(kvp.Value, out BeyAbility matchedAbility))
+                    if (InstanceMap != null && InstanceMap.TryGetValue(kvp.Value, out BeyAbility matchedAbility) && matchedAbility != null)
                         return matchedAbility;
                 }
             }
 
-            if (AbilityPool.Count == 0)
-                return null;
+            if (AbilityPool == null || AbilityPool.Count == 0)
+            {
+                EnsureInitialized();
+                if (AbilityPool == null || AbilityPool.Count == 0)
+                    return null;
+            }
 
             // 5. Fall back to deterministic hash assignment (unique per bolt where possible)
             string key = BuildFaceBoltKey(faceBolt);
@@ -275,12 +293,12 @@ namespace BladeSpinners.Abilities
                 return existing;
 
             int startIndex = Math.Abs(key.GetHashCode()) % AbilityPool.Count;
-            HashSet<BeyAbility> used = new HashSet<BeyAbility>(AssignedByFaceBoltId.Values);
+            HashSet<BeyAbility> used = new HashSet<BeyAbility>(AssignedByFaceBoltId.Values.Where(v => v != null));
             for (int offset = 0; offset < AbilityPool.Count; offset++)
             {
                 int index = (startIndex + offset) % AbilityPool.Count;
                 BeyAbility candidate = AbilityPool[index];
-                if (!used.Contains(candidate))
+                if (candidate != null && !used.Contains(candidate))
                 {
                     AssignedByFaceBoltId[key] = candidate;
                     return candidate;
@@ -289,8 +307,10 @@ namespace BladeSpinners.Abilities
 
             BeyAbility fallback = AbilityPool[startIndex];
             BeyAbility uniqueVariant = CreateRuntimeUniqueVariant(fallback, key);
-            AssignedByFaceBoltId[key] = uniqueVariant != null ? uniqueVariant : fallback;
-            return AssignedByFaceBoltId[key];
+            BeyAbility finalAbility = uniqueVariant != null ? uniqueVariant : fallback;
+            if (finalAbility != null)
+                AssignedByFaceBoltId[key] = finalAbility;
+            return finalAbility;
         }
 
         private static BeyAbility CreateRuntimeUniqueVariant(BeyAbility template, string key)
@@ -299,6 +319,7 @@ namespace BladeSpinners.Abilities
                 return null;
 
             BeyAbility variant = UnityEngine.Object.Instantiate(template);
+            variant.hideFlags = HideFlags.HideAndDontSave;
             ApplyRuntimeUniqueTuning(variant, key);
             return variant;
         }
