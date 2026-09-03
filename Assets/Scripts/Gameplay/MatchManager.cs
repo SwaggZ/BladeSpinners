@@ -319,6 +319,30 @@ namespace BladeSpinners.Gameplay
 
                 if (enemy.transform.position.y <= ringOutYThreshold)
                 {
+                    var arenaMeta = BladeSpinners.World.ArenaBowlMetadata.Active;
+                    Vector3 enemyPos = enemy.transform.position;
+                    float enemyDist = new Vector2(enemyPos.x, enemyPos.z).magnitude;
+                    if (arenaMeta != null)
+                    {
+                        bool isOutsideRim = enemyDist >= arenaMeta.Radius * 0.92f;
+                        bool isCenterHole = arenaMeta.HoleRadiusRatio > 0.001f && enemyDist < arenaMeta.Radius * arenaMeta.HoleRadiusRatio;
+
+                        if (!isOutsideRim && !isCenterHole)
+                        {
+                            float surfaceY = arenaMeta.GetSurfaceHeightAt(enemyDist);
+                            Debug.LogWarning($"[MatchManager] Enemy {enemy.name} clipped through bowl floor. Safely recovering to bowl surface.");
+                            enemyPos.y = surfaceY + 0.5f;
+                            enemy.transform.position = enemyPos;
+                            Rigidbody eRb = enemy.GetComponent<Rigidbody>();
+                            if (eRb != null)
+                            {
+                                eRb.position = enemyPos;
+                                eRb.linearVelocity = new Vector3(eRb.linearVelocity.x * 0.5f, 0.5f, eRb.linearVelocity.z * 0.5f);
+                            }
+                            continue;
+                        }
+                    }
+
                     string ringOutEnemyName = enemy.gameObject.name;
                     Debug.Log($"💥 {ringOutEnemyName} RING-OUT! Triggering disassembly...");
                     OnBeyBurst?.Invoke(ringOutEnemyName);
@@ -358,6 +382,33 @@ namespace BladeSpinners.Gameplay
 
             if (playerManager.transform.position.y > ringOutYThreshold)
                 return false;
+
+            // Verify player is actually outside the stadium rim (or fell into center hole)
+            var arenaMeta = BladeSpinners.World.ArenaBowlMetadata.Active;
+            Vector3 pos = playerManager.transform.position;
+            float horizontalDist = new Vector2(pos.x, pos.z).magnitude;
+
+            if (arenaMeta != null)
+            {
+                bool isOutsideRim = horizontalDist >= arenaMeta.Radius * 0.92f;
+                bool isCenterHole = arenaMeta.HoleRadiusRatio > 0.001f && horizontalDist < arenaMeta.Radius * arenaMeta.HoleRadiusRatio;
+
+                // Inside the bowl floor: recover safely instead of triggering an unfair defeat
+                if (!isOutsideRim && !isCenterHole)
+                {
+                    float surfaceY = arenaMeta.GetSurfaceHeightAt(horizontalDist);
+                    Debug.LogWarning($"[MatchManager] Player clipped through bowl floor at dist {horizontalDist:F1}m (y={pos.y:F1}). Safely recovering to bowl surface.");
+                    pos.y = surfaceY + 0.5f;
+                    playerManager.transform.position = pos;
+                    Rigidbody rb = playerManager.GetComponent<Rigidbody>();
+                    if (rb != null)
+                    {
+                        rb.position = pos;
+                        rb.linearVelocity = new Vector3(rb.linearVelocity.x * 0.5f, 0.5f, rb.linearVelocity.z * 0.5f);
+                    }
+                    return false;
+                }
+            }
 
             PlayerDefeatReason reason = GetRingOutDefeatReason();
             HandlePlayerBurst(reason, BuildRingOutDefeatMessage(reason));

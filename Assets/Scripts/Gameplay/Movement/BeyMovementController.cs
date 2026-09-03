@@ -366,6 +366,9 @@ namespace BladeSpinners.Gameplay.Movement
             if (knockbackStunTimer > 0f)
                 knockbackStunTimer -= Time.fixedDeltaTime;
 
+            // Enforce arena floor containment so clashes cannot tunnel through the bowl
+            EnsureBowlGroundContainment();
+
             // Keep Bey grounded with downward force on the bowl floor (like a spinning top).
             // Only apply dish-holding force when grounded on a genuine floor (normal.y >= 0.45f).
             if (isGrounded && lastGroundNormal.y >= 0.45f)
@@ -442,6 +445,8 @@ namespace BladeSpinners.Gameplay.Movement
             {
                 OnBurst();
             }
+
+            EnsureBowlGroundContainment();
         }
 
         public void CacheInput(float forwardInput, float steeringInput)
@@ -1047,6 +1052,48 @@ namespace BladeSpinners.Gameplay.Movement
             return tangent.sqrMagnitude > 0.0001f
                 ? tangent
                 : Vector3.zero;
+        }
+
+        /// <summary>
+        /// Safety ground containment: queries the active procedural arena floor height.
+        /// If a high-impulse collision or downward force ever pushes the bey below the floor,
+        /// this snaps it back above the surface and cancels downward penetrating velocity.
+        /// </summary>
+        private void EnsureBowlGroundContainment()
+        {
+            var arenaMeta = BladeSpinners.World.ArenaBowlMetadata.Active;
+            if (arenaMeta == null || rb == null)
+                return;
+
+            Vector3 currentPos = rb.position;
+            float horizontalDist = new Vector2(currentPos.x, currentPos.z).magnitude;
+
+            // Inside arena perimeter with boundary margin
+            if (horizontalDist <= arenaMeta.Radius + 0.5f)
+            {
+                // If the arena has an open center hole, don't clamp if the bey legitimately fell in
+                if (arenaMeta.HoleRadiusRatio > 0.001f && horizontalDist < arenaMeta.Radius * arenaMeta.HoleRadiusRatio)
+                    return;
+
+                float surfaceY = arenaMeta.GetSurfaceHeightAt(horizontalDist);
+                float minAllowedY = surfaceY + 0.04f;
+
+                if (currentPos.y < minAllowedY)
+                {
+                    currentPos.y = minAllowedY;
+                    rb.position = currentPos;
+
+                    Vector3 vel = rb.linearVelocity;
+                    if (vel.y < 0f)
+                    {
+                        vel.y = 0f;
+                        rb.linearVelocity = vel;
+                    }
+
+                    isGrounded = true;
+                    lastGroundNormal = Vector3.up;
+                }
+            }
         }
 
         public Rigidbody Rb => rb;

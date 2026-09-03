@@ -335,9 +335,17 @@ namespace BladeSpinners.Gameplay.Combat
 
             // Contact holding & Micro-jitter vibration
             Vector3 jitter = UnityEngine.Random.insideUnitSphere * 0.04f;
+            var arenaMeta = BladeSpinners.World.ArenaBowlMetadata.Active;
             if (Player != null)
             {
-                Player.transform.position = lockPlayerAnchor + jitter;
+                Vector3 pTarget = lockPlayerAnchor + jitter;
+                if (arenaMeta != null)
+                {
+                    float dist = new Vector2(pTarget.x, pTarget.z).magnitude;
+                    float floorY = arenaMeta.GetSurfaceHeightAt(dist);
+                    pTarget.y = Mathf.Max(pTarget.y, floorY + 0.04f);
+                }
+                Player.transform.position = pTarget;
                 if (playerRb != null)
                 {
                     playerRb.linearVelocity = Vector3.zero;
@@ -346,7 +354,14 @@ namespace BladeSpinners.Gameplay.Combat
             }
             if (Enemy != null)
             {
-                Enemy.transform.position = lockEnemyAnchor - jitter;
+                Vector3 eTarget = lockEnemyAnchor - jitter;
+                if (arenaMeta != null)
+                {
+                    float dist = new Vector2(eTarget.x, eTarget.z).magnitude;
+                    float floorY = arenaMeta.GetSurfaceHeightAt(dist);
+                    eTarget.y = Mathf.Max(eTarget.y, floorY + 0.04f);
+                }
+                Enemy.transform.position = eTarget;
                 if (enemyRb != null)
                 {
                     enemyRb.linearVelocity = Vector3.zero;

@@ -321,6 +321,78 @@ namespace BladeSpinners.World
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
 
+            // Build volumetric collision mesh with 2.0m solid thickness
+            // Prevents high-impulse clashes and downward forces from tunneling through the floor
+            int topVertCount = vertices.Length;
+            Vector3[] colVertices = new Vector3[topVertCount * 2];
+            const float floorThickness = 2.0f;
+            for (int i = 0; i < topVertCount; i++)
+            {
+                colVertices[i] = vertices[i];
+                colVertices[i + topVertCount] = vertices[i] - new Vector3(0f, floorThickness, 0f);
+            }
+
+            List<int> colTriangles = new List<int>(triangles.Count * 2 + ringSegs * 12);
+            // Top surface
+            colTriangles.AddRange(triangles);
+            // Bottom surface (reversed winding so normals face downward)
+            for (int i = 0; i < triangles.Count; i += 3)
+            {
+                colTriangles.Add(triangles[i] + topVertCount);
+                colTriangles.Add(triangles[i + 2] + topVertCount);
+                colTriangles.Add(triangles[i + 1] + topVertCount);
+            }
+
+            // Outer rim side walls
+            int outerTop = vertexOffset + (ringCount - 1) * ringSegs;
+            int outerBot = outerTop + topVertCount;
+            for (int a = 0; a < ringSegs; a++)
+            {
+                int next = (a + 1) % ringSegs;
+                int tCur = outerTop + a;
+                int tNxt = outerTop + next;
+                int bCur = outerBot + a;
+                int bNxt = outerBot + next;
+
+                colTriangles.Add(tCur);
+                colTriangles.Add(bCur);
+                colTriangles.Add(tNxt);
+
+                colTriangles.Add(tNxt);
+                colTriangles.Add(bCur);
+                colTriangles.Add(bNxt);
+            }
+
+            // Hole rim side walls
+            if (hasHole)
+            {
+                int holeTop = vertexOffset;
+                int holeBot = holeTop + topVertCount;
+                for (int a = 0; a < ringSegs; a++)
+                {
+                    int next = (a + 1) % ringSegs;
+                    int tCur = holeTop + a;
+                    int tNxt = holeTop + next;
+                    int bCur = holeBot + a;
+                    int bNxt = holeBot + next;
+
+                    colTriangles.Add(tCur);
+                    colTriangles.Add(tNxt);
+                    colTriangles.Add(bCur);
+
+                    colTriangles.Add(tNxt);
+                    colTriangles.Add(bNxt);
+                    colTriangles.Add(bCur);
+                }
+            }
+
+            Mesh colMesh = new Mesh();
+            colMesh.name = $"{s.Name}_ArenaBowl_Collision";
+            colMesh.vertices = colVertices;
+            colMesh.triangles = colTriangles.ToArray();
+            colMesh.RecalculateNormals();
+            colMesh.RecalculateBounds();
+
             GameObject bowl = new GameObject("Bowl");
             MeshFilter mf = bowl.AddComponent<MeshFilter>();
             mf.sharedMesh = mesh;
@@ -329,8 +401,15 @@ namespace BladeSpinners.World
             mr.sharedMaterial = CreateArenaMaterial(s.Color, 0.22f, 0.33f);
 
             MeshCollider mc = bowl.AddComponent<MeshCollider>();
-            mc.sharedMesh = mesh;
+            mc.sharedMesh = colMesh;
             ApplyArenaPhysicsMaterial(mc);
+
+            ArenaBowlMetadata meta = bowl.AddComponent<ArenaBowlMetadata>();
+            meta.Radius = s.Radius;
+            meta.Depth = s.Depth;
+            meta.FlatRatio = s.FlatRatio;
+            meta.HoleRadiusRatio = s.HoleRadiusRatio;
+            meta.Shape = s;
 
             // Perimeter lip around the outer rim
             GameObject outerLip = CreatePerimeterLip($"{s.Name}_OuterLip", outerRingPoints, s.LipHeight, s.LipThickness, false);

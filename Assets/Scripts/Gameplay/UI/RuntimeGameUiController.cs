@@ -1657,7 +1657,7 @@ namespace BladeSpinners.Gameplay.UI
 
             // Outer Border Frame
             Color frameBorder = isReady ? ACCENT_GOLD : (isOnCooldown ? new Color(0.3f, 0.3f, 0.4f, 0.6f) : ACCENT_CYAN);
-            DrawPanelFrame(iconRect, Color.clear, Color.clear, frameBorder, 2f);
+            DrawBorderOnly(iconRect, frameBorder, 2f);
 
             // Top-Right Mana Cost Badge
             if (effectiveCost > 0f)
@@ -2276,20 +2276,21 @@ namespace BladeSpinners.Gameplay.UI
             GUI.color = Color.white;
 
             // Direct standard IMGUI rendering for full texture sprites (our icons/emblems)
-            if (sprite.rect.width >= tex.width && sprite.rect.height >= tex.height)
+            if (sprite.rect.width >= tex.width - 1f && sprite.rect.height >= tex.height - 1f)
             {
                 GUI.DrawTexture(rect, tex, ScaleMode.ScaleToFit, true);
                 GUI.color = prevColor;
                 return;
             }
 
-            // Sub-rect sprite in atlas
+            // Sub-rect sprite in atlas or sprite sheet
             try
             {
                 Rect tr = sprite.rect;
+                // Unity IMGUI expects top-left origin UVs, whereas Sprite.rect has bottom-left origin
                 Rect uv = new Rect(
                     tr.x / (float)tex.width,
-                    tr.y / (float)tex.height,
+                    (tex.height - tr.yMax) / (float)tex.height,
                     tr.width / (float)tex.width,
                     tr.height / (float)tex.height);
                 GUI.DrawTextureWithTexCoords(rect, tex, uv, true);
@@ -6552,6 +6553,16 @@ namespace BladeSpinners.Gameplay.UI
             DrawRect(new Rect(rect.x, rect.y, Mathf.Max(2f, border), rect.height), new Color(accent.r, accent.g, accent.b, 0.65f));
             DrawRect(new Rect(rect.x, rect.yMax - Mathf.Max(2f, border), rect.width, Mathf.Max(2f, border)), new Color(0f, 0f, 0f, 0.85f));
             DrawFrameCorners(rect, new Color(accent.r, accent.g, accent.b, 0.60f), Mathf.Clamp(rect.width * 0.09f, 16f, 42f), Mathf.Max(2f, border));
+        }
+
+        private static void DrawBorderOnly(Rect rect, Color accent, float border)
+        {
+            float b = Mathf.Max(1f, border);
+            DrawRect(new Rect(rect.x, rect.y, rect.width, b), accent);
+            DrawRect(new Rect(rect.x, rect.yMax - b, rect.width, b), new Color(accent.r * 0.6f, accent.g * 0.6f, accent.b * 0.6f, accent.a));
+            DrawRect(new Rect(rect.x, rect.y, b, rect.height), new Color(accent.r * 0.8f, accent.g * 0.8f, accent.b * 0.8f, accent.a));
+            DrawRect(new Rect(rect.xMax - b, rect.y, b, rect.height), new Color(accent.r * 0.8f, accent.g * 0.8f, accent.b * 0.8f, accent.a));
+            DrawFrameCorners(rect, accent, Mathf.Clamp(rect.width * 0.18f, 10f, 24f), b);
         }
 
         private static void DrawConceptBackdrop(Rect rect)

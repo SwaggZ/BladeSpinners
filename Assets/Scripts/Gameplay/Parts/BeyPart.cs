@@ -190,7 +190,7 @@ namespace BladeSpinners.Gameplay.Parts
         public List<PartTag> Tags => tags;
         public string PartID => partID;
         public string Description => description;
-        public Sprite Icon => icon;
+        public Sprite Icon => icon != null ? icon : faceBoltEmblem;
 
         // Procedural Model
         public int MeshSeed => meshSeed;
